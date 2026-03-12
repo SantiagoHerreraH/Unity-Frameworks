@@ -1,0 +1,10 @@
+{
+  "name": "com.silverpillar.integrations.corgi",
+  "displayName": "Silver Pillar Corgi Engine Integrations",
+  "version": "1.0.0",
+  "unity": "2022.3",
+  "description": "Integrate corgi engine with the rest of the framework systems",
+  "author": {
+    "name": "Santiago Herrera Huerta"
+  }
+}

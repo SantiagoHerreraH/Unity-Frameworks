@@ -1,0 +1,10 @@
+{
+  "name": "com.silverpillar.goap",
+  "displayName": "Silver Pillar GOAP and Utility Score",
+  "version": "1.0.0",
+  "unity": "2022.3",
+  "description": "GOAP and Utility Score for the SilverPillar framework.",
+  "author": {
+    "name": "Santiago Herrera Huerta"
+  }
+}

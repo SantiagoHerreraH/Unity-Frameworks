@@ -1,0 +1,10 @@
+{
+  "name": "com.silverpillar.core",
+  "displayName": "Silver Pillar Core",
+  "version": "1.0.0",
+  "unity": "2022.3",
+  "description": "Shared interfaces, utilities, and base contracts for the SilverPillar framework.",
+  "author": {
+    "name": "Santiago Herrera Huerta"
+  }
+}

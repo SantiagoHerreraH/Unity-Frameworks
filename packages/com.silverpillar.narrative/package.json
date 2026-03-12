@@ -1,0 +1,10 @@
+{
+  "name": "com.silverpillar.narrative",
+  "displayName": "Silver Pillar Narrative System",
+  "version": "1.0.0",
+  "unity": "2022.3",
+  "description": "Narrative System for the SilverPillar framework.",
+  "author": {
+    "name": "Santiago Herrera Huerta"
+  }
+}
