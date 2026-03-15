@@ -3,6 +3,11 @@ using UnityEngine;
 
 namespace Pillar
 {
+    public enum TargetType
+    {
+        Self,
+        Other
+    }
     public interface IScore
     {
         public float CalculateScore(GameObject gameObject);

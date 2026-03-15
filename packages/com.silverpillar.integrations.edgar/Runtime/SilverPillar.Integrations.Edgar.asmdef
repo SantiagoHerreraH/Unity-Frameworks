@@ -1,0 +1,22 @@
+{
+  "name": "SilverPillar.Integrations.Edgar",
+  "rootNamespace": "SilverPillar.Integratioins.Edgar",
+  "references": [
+    "SilverPillar.Core",
+    "SilverPillar.Notifier",
+    "Edgar.Unity"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [{
+    "name": "com.silverpillar.notifier",
+    "expression": "1.0.0",
+    "define": "SILVERPILLAR_NOTIFIER"
+  }],
+  "noEngineReferences": false
+}

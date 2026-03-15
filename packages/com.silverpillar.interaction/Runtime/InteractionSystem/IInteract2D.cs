@@ -31,7 +31,7 @@ namespace Pillar
         public TargetType InteractionLifetimeDependsOn;
         public InteractionType InteractionType;
         [EnableIf("InteractionType", InteractionType.StayInteraction)]
-        public StatValueRange SecondsBetweenStayInteractionInteraction = new();
+        public float SecondsBetweenStayInteractionInteraction = 1;
         [EnableIf("InteractionType", InteractionType.StayInteraction)]
         public bool EndInteractionWhenExitingTouch = true;
     }

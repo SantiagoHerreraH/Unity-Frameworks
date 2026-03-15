@@ -2,6 +2,8 @@ using UnityEngine;
 using Edgar.Unity;
 using Pillar;
 
+#if SILVERPILLAR_NOTIFIER
+
 [CreateAssetMenu(menuName = "Edgar/Custom/NotifyChannelPostProcess", fileName = "NotifyChannelPostProcess")]
 public class NotifyChannelPostProcess : DungeonGeneratorPostProcessingGrid2D
 {
@@ -13,3 +15,5 @@ public class NotifyChannelPostProcess : DungeonGeneratorPostProcessingGrid2D
         ChannelNotifier.NotifyChannel(m_ChannelToNotify);
     }
 }
+
+#endif

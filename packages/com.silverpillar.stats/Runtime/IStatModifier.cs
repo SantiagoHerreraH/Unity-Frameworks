@@ -1,11 +1,9 @@
-using LukeyB.DeepStats.User;
 using Sirenix.OdinInspector;
 using Sirenix.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Playables;
 
 namespace Pillar
 {
@@ -218,6 +216,63 @@ namespace Pillar
     }
 
     [Serializable]
+    public class ValueStatModifier : IStatModifier
+    {
+        [Title("How to get Modification Value")]
+        public HowToGetModificationValue HowToGetModificationValue;
+
+        [Title("Self Stat")]
+        public float ModificationValue;
+        [OdinSerialize]
+        public HashSet<SO_Ref<StatTag>> NecessarySelfTags = new();
+
+
+        [Title("Target Stat")]
+        [SerializeField]
+        public StatType TargetStatType;
+        [OdinSerialize]
+        public HashSet<SO_Ref<StatTag>> NecessaryTargetTags = new();
+        [SerializeField]
+        public IncomingModificationData TargetStatData;
+
+        public ValueStatModifier(ValueStatModifier other)
+        {
+            HowToGetModificationValue = other.HowToGetModificationValue;
+
+            ModificationValue = other.ModificationValue;
+            NecessarySelfTags = new(other.NecessarySelfTags);
+
+
+            TargetStatType = other.TargetStatType;
+            NecessaryTargetTags = new(other.NecessaryTargetTags);
+            TargetStatData = other.TargetStatData;
+        }
+
+        public IStatModifier Clone()
+        {
+            return new ValueStatModifier(this);
+        }
+
+        public void Modify(StatController self, StatController target)
+        {
+            if (target.HasStatType(TargetStatType) &&
+                self.StatTags.Overlaps(NecessarySelfTags) &&
+                target.StatTags.Overlaps(NecessaryTargetTags))
+            {
+
+                ModifyTargetStat(target, ModificationValue);
+            }
+        }
+
+        private void ModifyTargetStat(StatController target, float modificationValue)
+        {
+            modificationValue = TargetStatData.ModifyIncomingValue(target, modificationValue);
+
+            target.Modify(TargetStatType, modificationValue, TargetStatData.StatOperation, TargetStatData.StatVariable);
+        }
+    }
+
+    [Serializable]
     public class OmniStatModifier : IStatModifier
     {
         [Title("How to get Modification Value")]
@@ -422,6 +477,25 @@ namespace Pillar
     }
 
     [Serializable]
+    public class ValueStatModifierHasStatType : IStatModifierCondition
+    {
+        [SerializeField]
+        private StatType m_TargetStatType;
+
+        public bool IsFulfilled(IStatModifier modifier)
+        {
+            ValueStatModifier cast = modifier as ValueStatModifier;
+
+            if (cast != null)
+            {
+                return cast.TargetStatType == m_TargetStatType;
+            }
+
+            return false;
+        }
+    }
+
+    [Serializable]
     public class OmniStatModifierHasStatTags : IStatModifierCondition
     {
         [SerializeField]
@@ -432,6 +506,41 @@ namespace Pillar
         public bool IsFulfilled(IStatModifier modifier)
         {
             OmniStatModifier cast = modifier as OmniStatModifier;
+
+            if (cast != null)
+            {
+                switch (m_FromWhichStatTarget)
+                {
+                    case StatTarget.Self:
+
+                        return cast.NecessarySelfTags.Overlaps(m_StatTags);
+
+                    case StatTarget.Target:
+
+
+                        return cast.NecessaryTargetTags.Overlaps(m_StatTags);
+
+                    default:
+                        break;
+                }
+            }
+
+            return false;
+        }
+    }
+
+
+    [Serializable]
+    public class ValueStatModifierHasStatTags : IStatModifierCondition
+    {
+        [SerializeField]
+        private HashSet<SO_Ref<StatTag>> m_StatTags = new();
+        [SerializeField]
+        private StatTarget m_FromWhichStatTarget;
+
+        public bool IsFulfilled(IStatModifier modifier)
+        {
+            ValueStatModifier cast = modifier as ValueStatModifier;
 
             if (cast != null)
             {
@@ -469,6 +578,7 @@ namespace Pillar
         }
     }
 
+    [Serializable]
     public struct AndStatConditions
     {
         [SerializeField]
@@ -487,6 +597,7 @@ namespace Pillar
         }
     }
 
+    [Serializable]
     public struct StatConditionGroup
     {
         public List<AndStatConditions> m_OrConditions;
@@ -508,7 +619,344 @@ namespace Pillar
 
     public interface IChangeModifier
     {
-        public bool ChangeModifier(IStatModifier modifierToCallDifferently);
+        public bool ChangeModifier(IStatModifier modifier);
+    }
+
+    [Serializable]
+    public class ChangeOmniModifierTags : IChangeModifier
+    {
+        public enum TagOperation
+        {
+            AddNew,
+            ReplaceWithNew
+        }
+
+        [SerializeField]
+        public TagOperation m_TagOperation;
+        [OdinSerialize]
+        public HashSet<SO_Ref<StatTag>> m_NewTags = new();
+        [SerializeField]
+        private StatTarget m_FromWhichStatTarget;
+        public bool ChangeModifier(IStatModifier modifier)
+        {
+            OmniStatModifier cast = modifier as OmniStatModifier;
+            if (cast != null)
+            {
+                HashSet<SO_Ref<StatTag>> oldTags = null;
+
+                switch (m_FromWhichStatTarget)
+                {
+                    case StatTarget.Self:
+
+                        oldTags = cast.NecessarySelfTags;
+
+                        break;
+                    case StatTarget.Target:
+
+                        oldTags = cast.NecessaryTargetTags;
+
+                        break;
+
+                    default:
+                        break;
+                }
+
+                switch (m_TagOperation)
+                {
+                    case TagOperation.AddNew:
+                        oldTags.UnionWith(m_NewTags);
+                        break;
+                    case TagOperation.ReplaceWithNew:
+                        oldTags.Clear();
+                        oldTags.UnionWith(m_NewTags);
+                        break;
+                    default:
+                        break;
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    [Serializable]
+    public class ChangeOmniModifierStatTypes : IChangeModifier
+    {
+        [SerializeField]
+        private StatType m_StatTypeToReplaceWith;
+        [SerializeField]
+        private StatTarget m_FromWhichStatTarget;
+        public bool ChangeModifier(IStatModifier modifier)
+        {
+            OmniStatModifier cast = modifier as OmniStatModifier;
+            if (cast != null)
+            {
+                switch (m_FromWhichStatTarget)
+                {
+                    case StatTarget.Self:
+
+                        cast.SelfStatType = m_StatTypeToReplaceWith;
+
+                        break;
+                    case StatTarget.Target:
+
+                        cast.TargetStatType = m_StatTypeToReplaceWith;
+
+                        break;
+                    default:
+                        break;
+
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    [Serializable]
+    public class ChangeOmniModifierStatOperation : IChangeModifier
+    {
+        [SerializeField]
+        private StatOperation m_StatOperation;
+        [SerializeField]
+        private StatTarget m_FromWhichStatTarget;
+        public bool ChangeModifier(IStatModifier modifier)
+        {
+            OmniStatModifier cast = modifier as OmniStatModifier;
+            if (cast != null)
+            {
+                switch (m_FromWhichStatTarget)
+                {
+                    case StatTarget.Self:
+
+                        cast.SelfStatData.StatOperation = m_StatOperation;
+
+                        break;
+                    case StatTarget.Target:
+
+                        cast.TargetStatData.StatOperation = m_StatOperation;
+
+                        break;
+                    default:
+                        break;
+
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    [Serializable]
+    public class ChangeOmniModifierStatVariableToOperate : IChangeModifier
+    {
+        [SerializeField]
+        private StatVariable m_StatVariable;
+        [SerializeField]
+        private StatTarget m_FromWhichStatTarget;
+        public bool ChangeModifier(IStatModifier modifier)
+        {
+            OmniStatModifier cast = modifier as OmniStatModifier;
+            if (cast != null)
+            {
+                switch (m_FromWhichStatTarget)
+                {
+                    case StatTarget.Self:
+
+                        cast.SelfStatData.StatVariable = m_StatVariable;
+
+                        break;
+                    case StatTarget.Target:
+
+                        cast.TargetStatData.StatVariable = m_StatVariable;
+
+                        break;
+                    default:
+                        break;
+
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    [Serializable]
+    public class ChangeOmniModifierModifyIncoming : IChangeModifier
+    {
+        [SerializeField]
+        private StatOperationGroup m_StatOperationGroup;
+        [SerializeField]
+        private StatTarget m_FromWhichStatTarget;
+        public bool ChangeModifier(IStatModifier modifier)
+        {
+            OmniStatModifier cast = modifier as OmniStatModifier;
+            if (cast != null)
+            {
+                switch (m_FromWhichStatTarget)
+                {
+                    case StatTarget.Self:
+
+                        cast.SelfStatData.ModifyIncoming = m_StatOperationGroup;
+
+                        break;
+                    case StatTarget.Target:
+
+                        cast.TargetStatData.ModifyIncoming = m_StatOperationGroup;
+
+                        break;
+                    default:
+                        break;
+
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    [Serializable]
+    public class ChangeValueModifierTags : IChangeModifier
+    {
+        public enum TagOperation
+        {
+            AddNew,
+            ReplaceWithNew
+        }
+
+        [SerializeField]
+        public TagOperation m_TagOperation;
+        [OdinSerialize]
+        public HashSet<SO_Ref<StatTag>> m_NewTags = new();
+        [SerializeField]
+        private StatTarget m_FromWhichStatTarget;
+        public bool ChangeModifier(IStatModifier modifier)
+        {
+            ValueStatModifier cast = modifier as ValueStatModifier;
+            if (cast != null)
+            {
+                HashSet<SO_Ref<StatTag>> oldTags = null;
+
+                switch (m_FromWhichStatTarget)
+                {
+                    case StatTarget.Self:
+
+                        oldTags = cast.NecessarySelfTags;
+
+                        break;
+                    case StatTarget.Target:
+
+                        oldTags = cast.NecessaryTargetTags;
+
+                        break;
+
+                    default:
+                        break;
+                }
+
+                switch (m_TagOperation)
+                {
+                    case TagOperation.AddNew:
+                        oldTags.UnionWith(m_NewTags);
+                        break;
+                    case TagOperation.ReplaceWithNew:
+                        oldTags.Clear();
+                        oldTags.UnionWith(m_NewTags);
+                        break;
+                    default:
+                        break;
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    [Serializable]
+    public class ChangeValueModifierStatTypes : IChangeModifier
+    {
+        [SerializeField]
+        private StatType m_StatTypeToReplaceTargetStatTypeWith;
+        public bool ChangeModifier(IStatModifier modifier)
+        {
+            ValueStatModifier cast = modifier as ValueStatModifier;
+            if (cast != null)
+            {
+                cast.TargetStatType = m_StatTypeToReplaceTargetStatTypeWith;
+
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    [Serializable]
+    public class ChangeValueModifierStatOperation : IChangeModifier
+    {
+        [SerializeField]
+        private StatOperation m_StatOperation;
+        public bool ChangeModifier(IStatModifier modifier)
+        {
+            ValueStatModifier cast = modifier as ValueStatModifier;
+            if (cast != null)
+            {
+                cast.TargetStatData.StatOperation = m_StatOperation;
+
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    [Serializable]
+    public class ChangeValueModifierStatVariableToOperate : IChangeModifier
+    {
+        [SerializeField]
+        private StatVariable m_StatVariable;
+        public bool ChangeModifier(IStatModifier modifier)
+        {
+            ValueStatModifier cast = modifier as ValueStatModifier;
+            if (cast != null)
+            {
+                cast.TargetStatData.StatVariable = m_StatVariable;
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    [Serializable]
+    public class ChangeValueModifierModifyIncoming : IChangeModifier
+    {
+        [SerializeField]
+        private StatOperationGroup m_StatOperationGroup;
+        public bool ChangeModifier(IStatModifier modifier)
+        {
+            ValueStatModifier cast = modifier as ValueStatModifier;
+            if (cast != null)
+            {
+                cast.TargetStatData.ModifyIncoming = m_StatOperationGroup;
+
+                return true;
+            }
+
+            return false;
+        }
     }
 }
 

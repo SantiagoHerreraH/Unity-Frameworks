@@ -16,15 +16,6 @@ namespace Pillar
         public List<SaveableCondition> ConditionsToFulfillGoal = new();
     }
 
-    [Serializable]
-    public class StatValueRelationship
-    {
-        public StatType StatType;
-        public StatVariable StatVariableThatIsChanging;
-        [Tooltip("how much a stat change affects a value percentage and viceversa")]
-        public float ValueChangePerStatChange;
-    }
-
     public class Emotion
     {
 
@@ -55,7 +46,7 @@ namespace Pillar
     public class SituationPerceiverThought //the perceiver can be either the actor, the receiver, or a another person
     {
         public Entity Actor;
-        public List<IAction> ActionsOfActor = new();
+        //public List<IAction> ActionsOfActor = new();
         public List<Emotion> EmotionsOfActor = new();
 
         public Entity Receiver;

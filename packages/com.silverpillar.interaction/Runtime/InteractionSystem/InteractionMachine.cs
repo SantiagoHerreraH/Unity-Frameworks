@@ -1,4 +1,3 @@
-using Pathfinding;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
@@ -169,7 +168,11 @@ namespace Pillar
                                 break;
                             case TargetType.Other:
 
-                                InteractionMachine interactionOnTouch = target.GetOrAddComponent<InteractionMachine>();
+                                InteractionMachine interactionOnTouch = target.GetComponent<InteractionMachine>();
+                                if (interactionOnTouch == null)
+                                {
+                                    interactionOnTouch = target.AddComponent<InteractionMachine>();
+                                }
                                 interactionOnTouch.InteractWhereSelfIsTarget(gameObject, interaction, collisionData, interactionTypeData.InteractionTypeData.InteractionType);
 
                                 break;
@@ -227,7 +230,11 @@ namespace Pillar
 
                             foreach (var interaction in interactionData.Interactable2DScriptableObjects)
                             {
-                                InteractionMachine interactionOnTouch = target.GetOrAddComponent<InteractionMachine>();
+                                InteractionMachine interactionOnTouch = target.GetComponent<InteractionMachine>(); 
+                                if (interactionOnTouch == null)
+                                {
+                                    interactionOnTouch = target.AddComponent<InteractionMachine>();
+                                }
                                 interactionOnTouch.InteractWhereSelfIsTarget(gameObject, interaction, data, InteractionType.StayInteraction);
                             }
 
@@ -289,8 +296,7 @@ namespace Pillar
 
         private IEnumerator StartOnStayInteractions(GameObject target, CollisionInteractionData2D data, Interaction2DData interactionData, InternalInteractionData internalInteractionData)
         {
-            var statController = GetComponent<StatController>();
-            float seconds = statController.GetCurrentStat(interactionData.InteractionTypeData.SecondsBetweenStayInteractionInteraction.StatTypeToGetValueFrom.Get());
+            float seconds = interactionData.InteractionTypeData.SecondsBetweenStayInteractionInteraction;
 
             do
             {
@@ -309,7 +315,11 @@ namespace Pillar
 
                         foreach (var interaction in interactionData.Interactable2DScriptableObjects)
                         {
-                            InteractionMachine interactionOnTouch = target.GetOrAddComponent<InteractionMachine>();
+                            InteractionMachine interactionOnTouch = target.GetComponent<InteractionMachine>();
+                            if (interactionOnTouch == null)
+                            {
+                                interactionOnTouch = target.AddComponent<InteractionMachine>();
+                            }
                             interactionOnTouch.InteractWhereSelfIsTarget(gameObject, interaction, data, InteractionType.StayInteraction);
                         }
 

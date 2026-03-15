@@ -1,0 +1,17 @@
+{
+  "name": "SilverPillar.Integrations.Corgi",
+  "rootNamespace": "SilverPillar.Integratioins.Corgi",
+  "references": [
+    "SilverPillar.Core",
+    "MoreMountains.CorgiEngine"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [ "CORGI_ENGINE" ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

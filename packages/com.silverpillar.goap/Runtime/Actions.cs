@@ -32,7 +32,12 @@ namespace Pillar
             {
                 var coroutineList = m_GameObject_To_Coroutine[gameObject];
 
-                var gameActionMachine = gameObject.GetOrAddComponent<GameActionMachine>();
+                var gameActionMachine = gameObject.GetComponent<GameActionMachine>();
+
+                if (gameActionMachine == null)
+                {
+                    gameActionMachine = gameObject.AddComponent<GameActionMachine>();
+                }
 
                 foreach (var coroutine in coroutineList)
                 {
@@ -56,7 +61,12 @@ namespace Pillar
 
             var coroutineList = m_GameObject_To_Coroutine[gameObject];
 
-            var gameActionMachine = gameObject.GetOrAddComponent<GameActionMachine>();
+            var gameActionMachine = gameObject.GetComponent<GameActionMachine>();
+
+            if (gameActionMachine == null)
+            {
+                gameActionMachine = gameObject.AddComponent<GameActionMachine>();
+            }
 
             foreach (var action in m_GameActionData)
             {

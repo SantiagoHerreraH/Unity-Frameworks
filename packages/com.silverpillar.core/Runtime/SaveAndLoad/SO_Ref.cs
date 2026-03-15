@@ -17,7 +17,7 @@ namespace Pillar
         [SerializeField, HideInInspector]
         private string m_Guid;
 
-        [SerializeField, ES3NonSerializable, InfoBox("ScriptableObject is missing!", InfoMessageType.Warning, "@ScriptableObject == null")]
+        [SerializeField, InfoBox("ScriptableObject is missing!", InfoMessageType.Warning, "@ScriptableObject == null")]
         private T ScriptableObject;
 
         public SO_Ref(T scriptableObject)
