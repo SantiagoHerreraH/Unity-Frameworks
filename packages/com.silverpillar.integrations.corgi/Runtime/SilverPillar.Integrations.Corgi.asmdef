@@ -1,9 +1,12 @@
 {
   "name": "SilverPillar.Integrations.Corgi",
-  "rootNamespace": "SilverPillar.Integratioins.Corgi",
+  "rootNamespace": "SilverPillar.Integrations.Corgi",
   "references": [
     "SilverPillar.Core",
-    "MoreMountains.CorgiEngine"
+    "MoreMountains.CorgiEngine",
+    "MoreMountains.Tools",
+    "MoreMountains.Feedbacks",
+    "MoreMountains.InventoryEngine"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
