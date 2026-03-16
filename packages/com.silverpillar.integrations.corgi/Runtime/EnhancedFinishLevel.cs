@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Collections;
 using MoreMountains.Tools;
 using MoreMountains.Feedbacks;
+using MoreMountains.CorgiEngine;
 
-namespace MoreMountains.CorgiEngine
+namespace SilverPillar.Integrations.Corgi
 {	
 	/// <summary>
 	/// Add this class to a trigger and it will send your player to the next level

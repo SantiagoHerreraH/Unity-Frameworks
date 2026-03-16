@@ -1,6 +1,7 @@
 using UnityEngine;
+using SilverPillar.Core;
 
-namespace Pillar
+namespace SilverPillar.Stats
 {
     public class StatDeltaScore : SaveableInteractionScore
     {

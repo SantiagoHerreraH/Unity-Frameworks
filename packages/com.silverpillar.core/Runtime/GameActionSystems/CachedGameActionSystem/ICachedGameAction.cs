@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Pillar
+namespace SilverPillar.Core
 {
     public interface ICachedGameAction
     {

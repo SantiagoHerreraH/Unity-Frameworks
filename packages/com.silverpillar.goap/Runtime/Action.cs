@@ -1,11 +1,10 @@
-using Pillar;
 using Sirenix.Serialization;
 using System.Collections.Generic;
 using UnityEngine;
+using SilverPillar.Core;
 
-namespace Pillar
+namespace SilverPillar.GOAP
 {
-
     [CreateAssetMenu(fileName = "Action", menuName = "GOAP/Action")]
     public class Action : SaveableScriptableObject, IScore
     {

@@ -10,7 +10,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-namespace Pillar
+namespace SilverPillar.Core
 {
     [GlobalConfig("Assets/Resources")]
     public class ScriptableObjectRegistry : GlobalConfig<ScriptableObjectRegistry>, ISerializationCallbackReceiver, ISupportsPrefabSerialization

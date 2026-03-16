@@ -1,8 +1,7 @@
-using System.Collections.Generic;
-using Pillar;
 using UnityEngine;
+using SilverPillar.Core;
 
-namespace Pillar
+namespace SilverPillar.Stats
 {
     [CreateAssetMenu(fileName = "StatType", menuName = "Stats/StatType")]
     public class StatType : SaveableScriptableObject

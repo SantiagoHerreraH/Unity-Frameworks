@@ -2,10 +2,10 @@ using Sirenix.OdinInspector;
 using Sirenix.Serialization;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.VisualScripting;
 using UnityEngine;
+using SilverPillar.Core;
 
-namespace Pillar
+namespace SilverPillar.GOAP
 {
 
     [CreateAssetMenu(fileName = "Brain", menuName = "GOAP/Brain")]

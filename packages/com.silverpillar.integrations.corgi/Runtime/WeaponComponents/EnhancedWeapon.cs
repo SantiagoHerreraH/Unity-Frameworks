@@ -1,12 +1,12 @@
-using System;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using MoreMountains.Tools;
 using MoreMountains.Feedbacks;
 using UnityEngine.Serialization;
+using MoreMountains.CorgiEngine;
 
-namespace MoreMountains.CorgiEngine
+namespace SilverPillar.Integrations.Corgi
 {
     /// <summary>
     /// A class used to store recoil properties, defining forces to apply on both ground and air, style, delay, and an associated feedback

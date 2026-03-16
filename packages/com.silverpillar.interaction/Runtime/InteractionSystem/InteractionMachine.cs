@@ -1,10 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace Pillar
+namespace SilverPillar.Interaction
 {
     //change this based on interaction data
     public class InteractionMachine : MonoBehaviour

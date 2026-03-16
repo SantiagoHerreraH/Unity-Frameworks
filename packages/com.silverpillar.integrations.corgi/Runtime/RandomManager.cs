@@ -1,7 +1,7 @@
 using MoreMountains.Tools;
 using UnityEngine;
 
-namespace MoreMountains.CorgiEngine
+namespace SilverPillar.Integrations.Corgi
 {
     public enum RandomChoice
     {

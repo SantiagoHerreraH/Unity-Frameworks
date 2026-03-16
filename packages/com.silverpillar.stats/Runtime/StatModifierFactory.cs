@@ -1,9 +1,11 @@
 using Sirenix.Serialization;
 using UnityEngine;
+using SilverPillar.Core;
 
-namespace Pillar
+
+namespace SilverPillar.Stats
 {
-    [CreateAssetMenu(fileName = "StatModifier", menuName = "Stats/StatModifierFactory")]
+    [CreateAssetMenu(fileName = "StatModifierFactory", menuName = "Stats/StatModifierFactory")]
     public class StatModifierFactory : SaveableScriptableObject
     {
         [OdinSerialize]

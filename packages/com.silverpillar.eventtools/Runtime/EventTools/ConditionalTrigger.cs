@@ -1,30 +1,36 @@
-using Pillar;
+
+using SilverPillar.Core;
 using Sirenix.Serialization;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
-public class ConditionalTrigger : MonoBehaviour
+namespace SilverPillar.EventTools
 {
-    [OdinSerialize]
-    private ConditionGroup Condition = new ();
-
-    [SerializeField]
-    private UnityEvent m_OnTrue;
-
-    [SerializeField]
-    private UnityEvent m_OnFalse;
-
-    public void Trigger()
+    public class ConditionalTrigger : MonoBehaviour
     {
-        if (Condition.IsFulfilled(gameObject))
+        [OdinSerialize]
+        private ConditionGroup Condition = new();
+
+        [SerializeField]
+        private UnityEvent m_OnTrue;
+
+        [SerializeField]
+        private UnityEvent m_OnFalse;
+
+        public void Trigger()
         {
-            m_OnTrue.Invoke();
+            if (Condition.IsFulfilled(gameObject))
+            {
+                m_OnTrue.Invoke();
+            }
+            else
+            {
+                m_OnFalse.Invoke();
+            }
         }
-        else
-        {
-            m_OnFalse.Invoke();
-        }
+
+
     }
 
 

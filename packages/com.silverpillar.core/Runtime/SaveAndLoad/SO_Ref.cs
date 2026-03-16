@@ -6,7 +6,7 @@ using System;
 using UnityEditor;
 #endif
 
-namespace Pillar
+namespace SilverPillar.Core
 {
     /*
      System to easily load, save (using easy save 3) and reference scriptable objects

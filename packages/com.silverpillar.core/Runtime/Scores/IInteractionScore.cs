@@ -2,9 +2,8 @@ using Sirenix.Serialization;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using static Pillar.SaveableScore;
 
-namespace Pillar
+namespace SilverPillar.Core
 {
     public enum TargetType
     {

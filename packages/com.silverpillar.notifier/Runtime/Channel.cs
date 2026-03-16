@@ -1,8 +1,13 @@
-using Pillar;
+using SilverPillar.Core;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "DataChannel", menuName = "Scriptable Objects/DataChannel")]
-public class Channel : SaveableScriptableObject
+namespace SilverPillar.Notifier
 {
-    
+    [CreateAssetMenu(fileName = "DataChannel", menuName = "Scriptable Objects/DataChannel")]
+    public class Channel : SaveableScriptableObject
+    {
+
+    }
 }
+
+

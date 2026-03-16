@@ -1,11 +1,10 @@
 using Sirenix.OdinInspector;
-using Sirenix.Serialization;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace Pillar
+namespace SilverPillar.Core
 {
     public class CachedGameActionMachine : MonoBehaviour
     {

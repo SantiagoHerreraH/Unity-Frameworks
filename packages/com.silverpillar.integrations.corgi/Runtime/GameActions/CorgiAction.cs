@@ -4,11 +4,11 @@ using Sirenix.Serialization;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+using SilverPillar.Core;
 
-namespace Pillar
+namespace SilverPillar.Integrations.Corgi
 {
     //This will need to be rewritten, but for now, it is okay
     public class CorgiAction : IGameAction

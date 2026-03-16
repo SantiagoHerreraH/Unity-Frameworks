@@ -1,19 +1,21 @@
 using UnityEngine;
 using Edgar.Unity;
-using Pillar;
+using SilverPillar.Notifier;
 
 #if SILVERPILLAR_NOTIFIER
 
-[CreateAssetMenu(menuName = "Edgar/Custom/NotifyChannelPostProcess", fileName = "NotifyChannelPostProcess")]
-public class NotifyChannelPostProcess : DungeonGeneratorPostProcessingGrid2D
+namespace SilverPillar.Integrations.Edgar
 {
-    [SerializeField]
-    private Channel m_ChannelToNotify;
-
-    public override void Run(DungeonGeneratorLevelGrid2D level)
+    [CreateAssetMenu(menuName = "Edgar/Custom/NotifyChannelPostProcess", fileName = "NotifyChannelPostProcess")]
+    public class NotifyChannelPostProcess : DungeonGeneratorPostProcessingGrid2D
     {
-        ChannelNotifier.NotifyChannel(m_ChannelToNotify);
+        [SerializeField]
+        private Channel m_ChannelToNotify;
+
+        public override void Run(DungeonGeneratorLevelGrid2D level)
+        {
+            ChannelNotifier.NotifyChannel(m_ChannelToNotify);
+        }
     }
 }
-
 #endif

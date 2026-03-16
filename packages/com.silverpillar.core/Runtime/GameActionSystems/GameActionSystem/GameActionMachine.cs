@@ -1,7 +1,6 @@
-using Pillar;
 using UnityEngine;
 
-namespace Pillar
+namespace SilverPillar.Core
 {
     public class GameActionMachine : MonoBehaviour
     {

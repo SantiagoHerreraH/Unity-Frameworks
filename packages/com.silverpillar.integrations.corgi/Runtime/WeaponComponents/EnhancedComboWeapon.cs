@@ -1,9 +1,8 @@
 using UnityEngine;
-using System.Collections;
 using MoreMountains.Tools;
-using System.Collections.Generic;
+using MoreMountains.CorgiEngine;
 
-namespace MoreMountains.CorgiEngine
+namespace SilverPillar.Integrations.Corgi
 {
     /// <summary>
     /// Add this component to an object containing multiple weapons and it'll turn it into a ComboWeapon, allowing you to chain attacks from all the different weapons

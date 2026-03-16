@@ -1,9 +1,9 @@
 using Sirenix.Serialization;
-using Unity.VisualScripting;
 using System.Collections.Generic;
 using UnityEngine;
+using SilverPillar.Core;
 
-namespace Pillar
+namespace SilverPillar.GOAP
 {
     public interface IAction
     {

@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Pillar
+namespace SilverPillar.Stats
 {
     public enum StatVariable
     {

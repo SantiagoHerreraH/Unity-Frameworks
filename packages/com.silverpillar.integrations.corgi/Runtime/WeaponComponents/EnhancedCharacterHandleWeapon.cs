@@ -1,8 +1,8 @@
 using UnityEngine;
-using System.Collections;
 using MoreMountains.Tools;
+using MoreMountains.CorgiEngine;
 
-namespace MoreMountains.CorgiEngine
+namespace SilverPillar.Integrations.Corgi
 {
     /// <summary>
     /// Add this class to a character so it can use weapons

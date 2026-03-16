@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-namespace Pillar
+namespace SilverPillar.Core
 {
     public interface IGameAction
     {

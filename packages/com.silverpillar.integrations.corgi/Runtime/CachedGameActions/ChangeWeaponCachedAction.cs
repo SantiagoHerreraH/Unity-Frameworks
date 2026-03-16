@@ -1,7 +1,8 @@
 using MoreMountains.CorgiEngine;
 using UnityEngine;
+using SilverPillar.Core;
 
-namespace Pillar
+namespace SilverPillar.Integrations.Corgi
 {
     public class ChangeWeaponCachedAction : ICachedGameAction
     {

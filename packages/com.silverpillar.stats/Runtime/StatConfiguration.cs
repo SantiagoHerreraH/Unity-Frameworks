@@ -1,7 +1,7 @@
 using Sirenix.Utilities;
 using UnityEngine;
 
-namespace Pillar
+namespace SilverPillar.Stats
 {
     [GlobalConfig("Assets/Resources/Stats")]
     public class StatConfiguration : GlobalConfig<StatConfiguration>

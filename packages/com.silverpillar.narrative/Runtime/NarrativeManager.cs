@@ -1,9 +1,8 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UIElements;
+using SilverPillar.Core;
 
-namespace Pillar
+namespace SilverPillar.Narrative
 {
     public class GoalNode
     {

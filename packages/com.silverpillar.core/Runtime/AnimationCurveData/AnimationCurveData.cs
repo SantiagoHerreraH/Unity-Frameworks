@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Pillar
+namespace SilverPillar.Core
 {
 
     [CreateAssetMenu(fileName = "SaveableScriptableObject", menuName = "Scriptable Objects/AnimationCurveData")]

@@ -1,12 +1,12 @@
-using System;
 using UnityEngine;
-using System.Collections;
 using MoreMountains.Tools;
 using System.Collections.Generic;
 using MoreMountains.Feedbacks;
 using UnityEngine.Serialization;
+using MoreMountains.CorgiEngine;
 
-namespace MoreMountains.CorgiEngine
+
+namespace SilverPillar.Integrations.Corgi
 {	
 	/// <summary>
 	/// Add this component to an object and it will cause damage to objects that collide with it. 

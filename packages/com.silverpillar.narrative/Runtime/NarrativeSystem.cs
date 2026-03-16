@@ -1,7 +1,6 @@
 using UnityEngine;
 
-
-namespace Pillar
+namespace SilverPillar.Narrative
 {
     public class NarrativeSystem : MonoBehaviour
     {

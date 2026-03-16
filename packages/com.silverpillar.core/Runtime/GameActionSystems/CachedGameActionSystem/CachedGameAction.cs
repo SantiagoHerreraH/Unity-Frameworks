@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Pillar
+namespace SilverPillar.Core
 {
     [CreateAssetMenu(fileName = "CachedGameAction", menuName = "Scriptable Objects/CachedGameAction")]
     public class CachedGameAction : SaveableScriptableObject

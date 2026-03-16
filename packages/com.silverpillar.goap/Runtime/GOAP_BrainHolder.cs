@@ -1,8 +1,7 @@
-using Sirenix.Serialization;
-using System.Collections.Generic;
 using UnityEngine;
+using SilverPillar.Core;
 
-namespace Pillar
+namespace SilverPillar.GOAP
 {
     public enum HowToChooseCurrentAction
     {

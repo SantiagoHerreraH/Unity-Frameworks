@@ -4,8 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
+using SilverPillar.Core;
 
-namespace Pillar
+namespace SilverPillar.Target
 {
     public class TargetSystem : MonoBehaviour
     {
