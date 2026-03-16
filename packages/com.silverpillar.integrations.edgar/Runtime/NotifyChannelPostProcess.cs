@@ -6,7 +6,7 @@ using SilverPillar.Notifier;
 
 namespace SilverPillar.Integrations.Edgar
 {
-    [CreateAssetMenu(menuName = "Edgar/Custom/NotifyChannelPostProcess", fileName = "NotifyChannelPostProcess")]
+    [CreateAssetMenu(menuName = "SilverPillar/Integrations/Edgar/NotifyChannelPostProcess", fileName = "NotifyChannelPostProcess")]
     public class NotifyChannelPostProcess : DungeonGeneratorPostProcessingGrid2D
     {
         [SerializeField]

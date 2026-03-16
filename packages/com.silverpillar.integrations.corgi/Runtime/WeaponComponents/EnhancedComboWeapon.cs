@@ -7,7 +7,7 @@ namespace SilverPillar.Integrations.Corgi
     /// <summary>
     /// Add this component to an object containing multiple weapons and it'll turn it into a ComboWeapon, allowing you to chain attacks from all the different weapons
     /// </summary>
-    [AddComponentMenu("Corgi Engine/Weapons/Combo Weapon")]
+    [AddComponentMenu("Corgi Engine/Weapons/Enhanced Combo Weapon")]
     public class EnhancedComboWeapon : CorgiMonoBehaviour
     {
         [Header("Combo")]

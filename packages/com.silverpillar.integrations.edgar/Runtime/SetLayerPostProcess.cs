@@ -3,7 +3,7 @@ using Edgar.Unity;
 
 namespace SilverPillar.Integrations.Edgar
 {
-    [CreateAssetMenu(menuName = "Edgar/Custom/Set Layer Post-process", fileName = "SetLayerPostProcess")]
+    [CreateAssetMenu(menuName = "SilverPillar/Integrations/Edgar/Set Layer Post-process", fileName = "SetLayerPostProcess")]
     public class SetLayerPostProcess : DungeonGeneratorPostProcessingGrid2D
     {
         [SerializeField, Tooltip("The name of the Layer you want to assign to the generated level.")]

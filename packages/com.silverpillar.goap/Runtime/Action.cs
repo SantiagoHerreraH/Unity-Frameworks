@@ -5,7 +5,7 @@ using SilverPillar.Core;
 
 namespace SilverPillar.GOAP
 {
-    [CreateAssetMenu(fileName = "Action", menuName = "GOAP/Action")]
+    [CreateAssetMenu(fileName = "Action", menuName = "SilverPillar/GOAP/Action")]
     public class Action : SaveableScriptableObject, IScore
     {
         [Tooltip("These are Or Conditions, if one is fulfilled, then ")]

@@ -10,7 +10,6 @@ using SilverPillar.Core;
 
 namespace SilverPillar.Integrations.Corgi
 {
-    //This will need to be rewritten, but for now, it is okay
     public class CorgiAction : IGameAction
     {
         [OdinSerialize, ValueDropdown(nameof(EnemyAITypeDropdown))]

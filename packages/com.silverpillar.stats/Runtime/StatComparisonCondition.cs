@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace SilverPillar.Stats
 {
-    [CreateAssetMenu(fileName = "StatComparisonCondition", menuName = "Stats/StatComparisonCondition")]
+    [CreateAssetMenu(fileName = "StatComparisonCondition", menuName = "SilverPillar/Stats/StatComparisonCondition")]
     [Serializable]
     public class StatComparisonCondition : SaveableCondition
     {

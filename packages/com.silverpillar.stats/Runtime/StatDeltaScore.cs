@@ -3,6 +3,7 @@ using SilverPillar.Core;
 
 namespace SilverPillar.Stats
 {
+    [CreateAssetMenu(fileName = "StatDeltaScore", menuName = "SilverPillar/Stats/StatDeltaScore")]
     public class StatDeltaScore : SaveableInteractionScore
     {
         [SerializeField]

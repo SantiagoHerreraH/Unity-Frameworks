@@ -4,7 +4,7 @@ using UnityEngine;
 namespace SilverPillar.Core
 {
 
-    [CreateAssetMenu(fileName = "SaveableScriptableObject", menuName = "Scriptable Objects/AnimationCurveData")]
+    [CreateAssetMenu(fileName = "AnimationCurveData", menuName = "SilverPillar/Core/AnimationCurveData")]
     public class AnimationCurveData : SaveableScriptableObject
     {
         public AnimationCurve Curve;

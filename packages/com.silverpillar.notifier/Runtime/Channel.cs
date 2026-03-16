@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace SilverPillar.Notifier
 {
-    [CreateAssetMenu(fileName = "DataChannel", menuName = "Scriptable Objects/DataChannel")]
+    [CreateAssetMenu(fileName = "Channel", menuName = "SilverPillar/Notifier/Channel")]
     public class Channel : SaveableScriptableObject
     {
 

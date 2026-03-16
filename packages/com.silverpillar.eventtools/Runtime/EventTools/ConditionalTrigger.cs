@@ -1,7 +1,6 @@
 
 using SilverPillar.Core;
 using Sirenix.Serialization;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace SilverPillar.Core
 {
-    [CreateAssetMenu(fileName = "CachedGameAction", menuName = "Scriptable Objects/CachedGameAction")]
+    [CreateAssetMenu(fileName = "CachedGameAction", menuName = "SilverPillar/Core/CachedGameActionSystem/CachedGameAction")]
     public class CachedGameAction : SaveableScriptableObject
     {
         [OdinSerialize]

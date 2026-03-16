@@ -5,7 +5,7 @@ using SilverPillar.Core;
 
 namespace SilverPillar.Stats
 {
-    [CreateAssetMenu(fileName = "StatModifierFactory", menuName = "Stats/StatModifierFactory")]
+    [CreateAssetMenu(fileName = "StatModifierFactory", menuName = "SilverPillar/Stats/StatModifierFactory")]
     public class StatModifierFactory : SaveableScriptableObject
     {
         [OdinSerialize]
@@ -14,7 +14,7 @@ namespace SilverPillar.Stats
         public IStatModifierFactory Get() { return m_StatModifierFactory; }
     }
 
-    [CreateAssetMenu(fileName = "StatModifier", menuName = "Stats/StatModifier")]
+    [CreateAssetMenu(fileName = "StatModifier", menuName = "SilverPillar/Stats/StatModifier")]
     public class StatModifier : SaveableScriptableObject
     {
         [OdinSerialize]

@@ -6,7 +6,7 @@ using SilverPillar.Core;
 
 namespace SilverPillar.GOAP
 {
-    [CreateAssetMenu(fileName = "GoalPlan", menuName = "GOAP/GoalPlan")]
+    [CreateAssetMenu(fileName = "GoalPlan", menuName = "SilverPillar/GOAP/GoalPlan")]
     public class GoalPlan : SaveableScriptableObject
     {
         [OdinSerialize]

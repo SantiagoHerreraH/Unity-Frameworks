@@ -10,7 +10,7 @@ namespace SilverPillar.Integrations.Corgi
     /// the current weapon's Animations
     /// Animator parameters : defined from the Weapon's inspector
     /// </summary>
-    [AddComponentMenu("Corgi Engine/Character/Abilities/Character Handle Weapon")]
+    [AddComponentMenu("Corgi Engine/Character/Abilities/Enhanced Character Handle Weapon")]
     public class EnhancedCharacterHandleWeapon : CharacterAbility
     {
         /// This method is only used to display a helpbox text at the beginning of the ability's inspector

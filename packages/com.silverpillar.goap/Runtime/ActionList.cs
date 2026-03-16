@@ -5,7 +5,7 @@ using SilverPillar.Core;
 
 namespace SilverPillar.GOAP
 {
-    [CreateAssetMenu(fileName = "ActionList", menuName = "GOAP/ActionList")]
+    [CreateAssetMenu(fileName = "ActionList", menuName = "SilverPillar/GOAP/ActionList")]
     public class ActionList : SaveableScriptableObject
     {
         [OdinSerialize]

@@ -2,7 +2,8 @@ using UnityEngine;
 
 namespace SilverPillar.Core
 {
-    [CreateAssetMenu(fileName = "ActionName", menuName = "Scriptable Objects/ActionName")]
+    [CreateAssetMenu(fileName = "ActionName", menuName = "SilverPillar/Core/CachedGameActionSystem/ActionName")]
+
     public class ActionName : SaveableScriptableObject
     {
 

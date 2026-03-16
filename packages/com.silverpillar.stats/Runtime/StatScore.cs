@@ -3,6 +3,7 @@ using SilverPillar.Core;
 
 namespace SilverPillar.Stats
 {
+    [CreateAssetMenu(fileName = "StatScore", menuName = "SilverPillar/Stats/StatScore")]
     public class StatScore : SaveableInteractionScore
     {
         [SerializeField]

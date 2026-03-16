@@ -24,7 +24,7 @@ namespace SilverPillar.Core
         public abstract bool IsFulfilled(GameObject gameObj);
     }
 
-    [CreateAssetMenu(fileName = "SaveableScriptableObject", menuName = "Conditions/CachedCondition")]
+    [CreateAssetMenu(fileName = "CachedCondition", menuName = "SilverPillar/Core/Conditions/CachedCondition")]
     public class CachedCondition : SaveableScriptableObject
     {
         [OdinSerialize]

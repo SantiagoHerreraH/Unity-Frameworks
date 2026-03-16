@@ -11,7 +11,7 @@ namespace SilverPillar.Integrations.Corgi
 	/// <summary>
 	/// Add this component to an object and it will cause damage to objects that collide with it. 
 	/// </summary>
-	[AddComponentMenu("Corgi Engine/Character/Damage/Damage On Touch")] 
+	[AddComponentMenu("Corgi Engine/Character/Damage/State Modifier On Touch")] 
 	public class StateModifierOnTouch : CorgiMonoBehaviour 
 	{
 		/// the possible ways to add knockback : noKnockback, which won't do nothing, set force, or add force

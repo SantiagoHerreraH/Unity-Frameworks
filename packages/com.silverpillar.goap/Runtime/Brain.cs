@@ -8,7 +8,7 @@ using SilverPillar.Core;
 namespace SilverPillar.GOAP
 {
 
-    [CreateAssetMenu(fileName = "Brain", menuName = "GOAP/Brain")]
+    [CreateAssetMenu(fileName = "Brain", menuName = "SilverPillar/GOAP/Brain")]
     public class Brain : SaveableScriptableObject
     {
         [Title("Creation Data")]
