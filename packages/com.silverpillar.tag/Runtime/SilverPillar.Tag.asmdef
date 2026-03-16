@@ -1,0 +1,16 @@
+{
+  "name": "SilverPillar.Tag",
+  "rootNamespace": "SilverPillar.Tag",
+  "references": [
+    "SilverPillar.Core"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
