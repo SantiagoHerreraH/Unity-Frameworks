@@ -4,9 +4,8 @@ using UnityEngine;
 
 namespace SilverPillar.Stats
 {
-    [CreateAssetMenu(fileName = "StatComparisonCondition", menuName = "SilverPillar/Stats/StatComparisonCondition")]
     [Serializable]
-    public class StatComparisonCondition : SaveableCondition
+    public class StatComparisonCondition : ICondition
     {
         public enum ConditionOperation
         {
@@ -32,7 +31,7 @@ namespace SilverPillar.Stats
         private StatVariable m_OtherStatVariable;
 
 
-        public override bool IsFulfilled(GameObject gameObj)
+        public bool IsFulfilled(GameObject gameObj)
         {
             var statRegistry = gameObj.GetComponent<StatController>();
             if (statRegistry)

@@ -1,0 +1,34 @@
+{
+  "name": "SilverPillar.Integrations.AStar",
+  "rootNamespace": "SilverPillar.Integrations.AStar",
+  "references": [
+    "SilverPillar.Core",
+    "SilverPillar.Target",
+    "AstarPathfindingProject",
+    "PackageTools",
+    "Drawing"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": ["HAS_ASTAR"],
+  "versionDefines": [{
+    "name": "com.silverpillar.target",
+    "expression": "1.0.0",
+    "define": "SILVERPILLAR_TARGET"
+  },
+  {
+    "name": "com.silverpillar.tag",
+    "expression": "1.0.0",
+    "define": "SILVERPILLAR_TAG"
+  },
+  {
+    "name": "com.arongranberg.astar",
+    "expression": "5.4.6",
+    "define": "HAS_ASTAR"
+  }],
+  "noEngineReferences": false
+}

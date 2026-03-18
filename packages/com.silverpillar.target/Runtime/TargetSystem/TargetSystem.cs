@@ -30,12 +30,12 @@ namespace SilverPillar.Target
 
         [Title("Filter")]
         [SerializeField]
-        private List<ConditionGroup> m_ConditionsToChooseTheCurrentTarget = new();
+        private List<ConditionGroupData> m_ConditionsToChooseTheCurrentTarget = new();
 
         [Title("Scoring")]
         [InfoBox("You always choose the possible target with the highest score as the current target.")]
         [SerializeField]
-        private SaveableScore.HowToCalculateScore m_HowToCalculateScore;
+        private ScoreGroup.HowToCalculateScore m_HowToCalculateScore;
         [SerializeField]
         private List<SaveableScore> m_ScoringSystemToChooseTheCurrentTarget = new();
         private List<float> m_TempScores = new(); //  just for optimization
@@ -152,7 +152,7 @@ namespace SilverPillar.Target
                         ++currentIdx;
                     }
 
-                    float finalScore = SaveableScore.CalculateScore(m_HowToCalculateScore, m_TempScores);
+                    float finalScore = ScoreGroup.CalculateScore(m_HowToCalculateScore, m_TempScores);
 
                     m_QualifiedTargets.Add(new TargetAndScore { Target = possibleTarget, Score = finalScore });
                 }

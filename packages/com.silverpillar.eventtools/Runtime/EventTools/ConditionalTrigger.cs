@@ -9,7 +9,7 @@ namespace SilverPillar.EventTools
     public class ConditionalTrigger : MonoBehaviour
     {
         [OdinSerialize]
-        private ConditionGroup Condition = new();
+        private ConditionGroupData Condition = new();
 
         [SerializeField]
         private UnityEvent m_OnTrue;

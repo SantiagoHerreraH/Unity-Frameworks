@@ -8,6 +8,24 @@ using SilverPillar.Core;
 namespace SilverPillar.GOAP
 {
 
+    public class ActionGroupExecutionData
+    {
+        private Dictionary<Action, ActionExecutionData> m_Action_To_ExecutableActions = new();
+        public ActionGroupExecutionData(ActionList actionList, GameObject gameObject) 
+        {
+            foreach (var action in actionList.PossibleActions)
+            {
+                m_Action_To_ExecutableActions.Add(action, action.GetActionExecutionData(gameObject));
+            }
+        }
+
+
+        public ActionExecutionData GetActionExecutionData(Action action)
+        {
+            return m_Action_To_ExecutableActions[action];
+        }
+    }
+
     [CreateAssetMenu(fileName = "Brain", menuName = "SilverPillar/GOAP/Brain")]
     public class Brain : SaveableScriptableObject
     {
@@ -85,6 +103,11 @@ namespace SilverPillar.GOAP
         {
             m_IsDirty = true;
             EnsureGraphIsBuilt();
+        }
+
+        public ActionGroupExecutionData GetData(GameObject gameObject)
+        {
+            return new ActionGroupExecutionData(m_ActionList, gameObject);
         }
 
         public static long CombineHashCodes(int hash1, int hash2)

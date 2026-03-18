@@ -1,57 +1,49 @@
+using SilverPillar.Core;
+using Sirenix.OdinInspector;
 using Sirenix.Serialization;
 using System.Collections.Generic;
 using UnityEngine;
-using SilverPillar.Core;
 
 namespace SilverPillar.GOAP
 {
     [CreateAssetMenu(fileName = "Action", menuName = "SilverPillar/GOAP/Action")]
     public class Action : SaveableScriptableObject, IScore
     {
-        [Tooltip("These are Or Conditions, if one is fulfilled, then ")]
-        public List<ConditionGroup> Preconditions = new();
-        public List<ConditionGroup> EffectOnWorld = new();
+        [TabGroup("Graph Connections")]
+        [Title("Preconditions")]
+        public ReducedConditionType PreconditionsType;
+        [Tooltip("If these are and conditions you have to make sure the children in conjunction lead to all conditions being true")]
+        public List<ICondition> Preconditions = new();
 
+        [TabGroup("Graph Connections")]
+        [Title("Effects On World")]
+        public List<ICondition> EffectOnWorld = new();
+
+
+        [TabGroup("Action Choosing Criteria")]
+        [Title("Action Cost")]
         [Min(0.1f)]
         public float Cost = 1;
 
-        [OdinSerialize]
-        public List<IScore> Score = new();
 
-        [OdinSerialize]
+        [TabGroup("Action Choosing Criteria")]
+        [Title("How to Score Action")]
+        [SerializeField]
+        private ScoreGroup m_ScoreGroup;
+
+        [TabGroup("Action Data")]
+        [OdinSerialize, ShowInInspector]
         public List<IAction> Actions = new();
-
-        private void OnEnable()
-        {
-            foreach (var action in Actions)
-            {
-                action.Initialize();
-            }
-        }
 
         public float CalculateScore(GameObject gameObject)
         {
-            float finalValue = 0;
-            foreach (var score in Score)
-                finalValue += score.CalculateScore(gameObject);
-            return finalValue;
+            return m_ScoreGroup.CalculateScore(gameObject);
         }
 
-        public void Start(GameObject gameObj)
+        public ActionExecutionData GetActionExecutionData(GameObject gameObject)
         {
-            foreach (var action in Actions) action.Start(gameObj);
+            return new ActionExecutionData(Actions, gameObject);
         }
-
-        public void Update(GameObject gameObj)
-        {
-            foreach (var action in Actions) action.Update(gameObj);
-        }
-
-        public void End(GameObject gameObj)
-        {
-            foreach (var action in Actions) action.End(gameObj);
-        }
-
         public bool IsChildrenActionOfOther(Action otherAction)
         {
             foreach (var otherEffectOnWorld in otherAction.EffectOnWorld)
@@ -72,12 +64,12 @@ namespace SilverPillar.GOAP
 
         public bool PreconditionsAreFulfilled(GameObject gameObj)
         {
-            return ConditionGroup.IsFulfilled(gameObj, ConditionType.OneHasToBeTrue, Preconditions);
+            return ConditionGroupData.IsFulfilled(gameObj, PreconditionsType, Preconditions);
         }
 
         public bool EffectOnWorldIsFulfilled(GameObject gameObj)
         {
-            return ConditionGroup.IsFulfilled(gameObj, ConditionType.OneHasToBeTrue, EffectOnWorld);
+            return ConditionGroupData.IsFulfilled(gameObj, ConditionType.OneHasToBeTrue, EffectOnWorld);
         }
 
         public bool HasPrecondition(ConditionGroup condition)

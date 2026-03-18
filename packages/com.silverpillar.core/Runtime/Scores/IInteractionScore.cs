@@ -1,4 +1,5 @@
 using Sirenix.Serialization;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -19,7 +20,8 @@ namespace SilverPillar.Core
         public float CalculateScore(GameObject self, GameObject target);
     }
 
-    public class SaveableScore : SaveableScriptableObject
+    [Serializable]
+    public class ScoreGroup
     {
         public enum HowToCalculateScore
         {
@@ -69,6 +71,17 @@ namespace SilverPillar.Core
             return (count % 2 != 0)
                 ? sorted[mid]
                 : (sorted[mid - 1] + sorted[mid]) / 2f;
+        }
+    }
+
+    public class SaveableScore : SaveableScriptableObject
+    {
+        [SerializeField]
+        private ScoreGroup m_ScoreGroup = new();
+
+        public float CalculateScore(GameObject gameObj)
+        {
+            return m_ScoreGroup.CalculateScore(gameObj);
         }
     }
 

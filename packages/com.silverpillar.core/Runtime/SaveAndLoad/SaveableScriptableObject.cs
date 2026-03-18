@@ -10,7 +10,7 @@ namespace SilverPillar.Core
     /// <summary>
     /// Base class for ScriptableObjects that must have a stable GUID for save/load references.
     /// </summary>
-    public class SaveableScriptableObject : ScriptableObject
+    public class SaveableScriptableObject : SerializedScriptableObject
     {
         [FoldoutGroup("Save Data")]
         [SerializeField, ReadOnly, Tooltip("Globally unique identifier (stable across saves/builds)")]
