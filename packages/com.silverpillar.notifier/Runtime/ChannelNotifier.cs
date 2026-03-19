@@ -11,7 +11,6 @@ namespace SilverPillar.Notifier
     {
         [Header("Locking")]
         [SerializeField, Tooltip("If it is locked, data sending won't work even if you call it")]
-        private bool m_StartLocked = false;
         private bool m_IsLocked = false;
 
         [Header("Channels")]
@@ -72,7 +71,6 @@ namespace SilverPillar.Notifier
         public static List<ChannelNotifier> RegisteredChannelNotifiers { get; private set; } = new();
         private void Awake()
         {
-            m_IsLocked = m_StartLocked;
             Register(this);
             InitializeLocal();
         }
@@ -207,12 +205,12 @@ namespace SilverPillar.Notifier
         }
 
         //Local == all channel notifiers on GameObject
-        public void NotifyAllLocal()
+        public void CallNotifyOnAllLocal()
         {
             InitializeLocal();
-            foreach (var dataSender in m_GameObjectChannelNotifiers)
+            foreach (var notifier in m_GameObjectChannelNotifiers)
             {
-                dataSender.Notify();
+                notifier.Notify();
             }
         }
 

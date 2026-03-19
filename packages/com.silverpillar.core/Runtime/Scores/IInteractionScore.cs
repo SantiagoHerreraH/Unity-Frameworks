@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using Sirenix.Serialization;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,18 @@ namespace SilverPillar.Core
     {
         public float CalculateScore(GameObject gameObject);
     }
+
+    [Serializable]
+    public class ConstantScore : IScore
+    {
+        [SerializeField]
+        private float m_Score;
+        public float CalculateScore(GameObject gameObject)
+        {
+            return m_Score;
+        }
+    }
+
     public interface IInteractionScore
     {
         public float CalculateScore(GameObject self, GameObject target);
@@ -34,7 +47,7 @@ namespace SilverPillar.Core
         }
         [SerializeField]
         private HowToCalculateScore m_HowToCalculateScore;
-        [OdinSerialize]
+        [OdinSerialize, ShowInInspector]
         private List<IScore> m_Scores = new();
 
         public float CalculateScore(GameObject gameObj)

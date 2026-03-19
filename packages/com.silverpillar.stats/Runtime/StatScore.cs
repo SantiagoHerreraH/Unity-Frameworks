@@ -3,34 +3,16 @@ using SilverPillar.Core;
 
 namespace SilverPillar.Stats
 {
-    [CreateAssetMenu(fileName = "StatScore", menuName = "SilverPillar/Stats/StatScore")]
-    public class StatScore : SaveableInteractionScore
+    public class StatScore : IScore
     {
         [SerializeField]
         private StatValueRange m_StatScore;
-        [SerializeField]
-        private TargetType m_TargetType;
 
-        public override float CalculateScore(GameObject self, GameObject target)
+        public float CalculateScore(GameObject gameObj)
         {
             StatController statController = null;
 
-            switch (m_TargetType)
-            {
-                case TargetType.Self:
-                    statController = self.GetComponent<StatController>();
-
-                    
-
-                    break;
-                case TargetType.Other:
-
-                    statController = target.GetComponent<StatController>();
-
-                    break;
-                default:
-                    break;
-            }
+            statController = gameObj.GetComponent<StatController>();
 
             if (statController != null)
             {

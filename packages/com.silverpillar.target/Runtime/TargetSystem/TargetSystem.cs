@@ -26,38 +26,48 @@ namespace SilverPillar.Target
             OnEnable
         }
 
-        [Title("How to Choose Current Target")]
+        [TabGroup("How to Choose Current Target")]
 
         [Title("Filter")]
         [SerializeField]
         private List<ConditionGroupData> m_ConditionsToChooseTheCurrentTarget = new();
+        
+        [Space(10)]
 
+        [TabGroup("How to Choose Current Target")]
         [Title("Scoring")]
         [InfoBox("You always choose the possible target with the highest score as the current target.")]
         [SerializeField]
         private ScoreGroup.HowToCalculateScore m_HowToCalculateScore;
+
+        [TabGroup("How to Choose Current Target")]
         [SerializeField]
         private List<SaveableScore> m_ScoringSystemToChooseTheCurrentTarget = new();
         private List<float> m_TempScores = new(); //  just for optimization
 
-
-        [Title("When to Choose Current Target")]
+        [TabGroup("When to Choose Current Target")]
         [SerializeField]
         private WhenToChooseTarget m_WhenToChooseTarget;
-        [SerializeField, Min(0), Tooltip("0 means every tick"), EnableIf(nameof(m_WhenToChooseTarget), WhenToChooseTarget.OnUpdate)]
+
+        [TabGroup("When to Choose Current Target")]
+        [SerializeField, Min(0), Tooltip("0 means every tick"), ShowIf(nameof(m_WhenToChooseTarget), WhenToChooseTarget.OnUpdate)]
         private float m_HowOftenToRecalculateCurrentTarget;
         private float m_TimeSinceLastCalculatedCurrentTarget = 0;
 
-        [Title("Events")]
+        [TabGroup("Events")]
         [SerializeField]
         private UnityEvent<GameObject> m_OnNewCurrentTarget = new();
 
-        [Title("Debug")]
+        [PropertySpace(SpaceBefore = 20)]
+
+        [FoldoutGroup("Debug")]
         [ShowInInspector, ReadOnly, SerializeField]
         private GameObject m_CurrentTarget;
+        [FoldoutGroup("Debug")]
         [ShowInInspector, ReadOnly, SerializeField]
         private List<GameObject> m_PossibleTargets = new(); // for iteration
         private HashSet<GameObject> m_PossibleTargetsHashset = new(); // for queries
+        [FoldoutGroup("Debug")]
         [ShowInInspector, ReadOnly, SerializeField]
         private List<TargetAndScore> m_QualifiedTargets = new();
         public GameObject CurrentTarget { get; }
@@ -119,6 +129,7 @@ namespace SilverPillar.Target
             return m_PossibleTargetsHashset.Contains(possibleTarget);
         }
 
+        [FoldoutGroup("Debug")]
         [Button]
         private void ChooseCurrentTarget()
         {

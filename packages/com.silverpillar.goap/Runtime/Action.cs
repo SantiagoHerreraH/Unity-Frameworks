@@ -12,6 +12,8 @@ namespace SilverPillar.GOAP
         [TabGroup("Graph Connections")]
         [Title("Preconditions")]
         public ReducedConditionType PreconditionsType;
+
+        [TabGroup("Graph Connections")]
         [Tooltip("If these are and conditions you have to make sure the children in conjunction lead to all conditions being true")]
         public List<ICondition> Preconditions = new();
 
