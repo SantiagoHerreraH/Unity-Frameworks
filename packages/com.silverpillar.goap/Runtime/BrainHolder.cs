@@ -16,30 +16,26 @@ namespace SilverPillar.GOAP
     {
         [SerializeField]
         private SO_Ref<Brain> m_BrainRef = new();
-        private Brain m_Brain = null; //just to avoid one jump
-        private ActionGroupExecutionData m_ActionGroupExecutionData = null;
-        private Action m_CurrentAction = null;
-        private ActionExecutionData m_CurrentActionExecutionData = null;
+        private BrainInstance m_BrainInstance = null;
+        private ActionInstance m_CurrentActionInstance = null;
 
         private void Awake()
         {
-            m_Brain = m_BrainRef.Get();
-            m_ActionGroupExecutionData = m_Brain.GetData(gameObject);
+            m_BrainInstance = m_BrainRef.Get().CreateInstance(gameObject);
         }
 
         void Update() 
         {
-            var newAction = m_Brain.GetAction(gameObject);
-            m_CurrentActionExecutionData =  m_ActionGroupExecutionData.GetActionExecutionData(newAction);
+            var newAction = m_BrainInstance.GetActionInstance();
             
-            if (newAction != m_CurrentAction)
+            if (newAction != m_CurrentActionInstance)
             {
-                m_CurrentActionExecutionData?.EndAction();
-                m_CurrentAction = newAction;
-                m_CurrentActionExecutionData.StartAction();
+                m_CurrentActionInstance?.EndAction();
+                m_CurrentActionInstance = newAction;
+                m_CurrentActionInstance.StartAction();
             }
 
-            m_CurrentActionExecutionData.UpdateAction();
+            m_CurrentActionInstance.UpdateAction();
 
         }
     }

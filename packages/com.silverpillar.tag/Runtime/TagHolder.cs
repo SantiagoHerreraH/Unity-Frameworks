@@ -35,7 +35,7 @@ namespace SilverPillar.Tag
             return null;
         }
 
-        public GameObject ChooseGameObjectWithTag(Tag tag, IChoose chooser)
+        public GameObject? ChooseGameObjectWithTag(Tag tag, IChoose chooser)
         {
             if (m_Tags_To_GameObjects.ContainsKey(tag))
             {

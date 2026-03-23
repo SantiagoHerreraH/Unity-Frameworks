@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace SilverPillar.Core
 {
-    public interface IChoose
+    public interface IChoose //change this to just querier without enumerable
     {
         public GameObject Choose(GameObject querier, IEnumerable<GameObject> enumerable);
     }

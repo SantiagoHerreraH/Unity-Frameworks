@@ -5,7 +5,7 @@ using UnityEngine;
 namespace SilverPillar.Stats
 {
     [Serializable]
-    public class StatComparisonCondition : ICondition
+    public class StatComparison_Condition : ICondition
     {
         public enum ConditionOperation
         {

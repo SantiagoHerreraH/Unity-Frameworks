@@ -8,12 +8,6 @@ namespace SilverPillar.Tag
     [Serializable]
     public class TagFilterCondition : ICondition
     {
-        public enum ReturnTrueIf
-        {
-            HasAllTags,
-            HasAnyTags,
-            DoesntHaveTags
-        }
 
         [Header("Follow Target if has Tags:")]
         [SerializeField]

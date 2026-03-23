@@ -6,7 +6,7 @@ using UnityEngine;
 namespace SilverPillar.Core
 {
     [CreateAssetMenu(fileName = "CachedCondition", menuName = "SilverPillar/Core/Conditions/CachedCondition")]
-    public class CachedCondition : SaveableScriptableObject
+    public class CachedCondition : SaveableScriptableObject, ICachedCondition
     {
         [OdinSerialize]
         private ICachedCondition m_CachedCondition;
@@ -17,10 +17,30 @@ namespace SilverPillar.Core
             result.SetGameObject(gameObj);
             return result;
         }
+
+        public ICachedCondition Clone()
+        {
+            return m_CachedCondition.Clone();
+        }
+
+        public GameObject GetGameObject()
+        {
+            return m_CachedCondition.GetGameObject();
+        }
+
+        public bool IsFulfilled()
+        {
+            return m_CachedCondition.IsFulfilled();
+        }
+
+        public bool SetGameObject(GameObject gameObj)
+        {
+            return m_CachedCondition.SetGameObject(gameObj);
+        }
     }
 
     [Serializable]
-    public class CachedConditionGroup
+    public class CachedConditionData
     {
 
         [SerializeField]

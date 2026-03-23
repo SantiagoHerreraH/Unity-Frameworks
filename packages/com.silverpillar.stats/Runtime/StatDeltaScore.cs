@@ -4,7 +4,7 @@ using SilverPillar.Core;
 namespace SilverPillar.Stats
 {
     [CreateAssetMenu(fileName = "StatDeltaScore", menuName = "SilverPillar/Stats/StatDeltaScore")]
-    public class StatDeltaScore : SaveableInteractionScore
+    public class StatDeltaScore : IInteractionScore
     {
         [SerializeField]
         private EntityStatIdentity m_CompareThis;
@@ -13,7 +13,7 @@ namespace SilverPillar.Stats
         [SerializeField]
         private ValueRange m_ScoreValueRange;
 
-        public override float CalculateScore(GameObject self, GameObject target)
+        public float CalculateScore(GameObject self, GameObject target)
         {
             float delta = Mathf.Abs(m_CompareThis.GetValue(self, target) - m_AgainstThis.GetValue(self, target));
 

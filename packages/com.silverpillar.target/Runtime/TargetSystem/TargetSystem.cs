@@ -5,10 +5,11 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using SilverPillar.Core;
+using Sirenix.Serialization;
 
 namespace SilverPillar.Target
 {
-    public class TargetSystem : MonoBehaviour
+    public class TargetSystem : SerializedMonoBehaviour
     {
         [Serializable]
         public struct TargetAndScore
@@ -26,12 +27,20 @@ namespace SilverPillar.Target
             OnEnable
         }
 
+        public enum WhatToDoIfPossibleTargetDoesntPassFilter
+        {
+            KeepInThePossibleTargetsArray,
+            RemoveFromThePossibleTargetsArray
+        }
+
         [TabGroup("How to Choose Current Target")]
 
         [Title("Filter")]
+        [OdinSerialize, ShowInInspector]
+        private IInteractionCondition m_ConditionToChooseTheCurrentTarget = null;
         [SerializeField]
-        private List<ConditionGroupData> m_ConditionsToChooseTheCurrentTarget = new();
-        
+        private WhatToDoIfPossibleTargetDoesntPassFilter m_WhatToDoIfPossibleTargetDoesntPassFilter;
+
         [Space(10)]
 
         [TabGroup("How to Choose Current Target")]
@@ -42,7 +51,7 @@ namespace SilverPillar.Target
 
         [TabGroup("How to Choose Current Target")]
         [SerializeField]
-        private List<SaveableScore> m_ScoringSystemToChooseTheCurrentTarget = new();
+        private List<Score> m_ScoringSystemToChooseTheCurrentTarget = new();
         private List<float> m_TempScores = new(); //  just for optimization
 
         [TabGroup("When to Choose Current Target")]
@@ -71,6 +80,13 @@ namespace SilverPillar.Target
         [ShowInInspector, ReadOnly, SerializeField]
         private List<TargetAndScore> m_QualifiedTargets = new();
         public GameObject CurrentTarget { get; }
+        
+        private bool m_Initialized = false;
+
+        private void Awake()
+        {
+            Initialize();
+        }
 
         private void OnEnable()
         {
@@ -133,22 +149,15 @@ namespace SilverPillar.Target
         [Button]
         private void ChooseCurrentTarget()
         {
+            Initialize();
+
             m_QualifiedTargets.Clear();
+
+            List<GameObject> targetsToRemove = null;
 
             foreach (GameObject possibleTarget in m_PossibleTargets)
             {
-                bool passes = true;
-
-                foreach (var condition in m_ConditionsToChooseTheCurrentTarget)
-                {
-                    if (!condition.IsFulfilled(possibleTarget))
-                    {
-                        passes = false;
-                        break;
-                    }
-                }
-
-                if (passes)
+                if (m_ConditionToChooseTheCurrentTarget.IsFulfilled(possibleTarget))
                 {
                     if (m_TempScores.Count != m_ScoringSystemToChooseTheCurrentTarget.Count)
                     {
@@ -167,6 +176,25 @@ namespace SilverPillar.Target
 
                     m_QualifiedTargets.Add(new TargetAndScore { Target = possibleTarget, Score = finalScore });
                 }
+                else if(
+                    m_WhatToDoIfPossibleTargetDoesntPassFilter ==
+                    WhatToDoIfPossibleTargetDoesntPassFilter.RemoveFromThePossibleTargetsArray)
+                {
+                    if(targetsToRemove == null)
+                    {
+                        targetsToRemove = new List<GameObject>();
+                    }
+
+                    targetsToRemove.Add(possibleTarget);
+                }
+            }
+
+            if(targetsToRemove != null)
+            {
+                foreach (var target in targetsToRemove)
+                {
+                    m_PossibleTargets.Remove(target);
+                }
             }
 
             if (m_QualifiedTargets.Count > 0)
@@ -180,6 +208,16 @@ namespace SilverPillar.Target
                 {
                     m_OnNewCurrentTarget.Invoke(m_CurrentTarget);
                 }
+            }
+        }
+
+        private void Initialize()
+        {
+            if (!m_Initialized)
+            {
+                m_ConditionToChooseTheCurrentTarget.SetGameObject(gameObject);
+                m_Initialized = true;
+
             }
         }
     }

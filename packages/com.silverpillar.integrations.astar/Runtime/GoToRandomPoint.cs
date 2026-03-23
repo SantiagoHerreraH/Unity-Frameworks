@@ -17,13 +17,26 @@ namespace SilverPillar.Integrations.AStar
         [SerializeField]
         private float m_Radius;
 
-        private AIDestinationSetter m_AIDestinationSetter = null;
-        private FollowerEntity m_FollowerEntity = null;
-        private TargetSystem m_TargetSystem = null;
+        private AIDestinationSetter m_AIDestinationSetter   = null;
+        private FollowerEntity      m_FollowerEntity        = null;
+        private TargetSystem        m_TargetSystem          = null;
+
+        public GoToRandomPoint() { }
+
+        public GoToRandomPoint(GoToRandomPoint other)
+        {
+            m_WhoIsTheCenterOfTheRadius = other.m_WhoIsTheCenterOfTheRadius;
+            m_Radius = other.m_Radius;
+
+            m_AIDestinationSetter   = other.m_AIDestinationSetter;
+            m_FollowerEntity        = other.m_FollowerEntity;
+            m_TargetSystem          = other.m_TargetSystem;
+
+        }
 
         public IAction Clone()
         {
-            throw new System.NotImplementedException();
+            return new GoToRandomPoint(this);
         }
 
         public GameObject GetGameObject()

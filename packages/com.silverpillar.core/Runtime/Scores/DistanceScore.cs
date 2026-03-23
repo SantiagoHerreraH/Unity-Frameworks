@@ -2,12 +2,12 @@ using UnityEngine;
 
 namespace SilverPillar.Core
 {
-    public class DistanceScore : SaveableInteractionScore
+    public class DistanceScore : IInteractionScore
     {
         [SerializeField]
         private ValueTransformation m_ScoreValueRange;
 
-        public override float CalculateScore(GameObject self, GameObject other)
+        public float CalculateScore(GameObject self, GameObject other)
         {
             float distance = (self.transform.position - other.transform.position).magnitude;
 

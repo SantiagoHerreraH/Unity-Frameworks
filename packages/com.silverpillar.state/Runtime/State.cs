@@ -23,7 +23,7 @@ namespace SilverPillar.State
     {
         [FoldoutGroup("Conditions")]
         [SerializeField]
-        private ConditionGroupData m_CanTransitionIf = new();
+        private ICachedCondition m_CanTransitionIf = null;
 
         [FoldoutGroup("Actions")]
         [OdinSerialize, ShowInInspector]
@@ -85,7 +85,7 @@ namespace SilverPillar.State
 
         public State(State other)
         {
-            this.m_CanTransitionIf = other.m_CanTransitionIf;
+            this.m_CanTransitionIf = other.m_CanTransitionIf.Clone();
             this.m_Actions = other.m_Actions.Select(a => a.Clone()).ToList();
             this.m_OnStart = other.m_OnStart;
             this.m_OnUpdate = other.m_OnUpdate;
@@ -116,6 +116,8 @@ namespace SilverPillar.State
         {
             if (gameObj.TryGetComponent(out m_StateMachine))
             {
+                m_CanTransitionIf.SetGameObject(gameObj);
+
                 if (m_CanTransitionToAllStates)
                 {
                     foreach (var item in m_StateMachine.States)
@@ -182,7 +184,7 @@ namespace SilverPillar.State
                     {
                         foreach (var stateData in m_StatesToTransitionTo)
                         {
-                            if (stateData.State.m_CanTransitionIf.IsFulfilled(m_StateMachine.gameObject))
+                            if (stateData.State.m_CanTransitionIf.IsFulfilled())
                             {
                                 m_StateMachine.ChangeState(stateData.StateTag);
                                 break;

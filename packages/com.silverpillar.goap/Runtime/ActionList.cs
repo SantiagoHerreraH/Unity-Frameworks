@@ -11,86 +11,76 @@ namespace SilverPillar.GOAP
     public class ActionList : SaveableScriptableObject
     {
         [OdinSerialize, ShowInInspector]
-        public HashSet<Action> PossibleActions = new();
+        private List<Action> m_PossibleActions = new();
+        public List<Action> PossibleActions { get { return m_PossibleActions; } }
+
+        private void OnValidate()
+        {
+            m_PossibleActions = m_PossibleActions.Distinct().ToList();
+        }
+
+        public ActionListInstance CreateInstance(GameObject gameObj)
+        {
+            return new ActionListInstance(this, gameObj);
+        }
     }
 
-    public class ActionExecutionData : IAction
+    public class ActionListInstance
     {
-        private List<IAction> m_ExecutableActions = new();
-        public ActionExecutionData(List<IAction> actionList, GameObject gameObject)
-        {
-            foreach (var action in actionList)
-            {
-                var clone = action.Clone();
-                clone.SetGameObject(gameObject);
+        private List<ActionInstance> m_Instances = new();
+        private Dictionary<Action, ActionInstance> m_Action_To_Instance = new();
 
-                m_ExecutableActions.Add(clone);
+        private List<Action> m_CurrentPossibleActions = new();
+        private List<Action> m_ActionsThatLeadToGoal = new();
+        public ActionListInstance(ActionList actionList, GameObject gameObject)
+        {
+            foreach (var action in actionList.PossibleActions)
+            {
+                var instance = action.CreateInstance(gameObject);
+                m_Instances.Add(instance);
+                m_Action_To_Instance.Add(action, instance);
             }
         }
 
-        public ActionExecutionData()
+        public ActionInstance GetInstance(Action action)
         {
-
+            return m_Action_To_Instance[action];
         }
 
-        public ActionExecutionData(ActionExecutionData other)
+        public ActionInstance GetRandomInstance()
         {
-            foreach (var action in other.m_ExecutableActions)
+            return m_Instances.FirstOrDefault();
+        }
+
+        public List<Action> GetCurrentPossibleActions()
+        {
+            m_CurrentPossibleActions.Clear();
+
+            foreach (var actionInstance in m_Instances)
             {
-                m_ExecutableActions.Add(action.Clone());
-            }
-        }
-
-        public IAction Clone()
-        {
-            return new ActionExecutionData(this);
-        }
-        public GameObject GetGameObject()
-        {
-            if (m_ExecutableActions.Count > 0)
-            {
-                return m_ExecutableActions.First().GetGameObject();
-            }
-
-            return null;
-        }
-
-        public bool SetGameObject(GameObject gameObj)
-        {
-            bool allGood = true;
-            foreach (var action in m_ExecutableActions)
-            {
-                if (action.SetGameObject(gameObj))
+                if (actionInstance.PreconditionsAreFulfilled())
                 {
-                    allGood = false;
+                    m_CurrentPossibleActions.Add(actionInstance.Action);
                 }
             }
 
-            return allGood;
+            return m_CurrentPossibleActions;
         }
 
-        public void EndAction()
+        public List<Action> GetActionsThatLeadToGoal(CachedCondition chosenGoal)
         {
-            foreach (var action in m_ExecutableActions)
-            {
-                action.EndAction();
-            }
-        }
+            m_ActionsThatLeadToGoal.Clear();
 
-        public void StartAction()
-        {
-            foreach (var action in m_ExecutableActions)
+            foreach (var actionInstance in m_Instances)
             {
-                action.StartAction();
+                if (actionInstance.Action.HasEffectOnWorld(chosenGoal))
+                {
+                    m_ActionsThatLeadToGoal.Add(actionInstance.Action);
+                }
             }
-        }
 
-        public void UpdateAction()
-        {
-            foreach (var action in m_ExecutableActions)
-            {
-                action.UpdateAction();
-            }
+            return m_ActionsThatLeadToGoal;
         }
     }
+
 }

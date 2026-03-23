@@ -8,21 +8,41 @@ using SilverPillar.Core;
 namespace SilverPillar.GOAP
 {
 
-    public class ActionGroupExecutionData
+    public class BrainInstance
     {
-        private Dictionary<Action, ActionExecutionData> m_Action_To_ExecutableActions = new();
-        public ActionGroupExecutionData(ActionList actionList, GameObject gameObject) 
+        private ActionListInstance m_ActionListInstance = null;
+        private GoalPlanInstance   m_GoalPlanInstance   = null;
+        private Brain m_Brain = null;
+        private GameObject m_GameObject = null;
+        public GameObject GameObject { get { return m_GameObject; } }
+        public BrainInstance(Brain brain, GameObject gameObject) 
         {
-            foreach (var action in actionList.PossibleActions)
-            {
-                m_Action_To_ExecutableActions.Add(action, action.GetActionExecutionData(gameObject));
-            }
+            m_Brain = brain;
+            m_GameObject = gameObject;
+            m_ActionListInstance = brain.ActionList.CreateInstance(gameObject);
+            m_GoalPlanInstance = brain.GoalPlan.CreateInstance(gameObject);
         }
 
 
-        public ActionExecutionData GetActionExecutionData(Action action)
+        public ActionInstance GetActionInstance()
         {
-            return m_Action_To_ExecutableActions[action];
+            ActionInstance actionInstance = null;
+            CachedCondition chosenGoal = m_GoalPlanInstance.GetGoal();
+
+            if (chosenGoal != null)
+            {
+                List<Action> currentPossibleActions = m_ActionListInstance.GetCurrentPossibleActions();
+                List<Action> actionsThatLeadToGoal = m_ActionListInstance.GetActionsThatLeadToGoal(chosenGoal);
+                Action chosenAction  = m_Brain.GetAction(m_GameObject, currentPossibleActions, actionsThatLeadToGoal);
+                actionInstance = m_ActionListInstance.GetInstance(chosenAction);
+            }
+            else
+            {
+                actionInstance = m_ActionListInstance.GetRandomInstance();
+            }
+
+            return actionInstance;
+
         }
     }
 
@@ -33,6 +53,10 @@ namespace SilverPillar.GOAP
         [SerializeField] private HowToChooseCurrentAction m_HowToChooseCurrentAction;
         [SerializeField] private GoalPlan m_GoalPlan;
         [SerializeField] private ActionList m_ActionList;
+
+        public HowToChooseCurrentAction HowToChooseCurrentAction { get { return m_HowToChooseCurrentAction; } }
+        public GoalPlan GoalPlan {  get { return m_GoalPlan; } }
+        public ActionList ActionList { get { return m_ActionList; }}
 
         [Title("When To Recreate")]
         [SerializeField]
@@ -105,9 +129,9 @@ namespace SilverPillar.GOAP
             EnsureGraphIsBuilt();
         }
 
-        public ActionGroupExecutionData GetData(GameObject gameObject)
+        public BrainInstance CreateInstance(GameObject gameObject)
         {
-            return new ActionGroupExecutionData(m_ActionList, gameObject);
+            return new BrainInstance(this, gameObject);
         }
 
         public static long CombineHashCodes(int hash1, int hash2)
@@ -277,107 +301,78 @@ namespace SilverPillar.GOAP
             return path;
         }
 
-        public Action GetAction(GameObject gameObj)
+        public Action GetAction(GameObject gameObj, List<Action> currentPossibleActions, List<Action> actionsThatLeadToGoal)
         {
             EnsureGraphIsBuilt();
 
-            ConditionGroup chosenGoal = null;
+            Action chosenAction = null;
 
-            foreach (var goal in m_GoalPlan.GoalsInOrder)
+            float chosenValue = 0;
+            float currentValue = 0;
+
+            switch (m_HowToChooseCurrentAction)
             {
-                if (!goal.IsFulfilled(gameObj))
-                {
-                    chosenGoal = goal;
+                case HowToChooseCurrentAction.MinPathCost:
+                    chosenValue = Mathf.Infinity;
                     break;
-                }
+                case HowToChooseCurrentAction.MaxScore:
+                    chosenValue = -Mathf.Infinity;
+                    break;
+                case HowToChooseCurrentAction.MaxScoreMinusMinPathCost:
+                    chosenValue = -Mathf.Infinity;
+                    break;
+                case HowToChooseCurrentAction.MaxScoreDividedByMinPathCost:
+                    chosenValue = -Mathf.Infinity;
+                    break;
+                default:
+                    break;
             }
 
-            Action chosenAction = m_ActionList.PossibleActions.First();
-
-            if (chosenGoal != null)
+            foreach (var currentPossibleAction in currentPossibleActions)
             {
-                List<Action> currentPossibleActions = new();
-                List<Action> actionsThatLeadToGoal = new();
-
-                foreach (var action in m_ActionList.PossibleActions)
+                foreach (var goalAction in actionsThatLeadToGoal)
                 {
-                    if (action.PreconditionsAreFulfilled(gameObj))
+                    var key = MakeKey(currentPossibleAction, goalAction);
+
+                    if (m_ActionPath_To_PathCost.ContainsKey(key))
                     {
-                        currentPossibleActions.Add(action);
-                    }
-                    if (action.HasEffectOnWorld(chosenGoal))
-                    {
-                        actionsThatLeadToGoal.Add(action);
-                    }
-                }
-
-                float chosenValue = 0;
-                float currentValue = 0;
-
-                switch (m_HowToChooseCurrentAction)
-                {
-                    case HowToChooseCurrentAction.MinPathCost:
-                        chosenValue = Mathf.Infinity;
-                        break;
-                    case HowToChooseCurrentAction.MaxScore:
-                        chosenValue = -Mathf.Infinity;
-                        break;
-                    case HowToChooseCurrentAction.MaxScoreMinusMinPathCost:
-                        chosenValue = -Mathf.Infinity;
-                        break;
-                    case HowToChooseCurrentAction.MaxScoreDividedByMinPathCost:
-                        chosenValue = -Mathf.Infinity;
-                        break;
-                    default:
-                        break;
-                }
-
-                foreach (var currentPossibleAction in currentPossibleActions)
-                {
-                    foreach (var goalAction in actionsThatLeadToGoal)
-                    {
-                        var key = MakeKey(currentPossibleAction, goalAction);
-
-                        if (m_ActionPath_To_PathCost.ContainsKey(key))
+                        bool currentValueIsBetter = false;
+                        switch (m_HowToChooseCurrentAction)
                         {
-                            bool currentValueIsBetter = false;
-                            switch (m_HowToChooseCurrentAction)
-                            {
-                                case HowToChooseCurrentAction.MinPathCost:
+                            case HowToChooseCurrentAction.MinPathCost:
 
-                                    currentValue = m_ActionPath_To_PathCost[key];
-                                    currentValueIsBetter = currentValue < chosenValue;
+                                currentValue = m_ActionPath_To_PathCost[key];
+                                currentValueIsBetter = currentValue < chosenValue;
 
-                                    break;
-                                case HowToChooseCurrentAction.MaxScore:
+                                break;
+                            case HowToChooseCurrentAction.MaxScore:
 
-                                    currentValue = currentPossibleAction.CalculateScore(gameObj);
-                                    currentValueIsBetter = currentValue > chosenValue;
+                                currentValue = currentPossibleAction.CalculateScore(gameObj);
+                                currentValueIsBetter = currentValue > chosenValue;
 
-                                    break;
-                                case HowToChooseCurrentAction.MaxScoreMinusMinPathCost:
+                                break;
+                            case HowToChooseCurrentAction.MaxScoreMinusMinPathCost:
 
-                                    currentValue = currentPossibleAction.CalculateScore(gameObj) - m_ActionPath_To_PathCost[key];
-                                    currentValueIsBetter = currentValue > chosenValue;
+                                currentValue = currentPossibleAction.CalculateScore(gameObj) - m_ActionPath_To_PathCost[key];
+                                currentValueIsBetter = currentValue > chosenValue;
 
-                                    break;
-                                case HowToChooseCurrentAction.MaxScoreDividedByMinPathCost:
+                                break;
+                            case HowToChooseCurrentAction.MaxScoreDividedByMinPathCost:
 
-                                    float minPathCost = m_ActionPath_To_PathCost[key];
-                                    minPathCost = minPathCost <= 0 ? 0.1f : minPathCost;
-                                    currentValue = currentPossibleAction.CalculateScore(gameObj) / minPathCost;
-                                    currentValueIsBetter = currentValue > chosenValue;
+                                float minPathCost = m_ActionPath_To_PathCost[key];
+                                minPathCost = minPathCost <= 0 ? 0.1f : minPathCost;
+                                currentValue = currentPossibleAction.CalculateScore(gameObj) / minPathCost;
+                                currentValueIsBetter = currentValue > chosenValue;
 
-                                    break;
-                                default:
-                                    break;
-                            }
+                                break;
+                            default:
+                                break;
+                        }
 
-                            if (currentValueIsBetter)
-                            {
-                                chosenAction = currentPossibleAction;
-                                chosenValue = currentValue;
-                            }
+                        if (currentValueIsBetter)
+                        {
+                            chosenAction = currentPossibleAction;
+                            chosenValue = currentValue;
                         }
                     }
                 }

@@ -2,6 +2,7 @@ using SilverPillar.Core;
 using Sirenix.OdinInspector;
 using Sirenix.Serialization;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace SilverPillar.GOAP
@@ -11,21 +12,26 @@ namespace SilverPillar.GOAP
     {
         [TabGroup("Graph Connections")]
         [Title("Preconditions")]
-        public ReducedConditionType PreconditionsType;
+        [SerializeField]
+        private PositiveConditionType m_PreconditionsType;
+        public PositiveConditionType PreconditionsType { get { return m_PreconditionsType; } }
 
         [TabGroup("Graph Connections")]
-        [Tooltip("If these are and conditions you have to make sure the children in conjunction lead to all conditions being true")]
-        public List<ICondition> Preconditions = new();
+        [SerializeField, Tooltip("If these are and conditions you have to make sure the children in conjunction lead to all conditions being true")]
+        private List<CachedCondition> m_Preconditions = new(); 
+        public List<CachedCondition> Preconditions {  get { return m_Preconditions; } }
 
         [TabGroup("Graph Connections")]
         [Title("Effects On World")]
-        public List<ICondition> EffectOnWorld = new();
-
+        [SerializeField]
+        private List<CachedCondition> m_EffectOnWorld = new(); 
+        public List<CachedCondition> EffectOnWorld { get { return m_EffectOnWorld; } }
 
         [TabGroup("Action Choosing Criteria")]
         [Title("Action Cost")]
-        [Min(0.1f)]
-        public float Cost = 1;
+        [Min(0.1f), SerializeField]
+        private float m_Cost = 1;
+        public float Cost { get { return m_Cost; } }
 
 
         [TabGroup("Action Choosing Criteria")]
@@ -35,21 +41,22 @@ namespace SilverPillar.GOAP
 
         [TabGroup("Action Data")]
         [OdinSerialize, ShowInInspector]
-        public List<IAction> Actions = new();
+        private List<IAction> m_Actions = new();
+        public List<IAction> Actions {  get { return m_Actions; } }
 
         public float CalculateScore(GameObject gameObject)
         {
             return m_ScoreGroup.CalculateScore(gameObject);
         }
 
-        public ActionExecutionData GetActionExecutionData(GameObject gameObject)
+        public ActionInstance CreateInstance(GameObject gameObject)
         {
-            return new ActionExecutionData(Actions, gameObject);
+            return new ActionInstance(this, gameObject);
         }
         public bool IsChildrenActionOfOther(Action otherAction)
         {
-            foreach (var otherEffectOnWorld in otherAction.EffectOnWorld)
-                foreach (var selfPreCondition in Preconditions)
+            foreach (var otherEffectOnWorld in otherAction.m_EffectOnWorld)
+                foreach (var selfPreCondition in m_Preconditions)
                     if (otherEffectOnWorld == selfPreCondition) return true;
 
             return false;
@@ -57,31 +64,136 @@ namespace SilverPillar.GOAP
 
         public bool IsParentActionOfOther(Action otherAction)
         {
-            foreach (var selfEffectOnWorld in EffectOnWorld)
-                foreach (var otherPreCondition in otherAction.Preconditions)
+            foreach (var selfEffectOnWorld in m_EffectOnWorld)
+                foreach (var otherPreCondition in otherAction.m_Preconditions)
                     if (selfEffectOnWorld == otherPreCondition) return true;
 
             return false;
         }
 
-        public bool PreconditionsAreFulfilled(GameObject gameObj)
+        public bool HasPrecondition(CachedCondition condition)
         {
-            return ConditionGroupData.IsFulfilled(gameObj, PreconditionsType, Preconditions);
+            return m_Preconditions.Contains(condition);
         }
 
-        public bool EffectOnWorldIsFulfilled(GameObject gameObj)
+        public bool HasEffectOnWorld(CachedCondition condition)
         {
-            return ConditionGroupData.IsFulfilled(gameObj, ConditionType.OneHasToBeTrue, EffectOnWorld);
+            return m_EffectOnWorld.Contains(condition);
+        }
+    }
+
+
+    public class ActionInstance : IAction
+    {
+        private List<IAction> m_ExecutableActions = new();
+        private List<ICachedCondition> m_Preconditions = new();
+        private PositiveConditionType m_PreconditionsType;
+
+        private Action m_Action;
+        public Action Action { get { return m_Action; } }
+
+        public ActionInstance(Action action, GameObject gameObject)
+        {
+            m_Action = action;
+            var actions = action.Actions;
+
+            foreach (var possibleAction in actions)
+            {
+                var clone = possibleAction.Clone();
+                clone.SetGameObject(gameObject);
+
+                m_ExecutableActions.Add(clone);
+            }
+
+
+            var preconditions = action.Preconditions;
+
+            foreach (var condition in preconditions)
+            {
+                var clone = condition.Clone();
+                clone.SetGameObject(gameObject);
+
+                m_Preconditions.Add(clone);
+            }
+
+            m_PreconditionsType = action.PreconditionsType;
         }
 
-        public bool HasPrecondition(ConditionGroup condition)
+        public ActionInstance()
         {
-            return Preconditions.Contains(condition);
+
         }
 
-        public bool HasEffectOnWorld(ConditionGroup condition)
+        public ActionInstance(ActionInstance other)
         {
-            return EffectOnWorld.Contains(condition);
+            m_PreconditionsType = other.m_PreconditionsType;
+
+            foreach (var action in other.m_ExecutableActions)
+            {
+                m_ExecutableActions.Add(action.Clone());
+            }
+
+            foreach (var condition in other.m_Preconditions)
+            {
+                m_Preconditions.Add(condition.Clone());
+            }
+        }
+
+        public IAction Clone()
+        {
+            return new ActionInstance(this);
+        }
+        public GameObject GetGameObject()
+        {
+            if (m_ExecutableActions.Count > 0)
+            {
+                return m_ExecutableActions.First().GetGameObject();
+            }
+
+            return null;
+        }
+
+        public bool SetGameObject(GameObject gameObj)
+        {
+            bool allGood = true;
+            foreach (var action in m_ExecutableActions)
+            {
+                if (action.SetGameObject(gameObj))
+                {
+                    allGood = false;
+                }
+            }
+
+            return allGood;
+        }
+
+        public bool PreconditionsAreFulfilled()
+        {
+            return CachedConditions.IsFulfilled(m_PreconditionsType, m_Preconditions);
+        }
+
+        public void EndAction()
+        {
+            foreach (var action in m_ExecutableActions)
+            {
+                action.EndAction();
+            }
+        }
+
+        public void StartAction()
+        {
+            foreach (var action in m_ExecutableActions)
+            {
+                action.StartAction();
+            }
+        }
+
+        public void UpdateAction()
+        {
+            foreach (var action in m_ExecutableActions)
+            {
+                action.UpdateAction();
+            }
         }
     }
 

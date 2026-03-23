@@ -11,12 +11,12 @@ namespace SilverPillar.Integrations.AStar
         [BoxGroup("FollowIf")]
         [Header("Conditions On Self")]
         [SerializeField]
-        private ConditionGroupData m_FollowIfSelf = new();
+        private ICachedCondition m_FollowIfSelf = null;
 
         [BoxGroup("FollowIf")]
         [Header("Conditions On Target")]
         [SerializeField]
-        private ConditionGroupData m_FollowIfTarget = new();
+        private ICachedCondition m_FollowIfTarget = null;
 
         [BoxGroup("Movement")]
         [SerializeField, Min(0.001f)]
@@ -59,7 +59,10 @@ namespace SilverPillar.Integrations.AStar
 
         public bool SetGameObject(GameObject gameObj)
         {
+
             return
+                m_FollowIfSelf.SetGameObject(gameObj) && 
+                m_FollowIfTarget.SetGameObject(gameObj) &&
                 gameObj.TryGetComponent<AIDestinationSetter>(out m_AIDestinationSetter) &&
                 gameObj.TryGetComponent<TargetSystem>(out m_TargetSystem) &&
                 gameObj.TryGetComponent<FollowerEntity>(out m_FollowerEntity);
@@ -72,7 +75,7 @@ namespace SilverPillar.Integrations.AStar
             {
                 if (m_TargetSystem.CurrentTarget != null)
                 {
-                    if (m_FollowIfSelf.IsFulfilled(m_TargetSystem.gameObject) && m_FollowIfTarget.IsFulfilled(m_TargetSystem.CurrentTarget))
+                    if (m_FollowIfSelf.IsFulfilled() && m_FollowIfTarget.IsFulfilled())
                     {
                         m_FollowerEntity.maxSpeed = m_MaxFollowSpeed;
                         m_AIDestinationSetter.target = m_TargetSystem.CurrentTarget.transform;

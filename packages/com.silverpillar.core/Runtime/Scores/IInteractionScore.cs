@@ -16,6 +16,12 @@ namespace SilverPillar.Core
     {
         public float CalculateScore(GameObject gameObject);
     }
+    public interface ICachedScore
+    {
+        public GameObject GetGameObject();
+        public bool SetGameObject(GameObject self);
+        public float CalculateScore();
+    }
 
     [Serializable]
     public class ConstantScore : IScore
@@ -33,8 +39,15 @@ namespace SilverPillar.Core
         public float CalculateScore(GameObject self, GameObject target);
     }
 
+    public interface ICachedInteractionScore
+    {
+        public GameObject GetGameObject();
+        public bool SetGameObject(GameObject self);
+        public float CalculateScore(GameObject target);
+    }
+
     [Serializable]
-    public class ScoreGroup
+    public class ScoreGroup : IScore
     {
         public enum HowToCalculateScore
         {
@@ -87,20 +100,26 @@ namespace SilverPillar.Core
         }
     }
 
-    public class SaveableScore : SaveableScriptableObject
+    public class Score : SaveableScriptableObject
     {
         [SerializeField]
-        private ScoreGroup m_ScoreGroup = new();
+        private IScore m_Score = null;
 
         public float CalculateScore(GameObject gameObj)
         {
-            return m_ScoreGroup.CalculateScore(gameObj);
+            return m_Score.CalculateScore(gameObj);
         }
     }
 
-    public abstract class SaveableInteractionScore : SaveableScriptableObject, IInteractionScore
+    public class InteractionScore : SaveableScriptableObject, IInteractionScore
     {
-        public abstract float CalculateScore(GameObject self, GameObject target);
+        [OdinSerialize, ShowInInspector]
+        private IInteractionScore m_IInteractionScore;
+
+        public float CalculateScore(GameObject self, GameObject target)
+        {
+            return m_IInteractionScore.CalculateScore(self, target);
+        }
     }
 }
 

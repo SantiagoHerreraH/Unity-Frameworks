@@ -14,7 +14,7 @@ namespace SilverPillar.Core
             public ActionName ActionName;
 
             [SerializeField]
-            private CachedConditionGroup m_Conditions = new();
+            private CachedConditionData m_Conditions = new();
 
             [SerializeField]
             private CachedGameActionGroup m_Actions = new();
@@ -79,7 +79,7 @@ namespace SilverPillar.Core
 
         [Title("Conditions")]
         [SerializeField]
-        private CachedConditionGroup m_ConditionsToCheckAllActions = new();
+        private CachedConditionData m_ConditionsToCheckAllActions = new();
 
 
         [Title("Actions")]

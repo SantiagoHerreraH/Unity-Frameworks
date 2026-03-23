@@ -1,15 +1,16 @@
 
 using SilverPillar.Core;
+using Sirenix.OdinInspector;
 using Sirenix.Serialization;
 using UnityEngine;
 using UnityEngine.Events;
 
 namespace SilverPillar.EventTools
 {
-    public class ConditionalTrigger : MonoBehaviour
+    public class ConditionalTrigger : SerializedMonoBehaviour
     {
-        [OdinSerialize]
-        private ConditionGroupData Condition = new();
+        [OdinSerialize, ShowInInspector]
+        private ICachedCondition Condition = null;
 
         [SerializeField]
         private UnityEvent m_OnTrue;
@@ -17,9 +18,18 @@ namespace SilverPillar.EventTools
         [SerializeField]
         private UnityEvent m_OnFalse;
 
+        private bool m_IsInitialized = false;
+
+        private void Awake()
+        {
+            Initialize();
+        }
+
         public void Trigger()
         {
-            if (Condition.IsFulfilled(gameObject))
+            Initialize();
+
+            if (Condition.IsFulfilled())
             {
                 m_OnTrue.Invoke();
             }
@@ -29,7 +39,15 @@ namespace SilverPillar.EventTools
             }
         }
 
+        private void Initialize()
+        {
+            if (!m_IsInitialized)
+            {
+                Condition.SetGameObject(gameObject);
 
+                m_IsInitialized = true;
+            }
+        }
     }
 
 
