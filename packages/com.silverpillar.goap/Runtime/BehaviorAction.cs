@@ -36,8 +36,8 @@ namespace SilverPillar.GOAP
 
         [TabGroup("Action Choosing Criteria")]
         [Title("How to Score Action")]
-        [SerializeField]
-        private ScoreGroup m_ScoreGroup;
+        [OdinSerialize, ShowInInspector]
+        private IScore m_Score;
 
         [TabGroup("Action Data")]
         [OdinSerialize, ShowInInspector]
@@ -46,7 +46,11 @@ namespace SilverPillar.GOAP
 
         public float CalculateScore(GameObject gameObject)
         {
-            return m_ScoreGroup.CalculateScore(gameObject);
+            if (m_Score == null)
+            {
+                return 0f;
+            }
+            return m_Score.CalculateScore(gameObject);
         }
 
         public BehaviorActionInstance CreateInstance(GameObject gameObject)
