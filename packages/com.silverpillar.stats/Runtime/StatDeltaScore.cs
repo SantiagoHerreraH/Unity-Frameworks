@@ -1,9 +1,10 @@
 using UnityEngine;
 using SilverPillar.Core;
+using System;
 
 namespace SilverPillar.Stats
 {
-    [CreateAssetMenu(fileName = "StatDeltaScore", menuName = "SilverPillar/Stats/StatDeltaScore")]
+    [Serializable]
     public class StatDeltaScore : IInteractionScore
     {
         [SerializeField]

@@ -7,32 +7,32 @@ using System.Linq;
 
 namespace SilverPillar.GOAP
 {
-    [CreateAssetMenu(fileName = "ActionList", menuName = "SilverPillar/GOAP/ActionList")]
-    public class ActionList : SaveableScriptableObject
+    [CreateAssetMenu(fileName = "BehaviorActionList", menuName = "SilverPillar/GOAP/BehaviorActionList")]
+    public class BehaviorActionList : SaveableScriptableObject
     {
         [OdinSerialize, ShowInInspector]
-        private List<Action> m_PossibleActions = new();
-        public List<Action> PossibleActions { get { return m_PossibleActions; } }
+        private List<BehaviorAction> m_PossibleActions = new();
+        public List<BehaviorAction> PossibleActions { get { return m_PossibleActions; } }
 
         private void OnValidate()
         {
             m_PossibleActions = m_PossibleActions.Distinct().ToList();
         }
 
-        public ActionListInstance CreateInstance(GameObject gameObj)
+        public BehaviorActionListInstance CreateInstance(GameObject gameObj)
         {
-            return new ActionListInstance(this, gameObj);
+            return new BehaviorActionListInstance(this, gameObj);
         }
     }
 
-    public class ActionListInstance
+    public class BehaviorActionListInstance
     {
-        private List<ActionInstance> m_Instances = new();
-        private Dictionary<Action, ActionInstance> m_Action_To_Instance = new();
+        private List<BehaviorActionInstance> m_Instances = new();
+        private Dictionary<BehaviorAction, BehaviorActionInstance> m_Action_To_Instance = new();
 
-        private List<Action> m_CurrentPossibleActions = new();
-        private List<Action> m_ActionsThatLeadToGoal = new();
-        public ActionListInstance(ActionList actionList, GameObject gameObject)
+        private List<BehaviorAction> m_CurrentPossibleActions = new();
+        private List<BehaviorAction> m_ActionsThatLeadToGoal = new();
+        public BehaviorActionListInstance(BehaviorActionList actionList, GameObject gameObject)
         {
             foreach (var action in actionList.PossibleActions)
             {
@@ -42,17 +42,17 @@ namespace SilverPillar.GOAP
             }
         }
 
-        public ActionInstance GetInstance(Action action)
+        public BehaviorActionInstance GetInstance(BehaviorAction action)
         {
             return m_Action_To_Instance[action];
         }
 
-        public ActionInstance GetRandomInstance()
+        public BehaviorActionInstance GetRandomInstance()
         {
             return m_Instances.FirstOrDefault();
         }
 
-        public List<Action> GetCurrentPossibleActions()
+        public List<BehaviorAction> GetCurrentPossibleActions()
         {
             m_CurrentPossibleActions.Clear();
 
@@ -67,7 +67,7 @@ namespace SilverPillar.GOAP
             return m_CurrentPossibleActions;
         }
 
-        public List<Action> GetActionsThatLeadToGoal(CachedCondition chosenGoal)
+        public List<BehaviorAction> GetActionsThatLeadToGoal(CachedCondition chosenGoal)
         {
             m_ActionsThatLeadToGoal.Clear();
 

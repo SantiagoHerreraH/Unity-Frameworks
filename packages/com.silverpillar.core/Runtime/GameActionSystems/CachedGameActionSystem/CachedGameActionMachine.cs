@@ -81,7 +81,6 @@ namespace SilverPillar.Core
         [SerializeField]
         private CachedConditionData m_ConditionsToCheckAllActions = new();
 
-
         [Title("Actions")]
         [SerializeField]
         private List<ActionData> m_ActionData = new();

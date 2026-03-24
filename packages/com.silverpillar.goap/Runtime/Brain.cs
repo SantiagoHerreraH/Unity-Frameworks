@@ -10,7 +10,7 @@ namespace SilverPillar.GOAP
 
     public class BrainInstance
     {
-        private ActionListInstance m_ActionListInstance = null;
+        private BehaviorActionListInstance m_ActionListInstance = null;
         private GoalPlanInstance   m_GoalPlanInstance   = null;
         private Brain m_Brain = null;
         private GameObject m_GameObject = null;
@@ -24,16 +24,16 @@ namespace SilverPillar.GOAP
         }
 
 
-        public ActionInstance GetActionInstance()
+        public BehaviorActionInstance GetActionInstance()
         {
-            ActionInstance actionInstance = null;
+            BehaviorActionInstance actionInstance = null;
             CachedCondition chosenGoal = m_GoalPlanInstance.GetGoal();
 
             if (chosenGoal != null)
             {
-                List<Action> currentPossibleActions = m_ActionListInstance.GetCurrentPossibleActions();
-                List<Action> actionsThatLeadToGoal = m_ActionListInstance.GetActionsThatLeadToGoal(chosenGoal);
-                Action chosenAction  = m_Brain.GetAction(m_GameObject, currentPossibleActions, actionsThatLeadToGoal);
+                List<BehaviorAction> currentPossibleActions = m_ActionListInstance.GetCurrentPossibleActions();
+                List<BehaviorAction> actionsThatLeadToGoal = m_ActionListInstance.GetActionsThatLeadToGoal(chosenGoal);
+                BehaviorAction chosenAction  = m_Brain.GetAction(m_GameObject, currentPossibleActions, actionsThatLeadToGoal);
                 actionInstance = m_ActionListInstance.GetInstance(chosenAction);
             }
             else
@@ -52,11 +52,11 @@ namespace SilverPillar.GOAP
         [Title("Creation Data")]
         [SerializeField] private HowToChooseCurrentAction m_HowToChooseCurrentAction;
         [SerializeField] private GoalPlan m_GoalPlan;
-        [SerializeField] private ActionList m_ActionList;
+        [SerializeField] private BehaviorActionList m_ActionList;
 
         public HowToChooseCurrentAction HowToChooseCurrentAction { get { return m_HowToChooseCurrentAction; } }
         public GoalPlan GoalPlan {  get { return m_GoalPlan; } }
-        public ActionList ActionList { get { return m_ActionList; }}
+        public BehaviorActionList ActionList { get { return m_ActionList; }}
 
         [Title("When To Recreate")]
         [SerializeField]
@@ -64,23 +64,23 @@ namespace SilverPillar.GOAP
         private bool m_IsDirty = false;
 
         [OdinSerialize, SerializeField, HideInInspector]
-        private Dictionary<Action, ActionNode> m_ActionToNode = new();
+        private Dictionary<BehaviorAction, ActionNode> m_ActionToNode = new();
 
         // cache: (start,target) -> cost/path
         [OdinSerialize, SerializeField, HideInInspector]
         private Dictionary<long, float> m_ActionPath_To_PathCost = new();
 
         [OdinSerialize, SerializeField, HideInInspector]
-        private Dictionary<long, List<Action>> m_ActionPath_To_Path = new();
+        private Dictionary<long, List<BehaviorAction>> m_ActionPath_To_Path = new();
 
         // -------- Priority Queue Item (no tuples) --------
         private readonly struct PQItem
         {
             public readonly float Cost;
             public readonly int Tie;
-            public readonly Action Action;
+            public readonly BehaviorAction Action;
 
-            public PQItem(float cost, int tie, Action action)
+            public PQItem(float cost, int tie, BehaviorAction action)
             {
                 Cost = cost;
                 Tie = tie;
@@ -139,7 +139,7 @@ namespace SilverPillar.GOAP
             return ((long)(uint)hash1 << 32) | (uint)hash2;
         }
 
-        private static long MakeKey(Action start, Action target)
+        private static long MakeKey(BehaviorAction start, BehaviorAction target)
         {
             return CombineHashCodes(start.GetInstanceID(), target.GetInstanceID());
         }
@@ -214,20 +214,20 @@ namespace SilverPillar.GOAP
         /// Dijkstra shortest-path (action sequence) from startAction to targetAction.
         /// Returns empty list if unreachable.
         /// </summary>
-        private List<Action> CalculateShortestPath(Action startAction, Action targetAction)
+        private List<BehaviorAction> CalculateShortestPath(BehaviorAction startAction, BehaviorAction targetAction)
         {
-            if (startAction == null || targetAction == null) return new List<Action>();
+            if (startAction == null || targetAction == null) return new List<BehaviorAction>();
 
             if (!m_ActionToNode.ContainsKey(startAction) || !m_ActionToNode.ContainsKey(targetAction))
-                return new List<Action>();
+                return new List<BehaviorAction>();
 
             long key = MakeKey(startAction, targetAction);
             if (m_ActionPath_To_Path.TryGetValue(key, out var cachedPath))
-                return new List<Action>(cachedPath); // copy to protect cache
+                return new List<BehaviorAction>(cachedPath); // copy to protect cache
 
-            var dist = new Dictionary<Action, float>(64);
-            var prev = new Dictionary<Action, Action>(64);
-            var visited = new HashSet<Action>();
+            var dist = new Dictionary<BehaviorAction, float>(64);
+            var prev = new Dictionary<BehaviorAction, BehaviorAction>(64);
+            var visited = new HashSet<BehaviorAction>();
 
             int tie = 0;
             var pq = new SortedSet<PQItem>(new PQItemComparer());
@@ -270,13 +270,13 @@ namespace SilverPillar.GOAP
 
             if (!found)
             {
-                m_ActionPath_To_Path[key] = new List<Action>();
+                m_ActionPath_To_Path[key] = new List<BehaviorAction>();
                 m_ActionPath_To_PathCost[key] = Mathf.Infinity;
-                return new List<Action>();
+                return new List<BehaviorAction>();
             }
 
             // Reconstruct
-            var path = new List<Action>();
+            var path = new List<BehaviorAction>();
             var step = targetAction;
 
             while (true)
@@ -295,17 +295,17 @@ namespace SilverPillar.GOAP
 
             path.Reverse();
 
-            m_ActionPath_To_Path[key] = new List<Action>(path);
+            m_ActionPath_To_Path[key] = new List<BehaviorAction>(path);
             m_ActionPath_To_PathCost[key] = dist.TryGetValue(targetAction, out var cst) ? cst : Mathf.Infinity;
 
             return path;
         }
 
-        public Action GetAction(GameObject gameObj, List<Action> currentPossibleActions, List<Action> actionsThatLeadToGoal)
+        public BehaviorAction GetAction(GameObject gameObj, List<BehaviorAction> currentPossibleActions, List<BehaviorAction> actionsThatLeadToGoal)
         {
             EnsureGraphIsBuilt();
 
-            Action chosenAction = null;
+            BehaviorAction chosenAction = null;
 
             float chosenValue = 0;
             float currentValue = 0;

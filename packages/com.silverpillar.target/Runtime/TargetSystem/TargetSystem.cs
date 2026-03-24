@@ -47,11 +47,12 @@ namespace SilverPillar.Target
         [Title("Scoring")]
         [InfoBox("You always choose the possible target with the highest score as the current target.")]
         [SerializeField]
-        private ScoreGroup.HowToCalculateScore m_HowToCalculateScore;
+        private HowToCalculateScore m_HowToCalculateScore;
 
         [TabGroup("How to Choose Current Target")]
         [SerializeField]
-        private List<Score> m_ScoringSystemToChooseTheCurrentTarget = new();
+        private List<CachedInteractionScore> m_ScoringSystemToChooseTheCurrentTarget = new();
+        private List<ICachedInteractionScore> m_ScoringSystemInstances = new();
         private List<float> m_TempScores = new(); //  just for optimization
 
         [TabGroup("When to Choose Current Target")]
@@ -159,20 +160,20 @@ namespace SilverPillar.Target
             {
                 if (m_ConditionToChooseTheCurrentTarget.IsFulfilled(possibleTarget))
                 {
-                    if (m_TempScores.Count != m_ScoringSystemToChooseTheCurrentTarget.Count)
+                    if (m_TempScores.Count != m_ScoringSystemInstances.Count)
                     {
                         m_TempScores.Clear();
-                        m_TempScores.AddRange(Enumerable.Repeat(0.0f, m_ScoringSystemToChooseTheCurrentTarget.Count));
+                        m_TempScores.AddRange(Enumerable.Repeat(0.0f, m_ScoringSystemInstances.Count));
                     }
 
                     int currentIdx = 0;
-                    foreach (var scoringSystem in m_ScoringSystemToChooseTheCurrentTarget)
+                    foreach (var scoringSystem in m_ScoringSystemInstances)
                     {
                         m_TempScores[currentIdx] = scoringSystem.CalculateScore(possibleTarget);
                         ++currentIdx;
                     }
 
-                    float finalScore = ScoreGroup.CalculateScore(m_HowToCalculateScore, m_TempScores);
+                    float finalScore = ScoreTools.CalculateScore(m_HowToCalculateScore, m_TempScores);
 
                     m_QualifiedTargets.Add(new TargetAndScore { Target = possibleTarget, Score = finalScore });
                 }
@@ -215,6 +216,10 @@ namespace SilverPillar.Target
         {
             if (!m_Initialized)
             {
+                foreach (var item in m_ScoringSystemToChooseTheCurrentTarget)
+                {
+                    m_ScoringSystemInstances.Add(item.Clone(gameObject));
+                }
                 m_ConditionToChooseTheCurrentTarget.SetGameObject(gameObject);
                 m_Initialized = true;
 

@@ -7,8 +7,8 @@ using UnityEngine;
 
 namespace SilverPillar.GOAP
 {
-    [CreateAssetMenu(fileName = "Action", menuName = "SilverPillar/GOAP/Action")]
-    public class Action : SaveableScriptableObject, IScore
+    [CreateAssetMenu(fileName = "BehaviorAction", menuName = "SilverPillar/GOAP/BehaviorAction")]
+    public class BehaviorAction : SaveableScriptableObject, IScore
     {
         [TabGroup("Graph Connections")]
         [Title("Preconditions")]
@@ -49,11 +49,11 @@ namespace SilverPillar.GOAP
             return m_ScoreGroup.CalculateScore(gameObject);
         }
 
-        public ActionInstance CreateInstance(GameObject gameObject)
+        public BehaviorActionInstance CreateInstance(GameObject gameObject)
         {
-            return new ActionInstance(this, gameObject);
+            return new BehaviorActionInstance(this, gameObject);
         }
-        public bool IsChildrenActionOfOther(Action otherAction)
+        public bool IsChildrenActionOfOther(BehaviorAction otherAction)
         {
             foreach (var otherEffectOnWorld in otherAction.m_EffectOnWorld)
                 foreach (var selfPreCondition in m_Preconditions)
@@ -62,7 +62,7 @@ namespace SilverPillar.GOAP
             return false;
         }
 
-        public bool IsParentActionOfOther(Action otherAction)
+        public bool IsParentActionOfOther(BehaviorAction otherAction)
         {
             foreach (var selfEffectOnWorld in m_EffectOnWorld)
                 foreach (var otherPreCondition in otherAction.m_Preconditions)
@@ -83,16 +83,16 @@ namespace SilverPillar.GOAP
     }
 
 
-    public class ActionInstance : IAction
+    public class BehaviorActionInstance : IAction
     {
         private List<IAction> m_ExecutableActions = new();
         private List<ICachedCondition> m_Preconditions = new();
         private PositiveConditionType m_PreconditionsType;
 
-        private Action m_Action;
-        public Action Action { get { return m_Action; } }
+        private BehaviorAction m_Action;
+        public BehaviorAction Action { get { return m_Action; } }
 
-        public ActionInstance(Action action, GameObject gameObject)
+        public BehaviorActionInstance(BehaviorAction action, GameObject gameObject)
         {
             m_Action = action;
             var actions = action.Actions;
@@ -119,12 +119,12 @@ namespace SilverPillar.GOAP
             m_PreconditionsType = action.PreconditionsType;
         }
 
-        public ActionInstance()
+        public BehaviorActionInstance()
         {
 
         }
 
-        public ActionInstance(ActionInstance other)
+        public BehaviorActionInstance(BehaviorActionInstance other)
         {
             m_PreconditionsType = other.m_PreconditionsType;
 
@@ -141,7 +141,7 @@ namespace SilverPillar.GOAP
 
         public IAction Clone()
         {
-            return new ActionInstance(this);
+            return new BehaviorActionInstance(this);
         }
         public GameObject GetGameObject()
         {
@@ -199,8 +199,8 @@ namespace SilverPillar.GOAP
 
     public class ActionNode
     {
-        public Action Action;
-        public List<Action> Parents = new();
-        public List<Action> Children = new();
+        public BehaviorAction Action;
+        public List<BehaviorAction> Parents = new();
+        public List<BehaviorAction> Children = new();
     }
 }

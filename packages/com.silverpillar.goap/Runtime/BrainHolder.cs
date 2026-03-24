@@ -17,7 +17,7 @@ namespace SilverPillar.GOAP
         [SerializeField]
         private SO_Ref<Brain> m_BrainRef = new();
         private BrainInstance m_BrainInstance = null;
-        private ActionInstance m_CurrentActionInstance = null;
+        private BehaviorActionInstance m_CurrentActionInstance = null;
 
         private void Awake()
         {
