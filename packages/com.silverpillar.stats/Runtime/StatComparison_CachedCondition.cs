@@ -7,19 +7,13 @@ namespace SilverPillar.Stats
     [Serializable]
     public class StatComparison_CachedCondition : ICachedCondition
     {
-        public enum ConditionOperation
-        {
-            IsLess,
-            IsMore,
-            IsEqual
-        }
 
         [Header("If")]
         [SerializeField] private StatType m_StatType;
         [SerializeField] private StatVariable m_StatVariable;
 
         [Header("Condition")]
-        [SerializeField] private ConditionOperation m_ConditionOperation;
+        [SerializeField] private FloatComparison.OperationType m_ConditionOperation;
 
         [Header("Than")]
         [SerializeField] private StatType m_OtherStatType;
@@ -46,13 +40,7 @@ namespace SilverPillar.Stats
                 float statValue = _cachedStatController.GetStat(m_StatType, m_StatVariable);
                 float statValueToCompare = _cachedStatController.GetStat(m_OtherStatType, m_OtherStatVariable);
 
-                return m_ConditionOperation switch
-                {
-                    ConditionOperation.IsLess => statValueToCompare < statValue,
-                    ConditionOperation.IsMore => statValueToCompare > statValue,
-                    ConditionOperation.IsEqual => Mathf.Approximately(statValueToCompare, statValue), // Más seguro para floats que (int)
-                    _ => false
-                };
+                return FloatComparison.Compare(statValueToCompare, m_ConditionOperation, statValue);
             }
 
             return false;

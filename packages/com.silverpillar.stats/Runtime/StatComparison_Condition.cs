@@ -22,7 +22,7 @@ namespace SilverPillar.Stats
 
         [Header("Condition")]
         [SerializeField]
-        private ConditionOperation m_ConditionOperation;
+        private FloatComparison.OperationType m_ConditionOperation;
 
         [Header("Than")]
         [SerializeField]
@@ -41,17 +41,7 @@ namespace SilverPillar.Stats
                     float statValue = statRegistry.GetStat(m_StatType, m_StatVariable);
                     float statValueToCompare = statRegistry.GetStat(m_OtherStatType, m_OtherStatVariable);
 
-                    switch (m_ConditionOperation)
-                    {
-                        case ConditionOperation.IsLess:
-                            return statValueToCompare < statValue;
-                        case ConditionOperation.IsMore:
-                            return statValueToCompare > statValue;
-                        case ConditionOperation.IsEqual:
-                            return (int)statValueToCompare == (int)statValue;
-                        default:
-                            break;
-                    }
+                    return FloatComparison.Compare(statValueToCompare, m_ConditionOperation, statValue);
                 }
             }
 

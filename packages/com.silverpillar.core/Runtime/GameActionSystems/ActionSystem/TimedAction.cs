@@ -81,12 +81,19 @@ namespace SilverPillar.Core
         public ICachedScore Time;
 
         [SerializeField]
-        public HowToInterpretTime HowToInterpretTime;
+        public SimpleTimer Timer;
+
+        public void ResetTimer()
+        {
+            Timer.SetMaxTime(Time.CalculateScore());
+            Timer.ResetTimer();
+        }
+
 
         public ActionTime(ActionTime other)
         {
             Time = other.Time.Clone();
-            HowToInterpretTime = other.HowToInterpretTime;
+            Timer = other.Timer;
         }
 
         public ActionTime Clone()
@@ -135,12 +142,6 @@ namespace SilverPillar.Core
         [FoldoutGroup("Actions")]
         [SerializeField]
         private List<ActionData> m_Actions = new();
-
-        private int m_CurrentTickNumber = 0;
-        private int m_MaxTickNumber = 0;
-
-        private float m_CurrentTime = 0f;
-        private float m_MaxTime;
 
         private bool m_IsOnWaitTime;
         private bool m_IsRunning = true;
@@ -208,12 +209,15 @@ namespace SilverPillar.Core
                 return;
             }
 
-            m_CurrentTime += Time.deltaTime;
-            ++m_CurrentTickNumber;
 
             if (!m_IsOnWaitTime)
             {
+                m_ActionTime.Timer.Update();
                 UpdateAllActions();
+            }
+            else
+            {
+                m_WaitTime.Timer.Update();
             }
 
             if (CanSwitchBetweenTimeModes())
@@ -263,41 +267,21 @@ namespace SilverPillar.Core
 
         private bool CanSwitchBetweenTimeModes()
         {
+            if (!m_UsesWaitTime)
+            {
+                return m_ActionTime.Timer.IsFinished();
+            }
+
             if (m_IsOnWaitTime)
             {
-                switch (m_WaitTime.HowToInterpretTime)
-                {
-                    case HowToInterpretTime.InSeconds:
-
-                        return m_CurrentTime >= m_MaxTime;
-
-                    case HowToInterpretTime.InTickCount:
-
-
-                        return m_CurrentTickNumber >= m_MaxTickNumber;
-                    default:
-                        break;
-                }
+                return m_WaitTime.Timer.IsFinished();
             }
             else
             {
-                switch (m_ActionTime.HowToInterpretTime)
-                {
-                    case HowToInterpretTime.InSeconds:
 
-                        return m_CurrentTime >= m_MaxTime;
-
-                    case HowToInterpretTime.InTickCount:
-
-
-                        return m_CurrentTickNumber >= m_MaxTickNumber;
-                    default:
-                        break;
-                }
-
+                return m_ActionTime.Timer.IsFinished();
             }
 
-            return false;
         }
 
         private void NextTimeMode()
@@ -338,37 +322,13 @@ namespace SilverPillar.Core
         }
         private void RecalculateTime()
         {
-            m_CurrentTickNumber = 0;
-            m_CurrentTime = 0f;
-
             if (m_UsesWaitTime && m_IsOnWaitTime)
             {
-                switch (m_WaitTime.HowToInterpretTime)
-                {
-                    case HowToInterpretTime.InSeconds:
-                        m_MaxTime = m_WaitTime.Time.CalculateScore();
-                        break;
-                    case HowToInterpretTime.InTickCount:
-                        m_MaxTickNumber = (int)m_WaitTime.Time.CalculateScore();
-                        break;
-                    default:
-                        break;
-                }
+                m_WaitTime.ResetTimer();
             }
             else 
             {
-                switch (m_ActionTime.HowToInterpretTime)
-                {
-                    case HowToInterpretTime.InSeconds:
-                        m_MaxTime = m_ActionTime.Time.CalculateScore();
-                        break;
-                    case HowToInterpretTime.InTickCount:
-                        m_MaxTickNumber = (int)m_ActionTime.Time.CalculateScore();
-                        break;
-                    default:
-                        break;
-                }
-
+                m_ActionTime.ResetTimer();
             }
         }
 

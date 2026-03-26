@@ -61,6 +61,52 @@ namespace SilverPillar.Stats
 
             return 0;
         }
+
+        public float GetValue(StatController self, StatController other)
+        {
+            StatController statController = null;
+            switch (From)
+            {
+                case TargetType.Self:
+                    statController = self;
+                    break;
+                case TargetType.Other:
+                    statController = other;
+                    break;
+                default:
+                    break;
+            }
+
+            if (statController)
+            {
+                return statController.GetStat(StatType, StatVariable);
+            }
+
+            return 0;
+        }
+
+        public bool CanGetValue(StatController self, StatController other)
+        {
+            StatController statController = null;
+            switch (From)
+            {
+                case TargetType.Self:
+                    statController = self;
+                    break;
+                case TargetType.Other:
+                    statController = other;
+                    break;
+                default:
+                    break;
+            }
+
+            if (statController)
+            {
+                return statController.HasStatType(StatType);
+            }
+
+            return false;
+        }
     }
 
     [Serializable]
