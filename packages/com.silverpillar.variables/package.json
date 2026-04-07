@@ -1,0 +1,10 @@
+{
+  "name": "com.silverpillar.variables",
+  "displayName": "Silver Pillar Variables System",
+  "version": "1.0.0",
+  "unity": "2022.3",
+  "description": "Variables System for the SilverPillar framework.",
+  "author": {
+    "name": "Santiago Herrera Huerta"
+  }
+}

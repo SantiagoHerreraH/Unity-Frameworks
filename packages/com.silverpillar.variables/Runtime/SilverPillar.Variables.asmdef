@@ -1,0 +1,16 @@
+{
+    "name": "SilverPillar.Variables",
+    "rootNamespace": "SilverPillar.Variables",
+    "references": [
+        "SilverPillar.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

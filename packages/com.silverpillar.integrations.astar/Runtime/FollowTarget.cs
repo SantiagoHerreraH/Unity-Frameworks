@@ -3,6 +3,7 @@ using SilverPillar.Core;
 using SilverPillar.Target;
 using Pathfinding;
 using Sirenix.OdinInspector;
+using Sirenix.Serialization;
 
 namespace SilverPillar.Integrations.AStar
 {
@@ -10,17 +11,17 @@ namespace SilverPillar.Integrations.AStar
     {
         [BoxGroup("FollowIf")]
         [Header("Conditions On Self")]
-        [SerializeField]
+        [OdinSerialize, ShowInInspector]
         private ICachedCondition m_FollowIfSelf = null;
 
         [BoxGroup("FollowIf")]
         [Header("Conditions On Target")]
-        [SerializeField]
+        [OdinSerialize, ShowInInspector]
         private ICachedCondition m_FollowIfTarget = null;
 
         [BoxGroup("Movement")]
-        [SerializeField, Min(0.001f)]
-        private float m_MaxFollowSpeed = 1f;
+        [OdinSerialize, ShowInInspector, Tooltip("If null will default to 1")]
+        private ICachedScore m_MaxFollowSpeed ;
 
 
         AIDestinationSetter m_AIDestinationSetter = null;
@@ -59,10 +60,14 @@ namespace SilverPillar.Integrations.AStar
 
         public bool SetGameObject(GameObject gameObj)
         {
+            bool followIfSelf   = m_FollowIfSelf != null ? m_FollowIfSelf.SetGameObject(gameObj) : true;
+            bool maxFollowSpeed = m_MaxFollowSpeed != null ? m_MaxFollowSpeed.SetGameObject(gameObj) : true;
+            bool followIfTarget = m_FollowIfTarget != null ? m_FollowIfTarget.SetGameObject(gameObj) : true;
 
             return
-                m_FollowIfSelf.SetGameObject(gameObj) && 
-                m_FollowIfTarget.SetGameObject(gameObj) &&
+                followIfSelf &&
+                maxFollowSpeed && 
+                followIfTarget &&
                 gameObj.TryGetComponent<AIDestinationSetter>(out m_AIDestinationSetter) &&
                 gameObj.TryGetComponent<TargetSystem>(out m_TargetSystem) &&
                 gameObj.TryGetComponent<FollowerEntity>(out m_FollowerEntity);
@@ -70,14 +75,16 @@ namespace SilverPillar.Integrations.AStar
 
         public void StartAction()
         {
-
             if (m_AIDestinationSetter && m_TargetSystem && m_FollowerEntity)
             {
                 if (m_TargetSystem.CurrentTarget != null)
                 {
-                    if (m_FollowIfSelf.IsFulfilled() && m_FollowIfTarget.IsFulfilled())
+                    bool followIfSelfIsFulfilled = m_FollowIfSelf != null ? m_FollowIfSelf.IsFulfilled() : true;
+                    bool followIfTargetIsFulfilled = m_FollowIfTarget != null ? m_FollowIfTarget.IsFulfilled() : true;
+
+                    if (followIfSelfIsFulfilled && followIfTargetIsFulfilled)
                     {
-                        m_FollowerEntity.maxSpeed = m_MaxFollowSpeed;
+                        m_FollowerEntity.maxSpeed = m_MaxFollowSpeed != null ? m_MaxFollowSpeed.CalculateScore() : 1f;
                         m_AIDestinationSetter.target = m_TargetSystem.CurrentTarget.transform;
                     }
                 }

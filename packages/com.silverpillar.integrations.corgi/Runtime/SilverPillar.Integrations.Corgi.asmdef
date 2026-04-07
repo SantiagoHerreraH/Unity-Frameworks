@@ -3,6 +3,8 @@
   "rootNamespace": "SilverPillar.Integrations.Corgi",
   "references": [
     "SilverPillar.Core",
+    "SilverPillar.Stats",
+    "SilverPillar.Modules",
     "MoreMountains.CorgiEngine",
     "MoreMountains.Tools",
     "MoreMountains.Feedbacks",
@@ -14,7 +16,22 @@
   "overrideReferences": false,
   "precompiledReferences": [],
   "autoReferenced": true,
-  "defineConstraints": [ "CORGI_ENGINE" ],
-  "versionDefines": [],
+  "defineConstraints": [
+    "CORGI_ENGINE",
+    "HAS_SILVERPILLAR_STATS",
+    "HAS_SILVERPILLAR_MODULES"
+  ],
+  "versionDefines": [
+    {
+      "name": "com.silverpillar.stats",
+      "expression": "0.0.1",
+      "define": "HAS_SILVERPILLAR_STATS"
+    },
+    {
+      "name": "com.silverpillar.modules",
+      "expression": "0.0.1",
+      "define": "HAS_SILVERPILLAR_MODULES"
+    }
+  ],
   "noEngineReferences": false
 }

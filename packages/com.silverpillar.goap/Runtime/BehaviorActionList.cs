@@ -23,6 +23,16 @@ namespace SilverPillar.GOAP
         {
             return new BehaviorActionListInstance(this, gameObj);
         }
+
+#if UNITY_EDITOR
+        [Button("Retrieve All Behaviour Actions", ButtonSizes.Medium)]
+        private void RetrieveAllEditorOnly()
+        {
+            ScriptableObjectRegistry.Instance.RefreshCacheEditorOnly();
+            m_PossibleActions.Clear();
+            m_PossibleActions = ScriptableObjectRegistry.Instance.GetAllOfType<BehaviorAction>();
+        }
+#endif
     }
 
     public class BehaviorActionListInstance

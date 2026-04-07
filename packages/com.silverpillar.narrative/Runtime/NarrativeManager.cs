@@ -12,7 +12,7 @@ namespace SilverPillar.Narrative
 
     public class Goal
     {
-        public List<SaveableCondition> ConditionsToFulfillGoal = new();
+        public List<ICachedCondition> ConditionsToFulfillGoal = new();
     }
 
     public class Emotion

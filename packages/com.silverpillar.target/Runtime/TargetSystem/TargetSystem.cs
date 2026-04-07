@@ -9,14 +9,15 @@ using Sirenix.Serialization;
 
 namespace SilverPillar.Target
 {
+    [Serializable]
+    public struct TargetAndScore
+    {
+        public GameObject Target;
+        public float Score;
+    }
     public class TargetSystem : SerializedMonoBehaviour
     {
-        [Serializable]
-        public struct TargetAndScore
-        {
-            public GameObject Target;
-            public float Score;
-        }
+        
 
         public enum WhenToChooseTarget
         {
@@ -33,38 +34,37 @@ namespace SilverPillar.Target
             RemoveFromThePossibleTargetsArray
         }
 
-        [TabGroup("How to Choose Current Target")]
+        [FoldoutGroup("How to Choose Current Target")]
 
         [Title("Filter")]
         [OdinSerialize, ShowInInspector]
         private IInteractionCondition m_ConditionToChooseTheCurrentTarget = null;
+        [FoldoutGroup("How to Choose Current Target")]
         [SerializeField]
         private WhatToDoIfPossibleTargetDoesntPassFilter m_WhatToDoIfPossibleTargetDoesntPassFilter;
 
         [Space(10)]
 
-        [TabGroup("How to Choose Current Target")]
+        [FoldoutGroup("How to Choose Current Target")]
         [Title("Scoring")]
-        [InfoBox("You always choose the possible target with the highest score as the current target.")]
         [SerializeField]
-        private HowToCalculateScore m_HowToCalculateScore;
+        private WhichScoreToChoose m_WhichScoreToChoose;
 
-        [TabGroup("How to Choose Current Target")]
-        [SerializeField]
-        private List<CachedInteractionScore> m_ScoringSystemToChooseTheCurrentTarget = new();
-        private List<ICachedInteractionScore> m_ScoringSystemInstances = new();
+        [FoldoutGroup("How to Choose Current Target")]
+        [OdinSerialize, ShowInInspector]
+        private ICachedInteractionScore m_HowToCalculateScore;
         private List<float> m_TempScores = new(); //  just for optimization
 
-        [TabGroup("When to Choose Current Target")]
+        [FoldoutGroup("When to Choose Current Target")]
         [SerializeField]
         private WhenToChooseTarget m_WhenToChooseTarget;
 
-        [TabGroup("When to Choose Current Target")]
+        [FoldoutGroup("When to Choose Current Target")]
         [SerializeField, Min(0), Tooltip("0 means every tick"), ShowIf(nameof(m_WhenToChooseTarget), WhenToChooseTarget.OnUpdate)]
         private float m_HowOftenToRecalculateCurrentTarget;
         private float m_TimeSinceLastCalculatedCurrentTarget = 0;
 
-        [TabGroup("Events")]
+        [FoldoutGroup("Events")]
         [SerializeField]
         private UnityEvent<GameObject> m_OnNewCurrentTarget = new();
 
@@ -80,7 +80,8 @@ namespace SilverPillar.Target
         [FoldoutGroup("Debug")]
         [ShowInInspector, ReadOnly, SerializeField]
         private List<TargetAndScore> m_QualifiedTargets = new();
-        public GameObject CurrentTarget { get; }
+        public GameObject CurrentTarget { get { return m_CurrentTarget; } }
+        public List<GameObject> PossibleTargets { get { return m_PossibleTargets; } }
         
         private bool m_Initialized = false;
 
@@ -146,6 +147,17 @@ namespace SilverPillar.Target
             return m_PossibleTargetsHashset.Contains(possibleTarget);
         }
 
+        public void ChangeCurrentTarget(GameObject newTarget)
+        {
+            var oldTarget = m_CurrentTarget;
+            m_CurrentTarget = newTarget;
+
+            if (newTarget != oldTarget)
+            {
+                m_OnNewCurrentTarget.Invoke(newTarget);
+            }
+        }
+
         [FoldoutGroup("Debug")]
         [Button]
         private void ChooseCurrentTarget()
@@ -160,20 +172,7 @@ namespace SilverPillar.Target
             {
                 if (m_ConditionToChooseTheCurrentTarget.IsFulfilled(possibleTarget))
                 {
-                    if (m_TempScores.Count != m_ScoringSystemInstances.Count)
-                    {
-                        m_TempScores.Clear();
-                        m_TempScores.AddRange(Enumerable.Repeat(0.0f, m_ScoringSystemInstances.Count));
-                    }
-
-                    int currentIdx = 0;
-                    foreach (var scoringSystem in m_ScoringSystemInstances)
-                    {
-                        m_TempScores[currentIdx] = scoringSystem.CalculateScore(possibleTarget);
-                        ++currentIdx;
-                    }
-
-                    float finalScore = ScoreTools.CalculateScore(m_HowToCalculateScore, m_TempScores);
+                    float finalScore = m_HowToCalculateScore != null ? m_HowToCalculateScore.CalculateScore(possibleTarget) : 0f;
 
                     m_QualifiedTargets.Add(new TargetAndScore { Target = possibleTarget, Score = finalScore });
                 }
@@ -200,15 +199,29 @@ namespace SilverPillar.Target
 
             if (m_QualifiedTargets.Count > 0)
             {
-                var oldTarget = m_CurrentTarget;
-                m_CurrentTarget = m_QualifiedTargets
-                    .OrderByDescending(t => t.Score)
-                    .FirstOrDefault().Target;
-
-                if (oldTarget != m_CurrentTarget)
+                GameObject newTarget = null;
+                switch (m_WhichScoreToChoose)
                 {
-                    m_OnNewCurrentTarget.Invoke(m_CurrentTarget);
+                    case WhichScoreToChoose.Highest:
+
+                        newTarget = m_QualifiedTargets
+                            .OrderByDescending(t => t.Score)
+                            .FirstOrDefault().Target;
+
+                        break;
+                    case WhichScoreToChoose.Lowest:
+
+                        newTarget = m_QualifiedTargets
+                            .OrderByDescending(t => t.Score)
+                            .LastOrDefault().Target;
+
+                        break;
+                    default:
+                        break;
                 }
+
+                ChangeCurrentTarget(newTarget);
+
             }
         }
 
@@ -216,11 +229,8 @@ namespace SilverPillar.Target
         {
             if (!m_Initialized)
             {
-                foreach (var item in m_ScoringSystemToChooseTheCurrentTarget)
-                {
-                    m_ScoringSystemInstances.Add(item.Clone(gameObject));
-                }
-                m_ConditionToChooseTheCurrentTarget.SetGameObject(gameObject);
+                m_HowToCalculateScore?.SetGameObject(gameObject);
+                m_ConditionToChooseTheCurrentTarget?.SetGameObject(gameObject);
                 m_Initialized = true;
 
             }

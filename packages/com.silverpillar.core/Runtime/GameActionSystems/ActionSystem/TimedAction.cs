@@ -3,6 +3,7 @@ using Sirenix.Serialization;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace SilverPillar.Core
 {
@@ -112,6 +113,9 @@ namespace SilverPillar.Core
             WaitTime
         }
 
+        [FoldoutGroup("Time Settings")]
+        [SerializeField, ShowIf(nameof(m_UsesWaitTime))]
+        private StartWith m_StartWith;
         [FoldoutGroup("Action Time")]
         [SerializeField]
         private ActionTime m_ActionTime = new();
@@ -122,9 +126,6 @@ namespace SilverPillar.Core
         [FoldoutGroup("Wait Time")]
         [SerializeField, ShowIf(nameof(m_UsesWaitTime))]
         private ActionTime m_WaitTime = new();
-        [FoldoutGroup("Wait Time")]
-        [SerializeField, ShowIf(nameof(m_UsesWaitTime))]
-        private StartWith m_StartWith;
 
 
         [FoldoutGroup("When To Stop Action")]
@@ -142,6 +143,20 @@ namespace SilverPillar.Core
         [FoldoutGroup("Actions")]
         [SerializeField]
         private List<ActionData> m_Actions = new();
+
+
+        [FoldoutGroup("Action Events")]
+        [SerializeField]
+        private UnityEvent m_OnStartActionTime = new();
+        [FoldoutGroup("Action Events")]
+        [SerializeField]
+        private UnityEvent m_OnEndActionTime = new();
+        [FoldoutGroup("Wait Time Events")]
+        [SerializeField]
+        private UnityEvent m_OnStartWaitTime = new();
+        [FoldoutGroup("Wait Time Events")]
+        [SerializeField]
+        private UnityEvent m_OnEndWaitTime = new();
 
         private bool m_IsOnWaitTime;
         private bool m_IsRunning = true;
@@ -247,6 +262,7 @@ namespace SilverPillar.Core
 
         private void StartAllActions()
         {
+            m_OnStartActionTime.Invoke();
             foreach (var action in m_Actions)
                 action.StartAction();
         }
@@ -260,6 +276,7 @@ namespace SilverPillar.Core
 
         private void EndAllActions()
         {
+            m_OnEndActionTime.Invoke();
             foreach (var action in m_Actions)
                 action.EndAction();
 
@@ -295,6 +312,7 @@ namespace SilverPillar.Core
                         ++m_CurrentRepetitions;
                     }
 
+                    m_OnEndWaitTime.Invoke();
                     m_IsOnWaitTime = false;
                     RecalculateTime();
                     StartAllActions();
@@ -324,6 +342,7 @@ namespace SilverPillar.Core
         {
             if (m_UsesWaitTime && m_IsOnWaitTime)
             {
+                m_OnStartWaitTime.Invoke();
                 m_WaitTime.ResetTimer();
             }
             else 

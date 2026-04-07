@@ -4,10 +4,11 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using SilverPillar.Core;
+using Sirenix.Serialization;
 
 namespace SilverPillar.Notifier
 {
-    public class ChannelNotifier : MonoBehaviour
+    public class ChannelNotifier : SerializedMonoBehaviour
     {
         [Header("Locking")]
         [SerializeField, Tooltip("If it is locked, data sending won't work even if you call it")]
@@ -19,6 +20,10 @@ namespace SilverPillar.Notifier
         [SerializeField]
         private List<Channel> m_ChannelsToNotifyIn;
         public List<Channel> ChannelsToNotifyIn { get { return m_ChannelsToNotifyIn; } }
+
+        [Header("Notify Filter")]
+        [OdinSerialize, ShowInInspector, Tooltip("If left null, there won't be any filter")]
+        private IInteractionCondition m_NotifyIf;
 
         [Header("Events")]
         [SerializeField, Tooltip("Called once when you send to all of the possible receivers within your allowed channels.Called right before you notify them")]
@@ -56,14 +61,14 @@ namespace SilverPillar.Notifier
             CheckActionsOnSelf(true);
         }
 
-        [SerializeField, Tooltip("These actions are executed on listen")]
+        [OdinSerialize, ShowInInspector, Tooltip("These actions are executed on listen")]
         private List<IGameAction> m_ActionsToExecuteOnSelf = new();
 
         [Header("Actions On Listener")]
 
         [SerializeField]
         private bool m_CheckIfActionsOnListenerCanExecuteBeforeExecutingThem;
-        [SerializeField, Tooltip("These actions are executed on notify to.")]
+        [OdinSerialize, ShowInInspector, Tooltip("These actions are executed on notify to.")]
         private List<IGameAction> m_ActionsToExecuteOnListener = new();
 
         private List<ChannelListener> m_PossibleChannelListeners = new();
@@ -241,6 +246,11 @@ namespace SilverPillar.Notifier
                 return;
             }
 
+            if (m_NotifyIf != null && m_NotifyIf.GetGameObject() == null)
+            {
+                m_NotifyIf.SetGameObject(gameObject);
+            }
+
             if (m_PossibleChannelListeners.Count == 0)
             {
                 RefreshPossibleListeners();
@@ -305,9 +315,12 @@ namespace SilverPillar.Notifier
 
         private void NotifyListeners()
         {
-            foreach (var receiver in m_PossibleChannelListeners)
+            foreach (var listener in m_PossibleChannelListeners)
             {
-                NotifyListener(receiver);
+                if (m_NotifyIf == null || m_NotifyIf.IsFulfilled(listener.gameObject))
+                {
+                    NotifyListener(listener);
+                }
             }
         }
 

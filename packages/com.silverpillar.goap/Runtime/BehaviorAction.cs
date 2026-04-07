@@ -173,6 +173,11 @@ namespace SilverPillar.GOAP
 
         public bool PreconditionsAreFulfilled()
         {
+            if (m_Preconditions.Count == 0)
+            {
+                return true;
+            }
+
             return CachedConditions.IsFulfilled(m_PreconditionsType, m_Preconditions);
         }
 

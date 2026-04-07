@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector.Editor;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -6,13 +7,23 @@ namespace SilverPillar.Core
 {
     public class TimedActionController : MonoBehaviour
     {
+        [Header("Data Scriptable Objects")]
         [SerializeField]
         private List<SO_Ref<TimedAction>> m_TimedActions = new();
         private Dictionary<SO_Ref<TimedAction>, List<TimedActionData>> m_TimedActions_To_Instances = new();
+
+
+        [Header("Non Scriptable Object Data")]
+        [SerializeField]
         private List<TimedActionData> m_TimedActionInstances = new();
         private List<TimedActionData> m_InstancesToRemove = new();
         void Start()
         {
+            foreach (var item in m_TimedActionInstances)
+            {
+                item.SetGameObject(gameObject);
+            }
+
             foreach (var item in m_TimedActions)
             {
                 var clone = item.Get().Clone(gameObject);

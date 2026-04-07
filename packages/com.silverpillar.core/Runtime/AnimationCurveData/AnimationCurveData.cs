@@ -16,7 +16,7 @@ namespace SilverPillar.Core
         public float MinInput;
         public float MaxInput;
 
-        public SO_Ref<AnimationCurveData> RemapTo;
+        public AnimationCurve RemapCurve;
 
         public float MinOutput;
         public float MaxOutput;
@@ -25,7 +25,7 @@ namespace SilverPillar.Core
         {
 
             float clamped = Mathf.Clamp(input, MinInput, MaxInput);
-            float defaultPercentage = RemapTo.Get().Curve.Evaluate(clamped / MaxInput);
+            float defaultPercentage = RemapCurve.Evaluate(clamped / MaxInput);
             return ((MaxOutput - MinOutput) * defaultPercentage) + MinOutput;
         }
     }
