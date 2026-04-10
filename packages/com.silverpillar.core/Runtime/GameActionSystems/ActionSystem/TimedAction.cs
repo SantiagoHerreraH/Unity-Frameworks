@@ -112,49 +112,62 @@ namespace SilverPillar.Core
             ActionTime,
             WaitTime
         }
-
-        [FoldoutGroup("Time Settings")]
+        [SerializeField]
+        private string m_Description;
+        [FoldoutGroup("Data")]
+        [FoldoutGroup("Data/Time Settings")]
         [SerializeField, ShowIf(nameof(m_UsesWaitTime))]
         private StartWith m_StartWith;
-        [FoldoutGroup("Action Time")]
+        [FoldoutGroup("Data")]
+        [FoldoutGroup("Data/Action Time")]
         [SerializeField]
         private ActionTime m_ActionTime = new();
 
-        [FoldoutGroup("Wait Time")]
+        [FoldoutGroup("Data")]
+        [FoldoutGroup("Data/Wait Time")]
         [SerializeField]
         private bool m_UsesWaitTime = true;
-        [FoldoutGroup("Wait Time")]
+        [FoldoutGroup("Data")]
+        [FoldoutGroup("Data/Wait Time")]
         [SerializeField, ShowIf(nameof(m_UsesWaitTime))]
         private ActionTime m_WaitTime = new();
 
 
-        [FoldoutGroup("When To Stop Action")]
+        [FoldoutGroup("Data")]
+        [FoldoutGroup("Data/When To Stop Action")]
         [SerializeField, Min(-1), Tooltip("-1 is infinite reps")]
         private int m_RepetitionNumber = 0;
 
-        [FoldoutGroup("When To Stop Action")]
+        [FoldoutGroup("Data")]
+        [FoldoutGroup("Data/When To Stop Action")]
         [OdinSerialize, ShowInInspector]
         private ICachedCondition m_ConditionToStop = null;
 
-        [FoldoutGroup("When To Stop Action")]
+        [FoldoutGroup("Data")]
+        [FoldoutGroup("Data/When To Stop Action")]
         [SerializeField]
         private bool m_CallEndActionsWhenTimeActionEnds;
 
-        [FoldoutGroup("Actions")]
+        [FoldoutGroup("Data")]
+        [FoldoutGroup("Data/Actions")]
         [SerializeField]
         private List<ActionData> m_Actions = new();
 
 
-        [FoldoutGroup("Action Events")]
+        [FoldoutGroup("Data")]
+        [FoldoutGroup("Data/Action Events")]
         [SerializeField]
         private UnityEvent m_OnStartActionTime = new();
-        [FoldoutGroup("Action Events")]
+        [FoldoutGroup("Data")]
+        [FoldoutGroup("Data/Action Events")]
         [SerializeField]
         private UnityEvent m_OnEndActionTime = new();
-        [FoldoutGroup("Wait Time Events")]
+        [FoldoutGroup("Data")]
+        [FoldoutGroup("Data/Wait Time Events")]
         [SerializeField]
         private UnityEvent m_OnStartWaitTime = new();
-        [FoldoutGroup("Wait Time Events")]
+        [FoldoutGroup("Data")]
+        [FoldoutGroup("Data/Wait Time Events")]
         [SerializeField]
         private UnityEvent m_OnEndWaitTime = new();
 
@@ -359,7 +372,7 @@ namespace SilverPillar.Core
             bool allSet = true;
 
             m_ActionTime.Time.SetGameObject(gameObj);
-            m_WaitTime.Time.SetGameObject(gameObj);
+            m_WaitTime.Time?.SetGameObject(gameObj);
             m_ConditionToStop?.SetGameObject(gameObj);
 
             foreach (var action in m_Actions)

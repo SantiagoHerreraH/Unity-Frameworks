@@ -1,11 +1,13 @@
+using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
+using Sirenix.Serialization;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 namespace SilverPillar.Core
 {
-    public class TimedActionController : MonoBehaviour
+    public class TimedActionController : SerializedMonoBehaviour
     {
         [Header("Data Scriptable Objects")]
         [SerializeField]
@@ -14,7 +16,7 @@ namespace SilverPillar.Core
 
 
         [Header("Non Scriptable Object Data")]
-        [SerializeField]
+        [OdinSerialize, ShowInInspector]
         private List<TimedActionData> m_TimedActionInstances = new();
         private List<TimedActionData> m_InstancesToRemove = new();
         void Start()

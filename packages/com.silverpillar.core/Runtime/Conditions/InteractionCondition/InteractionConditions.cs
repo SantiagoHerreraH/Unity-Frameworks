@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace SilverPillar.Core
 {
+#nullable enable
     [Serializable]
     public class InteractionConditionGroup : IInteractionCondition
     {

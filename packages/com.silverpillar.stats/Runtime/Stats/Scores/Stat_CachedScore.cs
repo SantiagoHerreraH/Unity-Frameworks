@@ -4,6 +4,9 @@ using UnityEngine;
 
 namespace SilverPillar.Stats
 {
+
+#nullable enable
+
     [Serializable]
     public class Stat_CachedScore : ICachedScore
     {

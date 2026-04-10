@@ -1,9 +1,12 @@
+using JetBrains.Annotations;
+using SilverPillar.Core;
 using Sirenix.OdinInspector;
 using Sirenix.Serialization;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
-using SilverPillar.Core;
+using UnityEngine.Events;
 
 namespace SilverPillar.Stats
 {
@@ -137,65 +140,45 @@ namespace SilverPillar.Stats
         }
     }
 
-    public class StatController : MonoBehaviour
+    [Serializable]
+    public class StatModifierFactoryData
     {
-        [Title("Stat Modifiers")]
-        [OdinSerialize]
-        private List<SO_Ref<StatModifier>> m_StatModifiers = new();
-        public List<SO_Ref<StatModifier>> StatModifiers { get { return m_StatModifiers; } }
-
-        [Title("Stat Modifier Factories")]
-        private List<SO_Ref<StatModifierFactory>> m_StatModifierFactories = new();
-        public List<SO_Ref<StatModifierFactory>> StatModifierFactories { get { return m_StatModifierFactories; } }
-        [ReadOnly]
-        private Dictionary<SO_Ref<StatModifierFactory>, List<IStatModifier>> m_StatModifierFactory_To_StatModifiers = new();
+        [OdinSerialize, ShowInInspector]
+        private List<IStatModifierFactory> m_StatModifierFactories = new();
+        public List<IStatModifierFactory> StatModifierFactories { get { return m_StatModifierFactories; } }
+        [ReadOnly, ShowInInspector]
+        private Dictionary<IStatModifierFactory, List<IStatModifier>> m_StatModifierFactory_To_StatModifiers = new();
         private List<IStatModifier> m_StatModifiersCreatedByFactories = new();
+        public List<IStatModifier> StatModifiersCreatedByFactories { get { return m_StatModifiersCreatedByFactories;} }
 
-        private Dictionary<StatType, Stat> m_StatType_To_Stat = new();
-
-        private void Start()
-        {
-            CreateStatModifiersFromFactories();
-        }
-
-        public void CreateStatType(StatType statType)
-        {
-            if (!HasStatType(statType))
-            {
-                m_StatType_To_Stat.Add(statType, new());
-            }
-        }
-
-        #region Stat Modification
-
-        private void CreateStatModifiersFromFactories()
+        public void CreateStatModifiersFromFactories(StatController statController)
         {
             m_StatModifiersCreatedByFactories.Clear();
             m_StatModifierFactory_To_StatModifiers.Clear();
 
             foreach (var factory in m_StatModifierFactories)
             {
-                List<IStatModifier> statModifiers = factory.Get().Get().CreateInstances(this);
+                List<IStatModifier> statModifiers = factory.CreateInstances(statController);
 
                 m_StatModifierFactory_To_StatModifiers.Add(factory, statModifiers);
                 m_StatModifiersCreatedByFactories.AddRange(statModifiers);
             }
         }
 
-        public void AddStatModifierFactory(SO_Ref<StatModifierFactory> factory)
+        public void AddStatModifierFactory(StatController statController, IStatModifierFactory factory)
         {
             if (!m_StatModifierFactory_To_StatModifiers.ContainsKey(factory))
             {
                 m_StatModifierFactories.Add(factory);
 
-                List<IStatModifier> statModifiers = factory.Get().Get().CreateInstances(this);
+                List<IStatModifier> statModifiers = factory.CreateInstances(statController);
 
                 m_StatModifierFactory_To_StatModifiers.Add(factory, statModifiers);
                 m_StatModifiersCreatedByFactories.AddRange(statModifiers);
             }
         }
 
-        public void RemoveStatModifierFactory(SO_Ref<StatModifierFactory> factory)
+        public void RemoveStatModifierFactory(StatController statController, IStatModifierFactory factory)
         {
             if (m_StatModifierFactory_To_StatModifiers.ContainsKey(factory))
             {
@@ -210,33 +193,208 @@ namespace SilverPillar.Stats
                 m_StatModifierFactory_To_StatModifiers.Remove(factory);
             }
         }
+    }
 
-        public void AddStatModifier(SO_Ref<StatModifier> statModifier)
+    [Serializable]
+    public struct StatSetting
+    {
+        public StatType StatType;
+        [Range(0,100)]
+        public float Value;
+        
+        public StatEvent CurrentStatEvents;
+        public StatEvent DefaultStatEvents;
+        public StatEvent MinLimitStatEvents;
+        public StatEvent MaxLimitStatEvents;
+
+        public void Apply(StatController statController)
         {
-            if (!m_StatModifiers.Contains(statModifier))
+            statController.CreateStatType(StatType, Value);
+            statController.SubscribeOnCurrentStatChange(StatType, TriggerCurrentStatChange);
+            statController.SubscribeOnDefaultStatChange(StatType, TriggerDefaultStatChange);
+            statController.SubscribeOnMinLimitStatChange(StatType, TriggerMinLimitStatChange);
+            statController.SubscribeOnMaxLimitStatChange(StatType, TriggerMaxLimitStatChange);
+        }
+
+        private void TriggerCurrentStatChange(float lastValue, float newValue)
+        {
+            CurrentStatEvents.Trigger(lastValue, newValue);
+        }
+        private void TriggerDefaultStatChange(float lastValue, float newValue)
+        {
+            DefaultStatEvents.Trigger(lastValue, newValue);
+        }
+        private void TriggerMinLimitStatChange(float lastValue, float newValue)
+        {
+            MinLimitStatEvents.Trigger(lastValue, newValue);
+        }
+        private void TriggerMaxLimitStatChange(float lastValue, float newValue)
+        {
+            MaxLimitStatEvents.Trigger(lastValue, newValue);
+        }
+    }
+
+    [Serializable]
+    public struct StatEvent
+    {
+        public UnityEvent<float> OnStatChange;
+        public UnityEvent<float> OnStatWorldMin;
+        public UnityEvent<float> OnStatWorldMax;
+
+        public void Trigger(float lastValue, float newValue)
+        {
+
+            if (Mathf.Approximately(lastValue, newValue))
             {
-                m_StatModifiers.Add(statModifier);
-                CreateStatModifiersFromFactories();//Can be optimized, but will suffice for now
+                return;
+            }
+
+            OnStatChange?.Invoke(newValue);
+
+            if (newValue <= StatConfiguration.Instance.MinStatValue)
+            {
+                OnStatWorldMin?.Invoke(newValue);
+            }
+            if (newValue >= StatConfiguration.Instance.MaxStatValue)
+            {
+                OnStatWorldMax?.Invoke(newValue);
+            }
+
+        }
+    }
+
+    public class StatController : SerializedMonoBehaviour
+    {
+        [FoldoutGroup("Stats")]
+        [SerializeField]
+        private List<StatSetting> m_StatSettings = new();
+
+        [FoldoutGroup("Stats")]
+        [Button(ButtonSizes.Small)]
+        private void PopulateWithAllStatTypes()
+        {
+            if (m_StatSettings == null)
+            {
+                m_StatSettings = new List<StatSetting>();
+            }
+
+            m_StatSettings = m_StatSettings
+            .Where(x => x.StatType != null) 
+            .GroupBy(x => x.StatType)       
+            .Select(g => g.First())         
+            .ToList();
+
+            var currentStatTypes = m_StatSettings.Select(x => x.StatType).ToHashSet();
+
+            var allStatTypes = ScriptableObjectRegistry.Instance.GetAllOfType<StatType>();
+
+            foreach (var statType in allStatTypes)
+            {
+                if (statType != null && !currentStatTypes.Contains(statType))
+                {
+                    m_StatSettings.Add(new StatSetting { StatType = statType });
+                }
             }
         }
 
-        public void RemoveStatModifier(SO_Ref<StatModifier> statModifier)
+
+        [FoldoutGroup("Target Modifiers")]
+        [Title("Stat Modifiers")]
+        [OdinSerialize, ShowInInspector, Tooltip("These modifiers are applied on others.")]
+        private List<IStatModifier> m_TargetStatModifiers = new();
+        public List<IStatModifier> TargetStatModifiers { get { return m_TargetStatModifiers; } }
+
+        [FoldoutGroup("Target Modifiers")]
+        [Title("Stat Modifier Factories")]
+        [SerializeField, Tooltip("These modifier factories create target stat modifiers")]
+        private StatModifierFactoryData m_TargetStatModifierFactoryData = new();
+
+        [FoldoutGroup("Target Modifiers")]
+        [Button(ButtonSizes.Small)]
+        private void CreateTargetStatModifiersFromFactories()
         {
-            if (m_StatModifiers.Contains(statModifier))
+            m_TargetStatModifierFactoryData.CreateStatModifiersFromFactories(this);
+        }
+
+        [FoldoutGroup("Stat Modifier Operations")]
+        [Title("Stat Modifiers")]
+        [SerializeField]
+        private StatModificationOperationController m_StatModificationOperationController = new();
+
+        private Dictionary<StatType, Stat> m_StatType_To_Stat = new();
+
+        private void Awake()
+        {
+            CreateStatTypes();
+        }
+
+        private void Start()
+        {
+            CreateTargetStatModifiersFromFactories();
+        }
+
+        public void CreateStatType(StatType statType, float value = 0)
+        {
+            if (!HasStatType(statType))
             {
-                m_StatModifiers.Remove(statModifier);
-                CreateStatModifiersFromFactories();//Can be optimized, but will suffice for now
+                m_StatType_To_Stat.Add(statType, new Stat(value, value, value, value));
+            }
+        }
+
+        private void CreateStatTypes()
+        {
+            foreach (var statType in m_StatSettings)
+            {
+                statType.Apply(this);
+            }
+        }
+
+        #region Stat Modification
+
+        public List<IStatModifierFactory> GetTargetModifierFactories()
+        {
+            return m_TargetStatModifierFactoryData.StatModifierFactories;
+        }
+
+        public void AddTargetStatModifierFactory(IStatModifierFactory factory)
+        {
+            m_TargetStatModifierFactoryData.AddStatModifierFactory(this, factory);
+        }
+
+        public void RemoveTargetStatModifierFactory(IStatModifierFactory factory)
+        {
+
+            m_TargetStatModifierFactoryData.RemoveStatModifierFactory(this, factory);
+        }
+
+        public void AddStatModifier(IStatModifier statModifier)
+        {
+            if (!m_TargetStatModifiers.Contains(statModifier))
+            {
+                m_TargetStatModifiers.Add(statModifier);
+                CreateTargetStatModifiersFromFactories();//Can be optimized, but will suffice for now
+            }
+        }
+
+        public void RemoveStatModifier(IStatModifier statModifier)
+        {
+            if (m_TargetStatModifiers.Contains(statModifier))
+            {
+                m_TargetStatModifiers.Remove(statModifier);
+                CreateTargetStatModifiersFromFactories();//Can be optimized, but will suffice for now
             }
         }
 
         public void ModifyTarget(StatController target)
         {
-            foreach (var statModifier in m_StatModifiers)
+            foreach (var statModifier in m_TargetStatModifiers)
             {
-                statModifier.Get().Get().Modify(this, target);
+                statModifier.Modify(this, target);
             }
 
-            foreach (var statModifier in m_StatModifiersCreatedByFactories)
+            var factoryModifiers = m_TargetStatModifierFactoryData.StatModifiersCreatedByFactories;
+
+            foreach (var statModifier in factoryModifiers)
             {
                 statModifier.Modify(this, target);
             }
@@ -244,7 +402,7 @@ namespace SilverPillar.Stats
 
         #endregion
 
-        #region Subscribe and Unsubscribe On Root Stat Change
+        #region Subscribe and Unsubscribe On Stat Change
         public void SubscribeOnStatChange(StatType statType, Action<float, float> action, StatVariable statVariable)
         {
             switch (statVariable)
@@ -443,6 +601,9 @@ namespace SilverPillar.Stats
         {
             if (HasStatType(statType))
             {
+                ModificationType modType = new ModificationType{StatType = statType, StatOperation = statOperation, StatVariable = statVariable};
+
+                value = m_StatModificationOperationController.ModifyIncoming(modType, this, value);
                 m_StatType_To_Stat[statType].ModifyStat(value, statOperation, statVariable);
             }
         }

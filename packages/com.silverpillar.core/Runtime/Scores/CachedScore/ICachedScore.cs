@@ -16,16 +16,16 @@ namespace SilverPillar.Core
     public class Constant_CachedScore : ICachedScore
     {
         [SerializeField]
-        private float m_Score;
+        private float m_Value;
 
         public float CalculateScore()
         {
-            return m_Score;
+            return m_Value;
         }
 
         public ICachedScore Clone()
         {
-            return new Constant_CachedScore { m_Score = this.m_Score };
+            return new Constant_CachedScore { m_Value = this.m_Value };
         }
 
         public GameObject? GetGameObject()

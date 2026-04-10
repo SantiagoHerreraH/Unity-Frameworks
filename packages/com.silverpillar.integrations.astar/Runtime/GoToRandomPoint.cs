@@ -2,9 +2,13 @@ using Pathfinding;
 using SilverPillar.Core;
 using UnityEngine;
 using SilverPillar.Target;
+using Sirenix.Serialization;
+using Sirenix.OdinInspector;
+using System;
 
 namespace SilverPillar.Integrations.AStar
 {
+    [Serializable]
     public class GoToRandomPoint : IAction
     {
         public enum WhoIsTheCenterOfTheRadius
@@ -14,8 +18,8 @@ namespace SilverPillar.Integrations.AStar
         }
         [SerializeField, Tooltip("If you choose CurrentTarget and self doesn't have the TargetSystem component or CurrentTarget is null, it will default to self")]
         private WhoIsTheCenterOfTheRadius m_WhoIsTheCenterOfTheRadius;
-        [SerializeField]
-        private float m_Radius;
+        [OdinSerialize, ShowInInspector]
+        private ICachedScore m_Radius;
 
         private AIDestinationSetter m_AIDestinationSetter   = null;
         private FollowerEntity      m_FollowerEntity        = null;
@@ -26,7 +30,7 @@ namespace SilverPillar.Integrations.AStar
         public GoToRandomPoint(GoToRandomPoint other)
         {
             m_WhoIsTheCenterOfTheRadius = other.m_WhoIsTheCenterOfTheRadius;
-            m_Radius = other.m_Radius;
+            m_Radius = other.m_Radius.Clone();
 
             m_AIDestinationSetter   = other.m_AIDestinationSetter;
             m_FollowerEntity        = other.m_FollowerEntity;
@@ -37,6 +41,7 @@ namespace SilverPillar.Integrations.AStar
         public IAction Clone()
         {
             return new GoToRandomPoint(this);
+
         }
 
         public GameObject GetGameObject()
@@ -52,6 +57,7 @@ namespace SilverPillar.Integrations.AStar
             bool targetSystemGood = m_WhoIsTheCenterOfTheRadius == WhoIsTheCenterOfTheRadius.Self ||
                 gameObj.TryGetComponent(out m_TargetSystem);
             return 
+                targetSystemGood &&
                 gameObj.TryGetComponent<AIDestinationSetter>(out m_AIDestinationSetter) &&
                 gameObj.TryGetComponent<FollowerEntity>(out m_FollowerEntity) &&
                 targetSystemGood;
@@ -88,7 +94,7 @@ namespace SilverPillar.Integrations.AStar
                 m_AIDestinationSetter.enabled = false;
                 m_FollowerEntity.enabled = true;
 
-                Vector3 randomPoint = centerOfRadius.transform.position + Random.insideUnitSphere * m_Radius;
+                Vector3 randomPoint = centerOfRadius.transform.position + UnityEngine.Random.insideUnitSphere * m_Radius.CalculateScore();
                 randomPoint.y = centerOfRadius.transform.position.y;
 
                 var nearest = AstarPath.active.GetNearest(randomPoint);

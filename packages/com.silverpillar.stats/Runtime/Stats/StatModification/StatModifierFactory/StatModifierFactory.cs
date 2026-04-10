@@ -13,14 +13,5 @@ namespace SilverPillar.Stats
 
         public IStatModifierFactory Get() { return m_StatModifierFactory; }
     }
-
-    [CreateAssetMenu(fileName = "StatModifier", menuName = "SilverPillar/Stats/StatModifier")]
-    public class StatModifier : SaveableScriptableObject
-    {
-        [OdinSerialize]
-        private IStatModifier m_StatModifier;
-
-        public IStatModifier Get() { return m_StatModifier; }
-    }
 }
 

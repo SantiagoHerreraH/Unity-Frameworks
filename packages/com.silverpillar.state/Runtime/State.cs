@@ -51,7 +51,7 @@ namespace SilverPillar.State
         [FoldoutGroup("Connected States")]
         [OdinSerialize, ShowInInspector, HideIf(nameof(m_CanTransitionToAllStates))]
         private HashSet<StateTag> m_AllowedStatesToTransitionTo = new();
-        private List<StateAndStateTag> m_StatesToTransitionTo = new();
+        private List<StateAndStateTag> m_StatesToTransitionTo = new List<StateAndStateTag>();
 
         public enum HowToEndState
         {
@@ -73,7 +73,7 @@ namespace SilverPillar.State
 
         [FoldoutGroup("How To End State")]
         [SerializeField, ShowIf(nameof(m_HowToEndState), HowToEndState.OnTimeEnd), 
-            Tooltip("This score lets you decide how to calculate the state time. The time will be calculated on State Start")]
+        Tooltip("This score lets you decide how to calculate the state time. The time will be calculated on State Start")]
         private ScoreGroup m_Time = new();
         private float m_MaxTime;
         private float m_CurrentTime;
@@ -92,6 +92,14 @@ namespace SilverPillar.State
             this.m_CheckIfCanTransitionToOtherStatesOnUpdate = other.m_CheckIfCanTransitionToOtherStatesOnUpdate;
             this.m_CanTransitionToAllStates = other.m_CanTransitionToAllStates;
             this.m_AllowedStatesToTransitionTo = new HashSet<StateTag>(other.m_AllowedStatesToTransitionTo);
+            this.m_StatesToTransitionTo = new(other.m_StatesToTransitionTo);
+            this.m_HowToEndState = other.m_HowToEndState;
+            this.m_StateToTransitionToOnTimeEnd = other.m_StateToTransitionToOnTimeEnd;
+            this.m_CanTransitionToOtherStateBeforeCounterEnd = other.m_CanTransitionToOtherStateBeforeCounterEnd;
+            this.m_Time = other.m_Time;
+            this.m_MaxTime = other.m_MaxTime;
+            this.m_CurrentTime = other.m_CurrentTime;
+            this.m_StateMachine = other.m_StateMachine;
         }
         public bool CanTransitionTo(StateTag stateTag)
         {
@@ -115,7 +123,12 @@ namespace SilverPillar.State
         {
             if (gameObj.TryGetComponent(out m_StateMachine))
             {
-                m_CanTransitionIf.SetGameObject(gameObj);
+                m_CanTransitionIf?.SetGameObject(gameObj);
+
+                if (m_StatesToTransitionTo == null)
+                {
+                    m_StatesToTransitionTo = new();
+                }
 
                 if (m_CanTransitionToAllStates)
                 {

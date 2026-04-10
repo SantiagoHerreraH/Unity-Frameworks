@@ -16,6 +16,7 @@ namespace SilverPillar.Core
             return m_Condition.SetGameObject(self);
         }
 
+#nullable enable
         public GameObject? GetGameObject()
         {
             return m_Condition.GetGameObject();
