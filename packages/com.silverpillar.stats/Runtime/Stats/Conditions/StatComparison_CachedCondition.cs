@@ -35,12 +35,13 @@ namespace SilverPillar.Stats
         {
             if (_cachedStatController == null) return false;
 
-            if (_cachedStatController.HasStatType(m_StatType))
+            if (_cachedStatController.HasStatType(m_StatType) && 
+                _cachedStatController.HasStatType(m_OtherStatType))
             {
                 float statValue = _cachedStatController.GetStat(m_StatType, m_StatVariable);
                 float statValueToCompare = _cachedStatController.GetStat(m_OtherStatType, m_OtherStatVariable);
 
-                return FloatComparison.Compare(statValueToCompare, m_ConditionOperation, statValue);
+                return FloatComparison.Compare(statValue, m_ConditionOperation, statValueToCompare);
             }
 
             return false;

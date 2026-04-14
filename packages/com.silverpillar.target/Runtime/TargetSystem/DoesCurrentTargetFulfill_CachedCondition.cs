@@ -36,7 +36,21 @@ namespace SilverPillar.Target
         {
             if (m_TargetSystem != null)
             {
-                return m_ConditionToFulfill.IsFulfilled();
+                if (m_TargetSystem.CurrentTarget != null)
+                {
+                    bool canCheckCondition = true;
+
+                    if (m_ConditionToFulfill.GetGameObject() != m_TargetSystem.CurrentTarget)
+                    {
+                        canCheckCondition = m_ConditionToFulfill.SetGameObject(m_TargetSystem.CurrentTarget);
+                    }
+
+                    if (canCheckCondition)
+                    {
+                        return m_ConditionToFulfill.IsFulfilled();
+                    }
+                }
+                
             }
 
             return false;
@@ -44,12 +58,7 @@ namespace SilverPillar.Target
 
         public bool SetGameObject(GameObject gameObj)
         {
-            if (gameObj.TryGetComponent(out m_TargetSystem) && m_TargetSystem.CurrentTarget != null)
-            {
-                return m_ConditionToFulfill.SetGameObject(m_TargetSystem.CurrentTarget);
-            }
-
-            return false;
+            return gameObj.TryGetComponent(out m_TargetSystem);
         }
     }
 }

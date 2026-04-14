@@ -17,10 +17,33 @@ namespace SilverPillar.Target
     }
     public class TargetSystem : SerializedMonoBehaviour
     {
-        
+        private static List<TargetSystem> m_AllTargetSystems = new();
+        private static List<PossibleTarget> m_StaticPossibleTargets = new List<PossibleTarget>();
+        public static void RegisterStaticPossibleTarget(PossibleTarget possibleTarget)
+        {
+            if (!m_StaticPossibleTargets.Contains(possibleTarget))
+            {
+                m_StaticPossibleTargets.Add(possibleTarget);
+
+                foreach (var item in m_AllTargetSystems)
+                {
+                    item.m_StaticTargetsAppended = false;
+                }
+            }
+        }
+        public static void UnregisterStaticPossibleTarget(PossibleTarget possibleTarget)
+        {
+            m_StaticPossibleTargets.Remove(possibleTarget);
+
+            foreach (var item in m_AllTargetSystems)
+            {
+                item.m_StaticTargetsAppended = false;
+            }
+        }
 
         public enum WhenToChooseTarget
         {
+            DontChooseAutomatically,
             OnUpdate,
             OnRegisterPossibleTarget,
             OnUnregisterPossibleTarget,
@@ -49,15 +72,17 @@ namespace SilverPillar.Target
         [Title("Scoring")]
         [SerializeField]
         private WhichScoreToChoose m_WhichScoreToChoose;
+        [SerializeField]
+        private bool m_ChooseFromStaticPossibleTargetsAsWell = true;
+        private bool m_StaticTargetsAppended = false;
 
         [FoldoutGroup("How to Choose Current Target")]
         [OdinSerialize, ShowInInspector]
         private ICachedInteractionScore m_HowToCalculateScore;
-        private List<float> m_TempScores = new(); //  just for optimization
 
         [FoldoutGroup("When to Choose Current Target")]
         [SerializeField]
-        private WhenToChooseTarget m_WhenToChooseTarget;
+        private WhenToChooseTarget m_WhenToChooseTarget = WhenToChooseTarget.DontChooseAutomatically;
 
         [FoldoutGroup("When to Choose Current Target")]
         [SerializeField, Min(0), Tooltip("0 means every tick"), ShowIf(nameof(m_WhenToChooseTarget), WhenToChooseTarget.OnUpdate)]
@@ -70,18 +95,23 @@ namespace SilverPillar.Target
 
         [PropertySpace(SpaceBefore = 20)]
 
-        [FoldoutGroup("Debug")]
-        [ShowInInspector, ReadOnly, SerializeField]
+        [FoldoutGroup("Targets")]
+        [SerializeField]
         private GameObject m_CurrentTarget;
-        [FoldoutGroup("Debug")]
-        [ShowInInspector, ReadOnly, SerializeField]
+        [FoldoutGroup("Targets")]
+        [SerializeField]
         private List<GameObject> m_PossibleTargets = new(); // for iteration
         private HashSet<GameObject> m_PossibleTargetsHashset = new(); // for queries
         [FoldoutGroup("Debug")]
         [ShowInInspector, ReadOnly, SerializeField]
         private List<TargetAndScore> m_QualifiedTargets = new();
         public GameObject CurrentTarget { get { return m_CurrentTarget; } }
-        public List<GameObject> PossibleTargets { get { return m_PossibleTargets; } }
+        public List<GameObject> PossibleTargets { 
+            get {
+
+                AppendStatic();
+                return m_PossibleTargets; 
+            } }
         
         private bool m_Initialized = false;
 
@@ -162,6 +192,7 @@ namespace SilverPillar.Target
         [Button]
         private void ChooseCurrentTarget()
         {
+            AppendStatic();
             Initialize();
 
             m_QualifiedTargets.Clear();
@@ -170,7 +201,8 @@ namespace SilverPillar.Target
 
             foreach (GameObject possibleTarget in m_PossibleTargets)
             {
-                if (m_ConditionToChooseTheCurrentTarget.IsFulfilled(possibleTarget))
+                if (m_ConditionToChooseTheCurrentTarget == null || 
+                    m_ConditionToChooseTheCurrentTarget.IsFulfilled(possibleTarget))
                 {
                     float finalScore = m_HowToCalculateScore != null ? m_HowToCalculateScore.CalculateScore(possibleTarget) : 0f;
 
@@ -229,10 +261,25 @@ namespace SilverPillar.Target
         {
             if (!m_Initialized)
             {
+                m_AllTargetSystems.Add(this);
+                AppendStatic();
                 m_HowToCalculateScore?.SetGameObject(gameObject);
                 m_ConditionToChooseTheCurrentTarget?.SetGameObject(gameObject);
                 m_Initialized = true;
 
+            }
+        }
+
+        private void AppendStatic()
+        {
+            if (m_ChooseFromStaticPossibleTargetsAsWell && !m_StaticTargetsAppended)
+            {
+                foreach (var item in m_StaticPossibleTargets)
+                {
+                    m_PossibleTargets.Add(item.gameObject);
+                }
+
+                m_StaticTargetsAppended = true;
             }
         }
     }

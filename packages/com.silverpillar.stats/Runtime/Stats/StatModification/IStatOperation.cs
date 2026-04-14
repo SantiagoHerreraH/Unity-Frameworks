@@ -34,6 +34,11 @@ namespace SilverPillar.Stats
         private List<StatCondition> m_StatConditions;
         public bool IsFulfilled(IStatModifier modifier)
         {
+            if (m_StatConditions == null)
+            {
+                return true;
+            }
+
             foreach (var condition in m_StatConditions)
             {
                 if (!condition.IsFulfilled(modifier))
@@ -53,6 +58,11 @@ namespace SilverPillar.Stats
 
         public bool IsFulfilled(IStatModifier modifier)
         {
+            if (m_OrConditions == null)
+            {
+                return true;
+            }
+
             foreach (var condition in m_OrConditions)
             {
                 if (condition.IsFulfilled(modifier))
@@ -140,6 +150,10 @@ namespace SilverPillar.Stats
 
         public float ModifyIncomingValue(StatController controllerThatWantsToBeModified, float incomingModificationValueFromData)
         {
+            if (StatOperatorsThatModifyIncoming == null)
+            {
+                return incomingModificationValueFromData;
+            }
             foreach (var item in StatOperatorsThatModifyIncoming)
             {
                 incomingModificationValueFromData = item.ModifyIncomingValue(controllerThatWantsToBeModified, incomingModificationValueFromData);

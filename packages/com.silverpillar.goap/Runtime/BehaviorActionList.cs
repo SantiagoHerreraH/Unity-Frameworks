@@ -57,7 +57,7 @@ namespace SilverPillar.GOAP
             return m_Action_To_Instance[action];
         }
 
-        public BehaviorActionInstance GetRandomInstance()
+        public BehaviorActionInstance GetFirstInstance()
         {
             return m_Instances.FirstOrDefault();
         }

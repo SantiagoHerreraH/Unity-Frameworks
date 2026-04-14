@@ -60,7 +60,7 @@ namespace SilverPillar.Target
 
                         foreach (var possibleTarget in m_TargetSystem.PossibleTargets)
                         {
-                            if (!m_ConditionToFulfill.IsFulfilled(m_TargetSystem.CurrentTarget))
+                            if (!m_ConditionToFulfill.IsFulfilled(possibleTarget))
                             {
                                 return false;
                             }
@@ -70,7 +70,7 @@ namespace SilverPillar.Target
 
                         foreach (var possibleTarget in m_TargetSystem.PossibleTargets)
                         {
-                            if (m_ConditionToFulfill.IsFulfilled(m_TargetSystem.CurrentTarget))
+                            if (m_ConditionToFulfill.IsFulfilled(possibleTarget))
                             {
                                 return true;
                             }

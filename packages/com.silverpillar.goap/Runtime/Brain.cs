@@ -1,9 +1,12 @@
+using SilverPillar.Core;
 using Sirenix.OdinInspector;
 using Sirenix.Serialization;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor.Toolbars;
 using UnityEngine;
-using SilverPillar.Core;
+using static UnityEngine.GraphicsBuffer;
 
 namespace SilverPillar.GOAP
 {
@@ -33,16 +36,64 @@ namespace SilverPillar.GOAP
             {
                 List<BehaviorAction> currentPossibleActions = m_ActionListInstance.GetCurrentPossibleActions();
                 List<BehaviorAction> actionsThatLeadToGoal = m_ActionListInstance.GetActionsThatLeadToGoal(chosenGoal);
-                BehaviorAction chosenAction  = m_Brain.GetAction(m_GameObject, currentPossibleActions, actionsThatLeadToGoal);
-                actionInstance = m_ActionListInstance.GetInstance(chosenAction);
+                BehaviorAction chosenAction = m_Brain.GetAction(m_GameObject, currentPossibleActions, actionsThatLeadToGoal);
+                
+                if (chosenAction != null)
+                {
+                    actionInstance = m_ActionListInstance.GetInstance(chosenAction);
+                }
+                else
+                {
+                    actionInstance = m_ActionListInstance.GetFirstInstance();
+                }
             }
             else
             {
-                actionInstance = m_ActionListInstance.GetRandomInstance();
+                actionInstance = m_ActionListInstance.GetFirstInstance();
             }
 
             return actionInstance;
 
+        }
+    }
+
+    [Serializable]
+    public struct ActionPath : IEquatable<ActionPath>
+    {
+        [SerializeField]
+        private BehaviorAction m_Start;
+        [SerializeField]
+        private BehaviorAction m_Target;
+
+        public ActionPath(BehaviorAction start, BehaviorAction target)
+        {
+            m_Start = start;
+            m_Target = target;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is ActionPath other && Equals(other);
+        }
+
+        public bool Equals(ActionPath other)
+        {
+            return m_Start == other.m_Start && m_Target == other.m_Target;
+        }
+
+        public override int GetHashCode()
+        {
+            int firstId = m_Start == null ? 0 : m_Start.GetHashCode();
+            int secondId = m_Target == null ? 0 : m_Target.GetHashCode();
+            return HashCodeCombiner.Combine(firstId, secondId).GetHashCode();
+        }
+    }
+
+    public class HashCodeCombiner
+    {
+        public static long Combine(int hash1, int hash2)
+        {
+            return ((long)(uint)hash1 << 32) | (uint)hash2;
         }
     }
 
@@ -68,10 +119,10 @@ namespace SilverPillar.GOAP
 
         // cache: (start,target) -> cost/path
         [OdinSerialize, SerializeField, HideInInspector]
-        private Dictionary<long, float> m_ActionPath_To_PathCost = new();
+        private Dictionary<ActionPath, float> m_ActionPath_To_PathCost = new();
 
         [OdinSerialize, SerializeField, HideInInspector]
-        private Dictionary<long, List<BehaviorAction>> m_ActionPath_To_Path = new();
+        private Dictionary<ActionPath, List<BehaviorAction>> m_ActionPath_To_Path = new();
 
         // -------- Priority Queue Item (no tuples) --------
         private readonly struct PQItem
@@ -134,15 +185,7 @@ namespace SilverPillar.GOAP
             return new BrainInstance(this, gameObject);
         }
 
-        public static long CombineHashCodes(int hash1, int hash2)
-        {
-            return ((long)(uint)hash1 << 32) | (uint)hash2;
-        }
-
-        private static long MakeKey(BehaviorAction start, BehaviorAction target)
-        {
-            return CombineHashCodes(start.GetInstanceID(), target.GetInstanceID());
-        }
+        
 
         private void EnsureGraphIsBuilt()
         {
@@ -151,6 +194,14 @@ namespace SilverPillar.GOAP
                 if (m_ActionToNode != null)
                 {
                     m_ActionToNode.Clear();
+                }
+                if (m_ActionPath_To_PathCost == null)
+                {
+                    m_ActionPath_To_PathCost = new();
+                }
+                if (m_ActionPath_To_Path == null)
+                {
+                    m_ActionPath_To_Path = new();
                 }
                 m_ActionPath_To_PathCost.Clear();
                 m_ActionPath_To_Path.Clear();
@@ -203,7 +254,7 @@ namespace SilverPillar.GOAP
 
             for (int i = 0; i < possibleActions.Count; i++)
             {
-                for (int j = i; j < possibleActions.Count; j++)
+                for (int j = 0; j < possibleActions.Count; j++)
                 {
                     CalculateShortestPath(possibleActions[i], possibleActions[j]);
                 }
@@ -214,98 +265,70 @@ namespace SilverPillar.GOAP
         /// Dijkstra shortest-path (action sequence) from startAction to targetAction.
         /// Returns empty list if unreachable.
         /// </summary>
-        private List<BehaviorAction> CalculateShortestPath(BehaviorAction startAction, BehaviorAction targetAction)
+        private void CalculateShortestPath(BehaviorAction startAction, BehaviorAction targetAction)
         {
-            if (startAction == null || targetAction == null) return new List<BehaviorAction>();
+            if (startAction == null || targetAction == null) return;
 
-            if (!m_ActionToNode.ContainsKey(startAction) || !m_ActionToNode.ContainsKey(targetAction))
-                return new List<BehaviorAction>();
+            var pathKey = new ActionPath(startAction, targetAction);
 
-            long key = MakeKey(startAction, targetAction);
-            if (m_ActionPath_To_Path.TryGetValue(key, out var cachedPath))
-                return new List<BehaviorAction>(cachedPath); // copy to protect cache
+            Dictionary<BehaviorAction, float> distances = new();
+            Dictionary<BehaviorAction, BehaviorAction> predecessors = new();
+            SortedSet<PQItem> priorityQueue = new(new PQItemComparer());
 
-            var dist = new Dictionary<BehaviorAction, float>(64);
-            var prev = new Dictionary<BehaviorAction, BehaviorAction>(64);
-            var visited = new HashSet<BehaviorAction>();
-
-            int tie = 0;
-            var pq = new SortedSet<PQItem>(new PQItemComparer());
-
-            dist[startAction] = startAction.Cost;
-            pq.Add(new PQItem(startAction.Cost, tie++, startAction));
+            distances[startAction] = 0;
+            priorityQueue.Add(new PQItem(0, 0, startAction));
 
             bool found = false;
 
-            while (pq.Count > 0)
+            while (priorityQueue.Count > 0)
             {
-                var curItem = pq.Min;
-                pq.Remove(curItem);
+                var current = priorityQueue.Min;
+                priorityQueue.Remove(current);
 
-                var cur = curItem.Action;
-                if (!visited.Add(cur)) continue;
-
-                if (ReferenceEquals(cur, targetAction))
+                if (current.Action == targetAction)
                 {
                     found = true;
                     break;
                 }
 
-                var node = m_ActionToNode[cur];
+                if (!m_ActionToNode.TryGetValue(current.Action, out var node)) continue;
+
                 foreach (var child in node.Children)
                 {
-                    if (child == null) continue;
-                    if (visited.Contains(child)) continue;
-
-                    float newCost = curItem.Cost + child.Cost;
-
-                    if (!dist.TryGetValue(child, out float oldCost) || newCost < oldCost)
+                    float newDist = distances[current.Action] + child.Cost; // Asumiendo que BehaviorAction tiene una propiedad Cost
+                    if (!distances.ContainsKey(child) || newDist < distances[child])
                     {
-                        dist[child] = newCost;
-                        prev[child] = cur;
-                        pq.Add(new PQItem(newCost, tie++, child));
+                        priorityQueue.Remove(new PQItem(distances.ContainsKey(child) ? distances[child] : 0, 0, child));
+                        distances[child] = newDist;
+                        predecessors[child] = current.Action;
+                        priorityQueue.Add(new PQItem(newDist, 0, child));
                     }
                 }
             }
 
-            if (!found)
+            if (found)
             {
-                m_ActionPath_To_Path[key] = new List<BehaviorAction>();
-                m_ActionPath_To_PathCost[key] = Mathf.Infinity;
-                return new List<BehaviorAction>();
-            }
+                m_ActionPath_To_PathCost[pathKey] = distances[targetAction];
 
-            // Reconstruct
-            var path = new List<BehaviorAction>();
-            var step = targetAction;
-
-            while (true)
-            {
-                path.Add(step);
-                if (ReferenceEquals(step, startAction)) break;
-
-                if (!prev.TryGetValue(step, out var p))
+                List<BehaviorAction> path = new();
+                BehaviorAction curr = targetAction;
+                while (curr != null)
                 {
-                    path.Clear();
-                    break;
+                    path.Add(curr);
+                    predecessors.TryGetValue(curr, out curr);
                 }
-
-                step = p;
+                path.Reverse();
+                m_ActionPath_To_Path[pathKey] = path;
             }
-
-            path.Reverse();
-
-            m_ActionPath_To_Path[key] = new List<BehaviorAction>(path);
-            m_ActionPath_To_PathCost[key] = dist.TryGetValue(targetAction, out var cst) ? cst : Mathf.Infinity;
-
-            return path;
         }
 
-        public BehaviorAction GetAction(GameObject gameObj, List<BehaviorAction> currentPossibleActions, List<BehaviorAction> actionsThatLeadToGoal)
+#nullable enable
+
+        public BehaviorAction? GetAction(GameObject gameObj, List<BehaviorAction> currentPossibleActions, List<BehaviorAction> actionsThatLeadToGoal)
         {
             EnsureGraphIsBuilt();
 
-            BehaviorAction chosenAction = null;
+            BehaviorAction? chosenAction = null;
 
             float chosenValue = 0;
             float currentValue = 0;
@@ -332,7 +355,7 @@ namespace SilverPillar.GOAP
             {
                 foreach (var goalAction in actionsThatLeadToGoal)
                 {
-                    var key = MakeKey(currentPossibleAction, goalAction);
+                    var key = new ActionPath(currentPossibleAction, goalAction);
 
                     if (m_ActionPath_To_PathCost.ContainsKey(key))
                     {

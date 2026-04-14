@@ -321,6 +321,11 @@ namespace SilverPillar.Stats
         [SerializeField]
         private StatModificationOperationController m_StatModificationOperationController = new();
 
+
+        [FoldoutGroup("Debug")]
+        [SerializeField]
+        private bool m_PrintOnStatChange;
+        [ReadOnly, OdinSerialize, ShowInInspector]
         private Dictionary<StatType, Stat> m_StatType_To_Stat = new();
 
         private void Awake()
@@ -337,7 +342,7 @@ namespace SilverPillar.Stats
         {
             if (!HasStatType(statType))
             {
-                m_StatType_To_Stat.Add(statType, new Stat(value, value, value, value));
+                m_StatType_To_Stat.Add(statType, new Stat(value, value, StatConfiguration.Instance.MinStatValue, StatConfiguration.Instance.MaxStatValue));
             }
         }
 
@@ -605,6 +610,11 @@ namespace SilverPillar.Stats
 
                 value = m_StatModificationOperationController.ModifyIncoming(modType, this, value);
                 m_StatType_To_Stat[statType].ModifyStat(value, statOperation, statVariable);
+
+                if (m_PrintOnStatChange)
+                {
+                    Debug.Log(gameObject.name + "'s" + statType.name + " " + statVariable.ToString() + " stat is " + GetStat(statType, statVariable));
+                }
             }
         }
 

@@ -41,7 +41,7 @@ namespace SilverPillar.GOAP
         {
             foreach (var goal in m_GoalsInOrder)
             {
-                if (goal.IsFulfilled())
+                if (!goal.IsFulfilled())
                 {
                     return m_Instance_To_CachedCondition[goal];
                 }

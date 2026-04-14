@@ -45,7 +45,10 @@ namespace SilverPillar.Target
                 return;
             }
 
-            m_QualifiedTargets.Clear();
+            if (m_QualifiedTargets == null)
+            {
+                m_QualifiedTargets = new();
+            }
 
             foreach (GameObject possibleTarget in m_TargetSystem.PossibleTargets)
             {
@@ -94,7 +97,10 @@ namespace SilverPillar.Target
 
         public bool SetGameObject(GameObject gameObj)
         {
-            return gameObj.TryGetComponent(out m_TargetSystem);
+            bool conditionGood = m_ConditionToChooseTheCurrentTarget != null ? m_ConditionToChooseTheCurrentTarget.SetGameObject(gameObj) : false;
+            bool scoreGood = m_HowToCalculateScore != null ? m_HowToCalculateScore.SetGameObject(gameObj) : false;
+
+            return conditionGood && scoreGood && gameObj.TryGetComponent(out m_TargetSystem);
         }
     }
 }

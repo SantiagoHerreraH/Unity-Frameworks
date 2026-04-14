@@ -10,6 +10,8 @@ namespace SilverPillar.Stats
         MaxLimit,
         MinLimit
     }
+
+    [Serializable]
     public class Stat
     {
         public Stat()
@@ -23,17 +25,22 @@ namespace SilverPillar.Stats
             MaxLimitStat = new StatValue(maxLimitStat);
         }
 
+        [Serializable]
         public class StatValue
         {
             public StatValue(float value)
             {
-                Value = value;
+                m_Value = value;
             }
-            public float Value { get; private set; }
+
+            [SerializeField]
+            private float m_Value;
+
+            public float Value { get { return m_Value; } }
 
             public void Set(float value)
             {
-                Value = value;
+                m_Value = value;
             }
 
             public void Modify(StatOperation statOperation, float value)
@@ -42,20 +49,20 @@ namespace SilverPillar.Stats
                 {
                     case StatOperation.Add:
 
-                        Value += value;
+                        m_Value += value;
 
                         break;
                     case StatOperation.Subtract:
 
-                        Value -= value;
+                        m_Value -= value;
                         break;
                     case StatOperation.Divide:
 
-                        Value /= value;
+                        m_Value /= value;
                         break;
                     case StatOperation.Multiply:
 
-                        Value *= value;
+                        m_Value *= value;
 
                         break;
                     default:
@@ -64,9 +71,13 @@ namespace SilverPillar.Stats
             }
         }
 
+        [SerializeField]
         public StatValue CurrentStat;
+        [SerializeField]
         public StatValue DefaultStat;
+        [SerializeField]
         public StatValue MinLimitStat;
+        [SerializeField]
         public StatValue MaxLimitStat;
 
         //make a variable to change astats based on inputs -> also take into account the stat modification changer
@@ -138,7 +149,6 @@ namespace SilverPillar.Stats
 
         public void ModifyStat(float value, StatOperation statOperation, StatVariable statVar)
         {
-            float newValue = 0;
             float pastValue = 0;
 
             switch (statVar)
@@ -147,7 +157,7 @@ namespace SilverPillar.Stats
 
                     pastValue = CurrentStat.Value;
                     CurrentStat.Modify(statOperation, value);
-                    CurrentStat.Set(Mathf.Clamp(newValue, MinLimitStat.Value, MaxLimitStat.Value));
+                    CurrentStat.Set(Mathf.Clamp(CurrentStat.Value, MinLimitStat.Value, MaxLimitStat.Value));
                     OnCurrentStatChange.Invoke(pastValue, CurrentStat.Value);
 
                     break;
@@ -155,7 +165,7 @@ namespace SilverPillar.Stats
 
                     pastValue = DefaultStat.Value;
                     DefaultStat.Modify(statOperation, value);
-                    DefaultStat.Set(Mathf.Clamp(newValue, MinLimitStat.Value, MaxLimitStat.Value));
+                    DefaultStat.Set(Mathf.Clamp(DefaultStat.Value, MinLimitStat.Value, MaxLimitStat.Value));
                     OnDefaultStatChange.Invoke(pastValue, DefaultStat.Value);
 
                     break;
@@ -163,7 +173,7 @@ namespace SilverPillar.Stats
 
                     pastValue = MaxLimitStat.Value;
                     MaxLimitStat.Modify(statOperation, value);
-                    MaxLimitStat.Set(Mathf.Clamp(newValue, 0, 100));
+                    MaxLimitStat.Set(Mathf.Clamp(MaxLimitStat.Value, StatConfiguration.Instance.MinStatValue, StatConfiguration.Instance.MaxStatValue));
                     OnMaxLimitStatChange.Invoke(pastValue, MaxLimitStat.Value);
 
                     break;
@@ -171,7 +181,7 @@ namespace SilverPillar.Stats
 
                     pastValue = MinLimitStat.Value;
                     MinLimitStat.Modify(statOperation, value);
-                    MinLimitStat.Set(Mathf.Clamp(newValue, 0, 100));
+                    MinLimitStat.Set(Mathf.Clamp(MinLimitStat.Value, StatConfiguration.Instance.MinStatValue, StatConfiguration.Instance.MaxStatValue));
                     OnMinLimitStatChange.Invoke(pastValue, MinLimitStat.Value);
 
                     break;
