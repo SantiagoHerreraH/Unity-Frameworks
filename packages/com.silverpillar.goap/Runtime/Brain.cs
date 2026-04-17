@@ -4,22 +4,26 @@ using Sirenix.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor.Toolbars;
 using UnityEngine;
-using static UnityEngine.GraphicsBuffer;
 
 namespace SilverPillar.GOAP
 {
-
+    [Serializable]
+    public struct BrainInstanceDebugSettings
+    {
+        public bool PrintCurrentGoal;
+    }
     public class BrainInstance
     {
         private BehaviorActionListInstance m_ActionListInstance = null;
         private GoalPlanInstance   m_GoalPlanInstance   = null;
         private Brain m_Brain = null;
         private GameObject m_GameObject = null;
+        private BrainInstanceDebugSettings m_DebugSettings;
         public GameObject GameObject { get { return m_GameObject; } }
-        public BrainInstance(Brain brain, GameObject gameObject) 
+        public BrainInstance(Brain brain, GameObject gameObject, BrainInstanceDebugSettings debugSettings) 
         {
+            m_DebugSettings = debugSettings;
             m_Brain = brain;
             m_GameObject = gameObject;
             m_ActionListInstance = brain.ActionList.CreateInstance(gameObject);
@@ -34,6 +38,12 @@ namespace SilverPillar.GOAP
 
             if (chosenGoal != null)
             {
+                if (m_DebugSettings.PrintCurrentGoal)
+                {
+                    Debug.Log($"{m_GameObject}'s GOAP BrainHolder's Current Goal is {chosenGoal.name}");
+                }
+
+
                 List<BehaviorAction> currentPossibleActions = m_ActionListInstance.GetCurrentPossibleActions();
                 List<BehaviorAction> actionsThatLeadToGoal = m_ActionListInstance.GetActionsThatLeadToGoal(chosenGoal);
                 BehaviorAction chosenAction = m_Brain.GetAction(m_GameObject, currentPossibleActions, actionsThatLeadToGoal);
@@ -49,6 +59,11 @@ namespace SilverPillar.GOAP
             }
             else
             {
+                if (m_DebugSettings.PrintCurrentGoal)
+                {
+                    Debug.Log($"{m_GameObject}'s GOAP BrainHolder has NO CURRENT GOAL.");
+                }
+
                 actionInstance = m_ActionListInstance.GetFirstInstance();
             }
 
@@ -180,9 +195,9 @@ namespace SilverPillar.GOAP
             EnsureGraphIsBuilt();
         }
 
-        public BrainInstance CreateInstance(GameObject gameObject)
+        public BrainInstance CreateInstance(GameObject gameObject, BrainInstanceDebugSettings debugSettings)
         {
-            return new BrainInstance(this, gameObject);
+            return new BrainInstance(this, gameObject, debugSettings);
         }
 
         

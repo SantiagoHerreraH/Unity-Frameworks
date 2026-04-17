@@ -72,6 +72,7 @@ namespace SilverPillar.Target
         [Title("Scoring")]
         [SerializeField]
         private WhichScoreToChoose m_WhichScoreToChoose;
+        [FoldoutGroup("How to Choose Current Target")]
         [SerializeField]
         private bool m_ChooseFromStaticPossibleTargetsAsWell = true;
         private bool m_StaticTargetsAppended = false;
@@ -93,8 +94,6 @@ namespace SilverPillar.Target
         [SerializeField]
         private UnityEvent<GameObject> m_OnNewCurrentTarget = new();
 
-        [PropertySpace(SpaceBefore = 20)]
-
         [FoldoutGroup("Targets")]
         [SerializeField]
         private GameObject m_CurrentTarget;
@@ -102,6 +101,11 @@ namespace SilverPillar.Target
         [SerializeField]
         private List<GameObject> m_PossibleTargets = new(); // for iteration
         private HashSet<GameObject> m_PossibleTargetsHashset = new(); // for queries
+
+        [FoldoutGroup("Debug")]
+        [SerializeField]
+        private bool m_PrintOnChangeTarget;
+
         [FoldoutGroup("Debug")]
         [ShowInInspector, ReadOnly, SerializeField]
         private List<TargetAndScore> m_QualifiedTargets = new();
@@ -185,6 +189,11 @@ namespace SilverPillar.Target
             if (newTarget != oldTarget)
             {
                 m_OnNewCurrentTarget.Invoke(newTarget);
+            }
+
+            if (m_PrintOnChangeTarget)
+            {
+                Debug.Log($"{gameObject}'s Target System Current Target is {newTarget}.");
             }
         }
 

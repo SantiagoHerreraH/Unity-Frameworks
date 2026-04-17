@@ -37,9 +37,15 @@ namespace SilverPillar.GOAP
         private BehaviorActionInstance m_CurrentActionInstance = null;
         private BehaviorActionEvent m_CurrentEvent;
 
+        [Title("Debug")]
+        [SerializeField]
+        private BrainInstanceDebugSettings m_DebugSettings;
+        [SerializeField]
+        private bool m_PrintActionOnActionChange;
+
         private void Awake()
         {
-            m_BrainInstance = m_BrainRef.Get().CreateInstance(gameObject);
+            m_BrainInstance = m_BrainRef.Get().CreateInstance(gameObject, m_DebugSettings);
         }
 
         void Update() 
@@ -62,6 +68,11 @@ namespace SilverPillar.GOAP
                 if (m_BehaviorActionEvents != null && m_BehaviorActionEvents.TryGetValue(m_CurrentActionInstance.Action, out m_CurrentEvent))
                 {
                     m_CurrentEvent.OnStart?.Invoke();
+                }
+
+                if (m_PrintActionOnActionChange)
+                {
+                    Debug.Log($"{gameObject}'s Brain Holder NEW ACTION is {m_CurrentActionInstance.Action.name}");
                 }
             }
 

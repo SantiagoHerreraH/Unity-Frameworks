@@ -9,13 +9,60 @@ using System;
 namespace SilverPillar.Integrations.AStar
 {
     [Serializable]
+    public class IsDistanceLessThan
+    {
+        public IsDistanceLessThan()
+        {
+
+        }
+
+        public IsDistanceLessThan(IsDistanceLessThan other)
+        {
+            m_WhatAxisToCompare = other.m_WhatAxisToCompare;
+            m_ThanDistanceToCompare = other.m_ThanDistanceToCompare.Clone();
+            m_ValueIfNullScore = other.m_ValueIfNullScore;
+        }
+
+        [Title("What Distance Axis to compare")]
+        [SerializeField]
+        private VectorFromAxis m_WhatAxisToCompare = VectorFromAxis.xyz;
+
+        [Title("Is less or equal than ")]
+        [OdinSerialize, ShowInInspector] private ICachedScore m_ThanDistanceToCompare;
+        [SerializeField]
+        private float m_ValueIfNullScore = 0f;
+
+        public bool IsFulfilled(Vector3 firstPosition, Vector3 secondPosition)
+        {
+            float distanceSqr = DistanceComparer.CalculateSquareDistance(m_WhatAxisToCompare, firstPosition, secondPosition);
+            float score = m_ThanDistanceToCompare == null ? m_ValueIfNullScore : m_ThanDistanceToCompare.CalculateScore();
+            return FloatComparison.Compare(distanceSqr, FloatComparison.OperationType.LessOrEqual, score * score);
+        }
+    }
+
+    [Serializable]
     public class GoToRandomPoint : IAction
     {
+        public enum HowToCalculateOnReachDestination
+        {
+            ReachDestination,
+            ReachEndOfPath,
+            ReachEndOfCrowdedPath,
+            ReachCustomDistance
+        }
+
         public enum WhoIsTheCenterOfTheRadius
         {
             Self, 
             CurrentTarget
         }
+
+        [SerializeField]
+        private HowToCalculateOnReachDestination m_HowToCalculateOnReachDestination;
+
+        [OdinSerialize, ShowInInspector, ShowIf(nameof(m_HowToCalculateOnReachDestination), HowToCalculateOnReachDestination.ReachCustomDistance)]
+        private IsDistanceLessThan m_CustomDistanceParams = new();
+
         [SerializeField, Tooltip("If you choose CurrentTarget and self doesn't have the TargetSystem component or CurrentTarget is null, it will default to self")]
         private WhoIsTheCenterOfTheRadius m_WhoIsTheCenterOfTheRadius;
         [OdinSerialize, ShowInInspector]
@@ -26,15 +73,21 @@ namespace SilverPillar.Integrations.AStar
         private FollowerEntity      m_FollowerEntity        = null;
         private TargetSystem        m_TargetSystem          = null;
 
+        private AIDestinationSetter m_DestinationSetter = null;
         public GoToRandomPoint() { }
 
         public GoToRandomPoint(GoToRandomPoint other)
         {
             m_WhoIsTheCenterOfTheRadius = other.m_WhoIsTheCenterOfTheRadius;
             m_Radius = other.m_Radius.Clone();
+            m_Speed = other.m_Speed.Clone();
 
             m_FollowerEntity        = other.m_FollowerEntity;
             m_TargetSystem          = other.m_TargetSystem;
+
+            m_HowToCalculateOnReachDestination = other.m_HowToCalculateOnReachDestination;
+            m_CustomDistanceParams = new(other.m_CustomDistanceParams);
+
 
         }
 
@@ -57,9 +110,13 @@ namespace SilverPillar.Integrations.AStar
                 gameObj.TryGetComponent(out m_TargetSystem);
 
             bool speedIsGood = m_Speed != null ? m_Speed.SetGameObject(gameObj) : false;
+            bool radiusIsGood = m_Radius != null ? m_Radius.SetGameObject(gameObj) : false;
+
+            gameObj.TryGetComponent<AIDestinationSetter>(out m_DestinationSetter);
 
             return
                 speedIsGood &&
+                radiusIsGood &&
                 targetSystemGood &&
                 gameObj.TryGetComponent<FollowerEntity>(out m_FollowerEntity);
         }
@@ -72,7 +129,8 @@ namespace SilverPillar.Integrations.AStar
 
         public void UpdateAction()
         {
-            if (m_FollowerEntity && m_FollowerEntity.reachedDestination)
+            if (m_FollowerEntity &&
+                ReachedDestination())
             {
                 SetRandomPointAsDestination();
             }
@@ -85,6 +143,11 @@ namespace SilverPillar.Integrations.AStar
         {
             if (m_FollowerEntity)
             {
+                if (m_DestinationSetter)
+                {
+                    m_DestinationSetter.enabled = false;
+                }
+
                 GameObject centerOfRadius = m_FollowerEntity.gameObject;
 
                 if (m_WhoIsTheCenterOfTheRadius == WhoIsTheCenterOfTheRadius.CurrentTarget && m_TargetSystem && m_TargetSystem.CurrentTarget)
@@ -93,6 +156,7 @@ namespace SilverPillar.Integrations.AStar
                 }
 
                 m_FollowerEntity.enabled = true;
+                m_FollowerEntity.isStopped = false;
 
                 Vector3 randomPoint = centerOfRadius.transform.position + UnityEngine.Random.insideUnitSphere * m_Radius.CalculateScore();
                 randomPoint.y = centerOfRadius.transform.position.y;
@@ -107,6 +171,25 @@ namespace SilverPillar.Integrations.AStar
 
                 m_FollowerEntity.destination = destination;
             }
+        }
+
+        private bool ReachedDestination()
+        {
+            switch (m_HowToCalculateOnReachDestination)
+            {
+                case HowToCalculateOnReachDestination.ReachDestination:
+                    return m_FollowerEntity.reachedDestination;
+                case HowToCalculateOnReachDestination.ReachEndOfPath:
+                    return m_FollowerEntity.reachedEndOfPath;
+                case HowToCalculateOnReachDestination.ReachEndOfCrowdedPath:
+                    return m_FollowerEntity.reachedCrowdedEndOfPath;
+                case HowToCalculateOnReachDestination.ReachCustomDistance:
+                    return m_CustomDistanceParams.IsFulfilled(m_FollowerEntity.gameObject.transform.position, m_FollowerEntity.destination);
+                default:
+                    break;
+            }
+
+            return false;
         }
     }
 }

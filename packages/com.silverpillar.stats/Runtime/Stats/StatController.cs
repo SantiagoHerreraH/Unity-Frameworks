@@ -238,6 +238,8 @@ namespace SilverPillar.Stats
     public struct StatEvent
     {
         public UnityEvent<float> OnStatChange;
+        public UnityEvent<float> OnStatDecrease;
+        public UnityEvent<float> OnStatIncrease;
         public UnityEvent<float> OnStatWorldMin;
         public UnityEvent<float> OnStatWorldMax;
 
@@ -250,6 +252,16 @@ namespace SilverPillar.Stats
             }
 
             OnStatChange?.Invoke(newValue);
+
+            if (newValue > lastValue)
+            {
+                OnStatIncrease?.Invoke(newValue);
+            }
+
+            if (newValue < lastValue)
+            {
+                OnStatDecrease?.Invoke(newValue);
+            }
 
             if (newValue <= StatConfiguration.Instance.MinStatValue)
             {
@@ -265,6 +277,9 @@ namespace SilverPillar.Stats
 
     public class StatController : SerializedMonoBehaviour
     {
+        [FoldoutGroup("Stats")]
+        [SerializeField]
+        private bool m_ResetCurrentStatsOnEnable = true;
         [FoldoutGroup("Stats")]
         [SerializeField]
         private List<StatSetting> m_StatSettings = new();
@@ -336,6 +351,18 @@ namespace SilverPillar.Stats
         private void Start()
         {
             CreateTargetStatModifiersFromFactories();
+        }
+
+        private void OnEnable()
+        {
+            if (m_ResetCurrentStatsOnEnable)
+            {
+                foreach (var item in m_StatSettings)
+                {
+                    var stat = GetStat(item.StatType);
+                    stat.CurrentStat.Set(item.Value);
+                }
+            }
         }
 
         public void CreateStatType(StatType statType, float value = 0)

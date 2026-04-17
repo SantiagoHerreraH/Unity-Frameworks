@@ -25,6 +25,8 @@ namespace SilverPillar.Core
         private WhatToDoIfReachedMaxSpawnCount m_WhatToDoIfReachedMaxSpawnCount = WhatToDoIfReachedMaxSpawnCount.Nothing;
         [SerializeField, Tooltip("If this is null, it will be self")] 
         private GameObject m_DefaultSpawnPoint;
+        [SerializeField]
+        private bool m_ParentToDefaultSpawnPoint;
 
         private List<GameObject> m_Instances = new();
         private int m_NextReuseIndex = 0;
@@ -105,7 +107,22 @@ namespace SilverPillar.Core
 
         private GameObject CreateNewInstance(bool activate)
         {
-            GameObject obj = Instantiate(m_SpawnPrefab, transform);
+            GameObject obj = null;
+
+            if (m_ParentToDefaultSpawnPoint)
+            {
+                if (m_DefaultSpawnPoint == null)
+                {
+                    m_DefaultSpawnPoint = gameObject;
+                }
+
+                obj = Instantiate(m_SpawnPrefab, m_DefaultSpawnPoint.transform);
+            }
+            else
+            {
+                obj = Instantiate(m_SpawnPrefab);
+            }
+
             obj.SetActive(activate);
             m_Instances.Add(obj);
             return obj;

@@ -16,6 +16,10 @@ namespace SilverPillar.Stats
         [Header("Than")]
         [SerializeField, Range(0,100)] private float m_Value;
 
+
+        [Header("Side Cases")]
+        [SerializeField] private bool m_ReturnValueIfNoStatType;
+
         private GameObject _cachedGameObject;
         private StatController _cachedStatController;
 
@@ -39,7 +43,7 @@ namespace SilverPillar.Stats
                 return FloatComparison.Compare(m_Value, m_ConditionOperation, statValue);
             }
 
-            return false;
+            return m_ReturnValueIfNoStatType;
         }
 
         public ICachedCondition Clone()

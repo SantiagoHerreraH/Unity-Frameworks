@@ -84,6 +84,8 @@ namespace SilverPillar.Integrations.AStar
 
                     if (followIfSelfIsFulfilled && followIfTargetIsFulfilled)
                     {
+                        m_AIDestinationSetter.enabled = true;
+                        m_FollowerEntity.isStopped = false;
                         m_FollowerEntity.maxSpeed = m_MaxFollowSpeed != null ? m_MaxFollowSpeed.CalculateScore() : 1f;
                         m_AIDestinationSetter.target = m_TargetSystem.CurrentTarget.transform;
                     }
