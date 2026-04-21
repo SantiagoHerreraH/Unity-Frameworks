@@ -107,6 +107,13 @@ namespace SilverPillar.Target
         private bool m_PrintOnChangeTarget;
 
         [FoldoutGroup("Debug")]
+        [SerializeField]
+        private bool m_PrintOnRegisterPossibleTarget;
+        [FoldoutGroup("Debug")]
+        [SerializeField]
+        private bool m_PrintOnUnregisterPossibleTarget;
+
+        [FoldoutGroup("Debug")]
         [ShowInInspector, ReadOnly, SerializeField]
         private List<TargetAndScore> m_QualifiedTargets = new();
         public GameObject CurrentTarget { get { return m_CurrentTarget; } }
@@ -152,6 +159,11 @@ namespace SilverPillar.Target
                 m_PossibleTargetsHashset.Add(possibleTarget);
                 m_PossibleTargets.Add(possibleTarget);
 
+                if (m_PrintOnRegisterPossibleTarget)
+                {
+                    Debug.Log($"{gameObject.name}'s Target System <b><color=#F44336>[Registered Target]</color></b> {possibleTarget.name}");
+                }
+
                 if (m_WhenToChooseTarget == WhenToChooseTarget.OnRegisterPossibleTarget ||
                     m_WhenToChooseTarget == WhenToChooseTarget.OnRegisterAndUnregisterPossibleTarget)
                 {
@@ -167,6 +179,11 @@ namespace SilverPillar.Target
             {
                 m_PossibleTargetsHashset.Remove(possibleTarget);
                 m_PossibleTargets.Remove(possibleTarget);
+
+                if (m_PrintOnUnregisterPossibleTarget)
+                {
+                    Debug.Log($"{gameObject.name}'s Target System <b><color=#F44336>[Unregistered Target]</color></b> {possibleTarget.name}");
+                }
 
                 if (m_WhenToChooseTarget == WhenToChooseTarget.OnUnregisterPossibleTarget ||
                     m_WhenToChooseTarget == WhenToChooseTarget.OnRegisterAndUnregisterPossibleTarget)

@@ -89,8 +89,14 @@ namespace SilverPillar.Core
         public CachedConditions Clone()
         {
             var clone = new CachedConditions();
-            foreach (var cond in ConditionList) clone.ConditionList.Add(cond.Clone());
-            clone.SetGameObject(_cachedGameObject);
+            foreach (var cond in ConditionList)
+            {
+                clone.ConditionList.Add(cond.Clone());
+            }
+            if (_cachedGameObject != null)
+            {
+                clone.SetGameObject(_cachedGameObject);
+            }
             return clone;
         }
     }

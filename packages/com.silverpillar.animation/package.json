@@ -1,0 +1,10 @@
+{
+  "name": "com.silverpillar.animation",
+  "displayName": "Silver Pillar Animation Tools",
+  "version": "1.0.0",
+  "unity": "2022.3",
+  "description": "Animation Tools for the SilverPillar framework.",
+  "author": {
+    "name": "Santiago Herrera Huerta"
+  }
+}

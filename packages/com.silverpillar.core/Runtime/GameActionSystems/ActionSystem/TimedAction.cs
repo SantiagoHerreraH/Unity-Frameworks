@@ -68,13 +68,6 @@ namespace SilverPillar.Core
         }
     }
 
-
-    public enum HowToInterpretTime
-    {
-        InSeconds,
-        InTickCount
-    }
-
     [Serializable]
     public struct ActionTime 
     {
@@ -171,6 +164,11 @@ namespace SilverPillar.Core
         [SerializeField]
         private UnityEvent m_OnEndWaitTime = new();
 
+
+        [FoldoutGroup("Debug")]
+        [SerializeField]
+        private bool m_PrintInfo;
+
         private bool m_IsOnWaitTime;
         private bool m_IsRunning = true;
 
@@ -186,11 +184,27 @@ namespace SilverPillar.Core
             m_WaitTime = other.m_WaitTime.Clone();
             m_RepetitionNumber = other.m_RepetitionNumber;
             m_ConditionToStop = other.m_ConditionToStop?.Clone();
+            m_PrintInfo = other.m_PrintInfo;
 
             foreach (var item in other.m_Actions)
             {
                 m_Actions.Add(new ActionData(item));
             }
+
+            m_Description = other.m_Description;
+            m_StartWith = other.m_StartWith;
+            m_UsesWaitTime = other.m_UsesWaitTime;
+            m_CallEndActionsWhenTimeActionEnds = other.m_CallEndActionsWhenTimeActionEnds;
+
+            m_OnStartActionTime = other.m_OnStartActionTime;
+            m_OnEndActionTime = other.m_OnEndActionTime;
+            m_OnStartWaitTime = other.m_OnStartWaitTime;
+            m_OnEndWaitTime = other.m_OnEndWaitTime;
+
+            m_IsOnWaitTime = other.m_IsOnWaitTime;
+            m_IsRunning = other.m_IsRunning;
+            m_Owner = other.m_Owner;
+            m_CurrentRepetitions = other.m_CurrentRepetitions;
         }
 
         public IAction Clone() => new TimedActionData(this);
@@ -207,6 +221,13 @@ namespace SilverPillar.Core
 
         public void StartAction()
         {
+            if (m_PrintInfo)
+            {
+                string mode = m_StartWith == StartWith.WaitTime ? "<color=#00ffffff>Wait Time</color>" : "<color=#00ffffff>Action Time</color>";
+                Debug.Log($"<b><color=#4CAF50>[START]</color></b> {m_Description} | Modo Inicial: {mode}");
+            }
+
+            m_CurrentRepetitions = -1;
             m_IsRunning = true;
             switch (m_StartWith)
             {
@@ -237,6 +258,11 @@ namespace SilverPillar.Core
                 return;
             }
 
+            if (m_PrintInfo)
+            {
+                string mode = m_IsOnWaitTime ? "<color=#00ffffff>Wait Time</color>" : "<color=#00ffffff>Action Time</color>";
+                Debug.Log($"<b><color=#FFEB3B>[UPDATE]</color></b> {m_Description} | Mode: {mode}");
+            }
 
             if (!m_IsOnWaitTime)
             {
@@ -253,11 +279,7 @@ namespace SilverPillar.Core
                 NextTimeMode();
             }
 
-            if (m_RepetitionNumber >= 0 && m_CurrentRepetitions >= m_RepetitionNumber)
-            {
-                EndAction();
-            }
-            else if (m_ConditionToStop != null && m_ConditionToStop.IsFulfilled())
+            if (m_ConditionToStop != null && m_ConditionToStop.IsFulfilled())
             {
                 EndAction();
             }
@@ -265,6 +287,11 @@ namespace SilverPillar.Core
 
         public void EndAction()
         {
+            if (m_PrintInfo)
+            {
+                Debug.Log($"<b><color=#F44336>[END]</color></b> {m_Description}");
+            }
+
             if (m_CallEndActionsWhenTimeActionEnds)
             {
                 EndAllActions();
@@ -327,8 +354,17 @@ namespace SilverPillar.Core
 
                     m_OnEndWaitTime.Invoke();
                     m_IsOnWaitTime = false;
-                    RecalculateTime();
-                    StartAllActions();
+
+                    if (ReachedRepetitionNumber())
+                    {
+                        EndAction();
+                    }
+                    else
+                    {
+                        RecalculateTime();
+                        StartAllActions();
+                    }
+
                 }
                 else
                 {
@@ -337,20 +373,42 @@ namespace SilverPillar.Core
                         ++m_CurrentRepetitions;
                     }
 
-                    EndAllActions();
-                    m_IsOnWaitTime = true;
-                    RecalculateTime();
-
+                    if (ReachedRepetitionNumber())
+                    {
+                        EndAction();
+                    }
+                    else
+                    {
+                        EndAllActions();
+                        m_IsOnWaitTime = true;
+                        RecalculateTime();
+                    }
                 }
             }
             else
             {
-                EndAllActions();
-                RecalculateTime();
-                StartAllActions();
+                ++m_CurrentRepetitions;
+
+                if (ReachedRepetitionNumber())
+                {
+                    EndAction();
+                }
+                else
+                {
+                    EndAllActions();
+                    RecalculateTime();
+                    StartAllActions();
+                }
+                   
             }
             
         }
+
+        private bool ReachedRepetitionNumber()
+        {
+            return m_RepetitionNumber >= 0 && m_CurrentRepetitions >= m_RepetitionNumber;
+        }
+
         private void RecalculateTime()
         {
             if (m_UsesWaitTime && m_IsOnWaitTime)

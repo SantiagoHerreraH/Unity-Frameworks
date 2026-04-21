@@ -25,7 +25,7 @@ namespace SilverPillar.Integrations.AStar
 
         [Title("What Distance Axis to compare")]
         [SerializeField]
-        private VectorFromAxis m_WhatAxisToCompare = VectorFromAxis.xyz;
+        private AxisFilter m_WhatAxisToCompare = AxisFilter.xyz;
 
         [Title("Is less or equal than ")]
         [OdinSerialize, ShowInInspector] private ICachedScore m_ThanDistanceToCompare;
@@ -34,7 +34,7 @@ namespace SilverPillar.Integrations.AStar
 
         public bool IsFulfilled(Vector3 firstPosition, Vector3 secondPosition)
         {
-            float distanceSqr = DistanceComparer.CalculateSquareDistance(m_WhatAxisToCompare, firstPosition, secondPosition);
+            float distanceSqr = AxisFilterTools.CalculateSquareDistance(m_WhatAxisToCompare, firstPosition, secondPosition);
             float score = m_ThanDistanceToCompare == null ? m_ValueIfNullScore : m_ThanDistanceToCompare.CalculateScore();
             return FloatComparison.Compare(distanceSqr, FloatComparison.OperationType.LessOrEqual, score * score);
         }
@@ -143,6 +143,8 @@ namespace SilverPillar.Integrations.AStar
         {
             if (m_FollowerEntity)
             {
+                m_FollowerEntity.enabled = true;
+
                 if (m_DestinationSetter)
                 {
                     m_DestinationSetter.enabled = false;

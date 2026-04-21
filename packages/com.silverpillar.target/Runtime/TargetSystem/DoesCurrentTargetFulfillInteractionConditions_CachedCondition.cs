@@ -44,7 +44,7 @@ namespace SilverPillar.Target
 
         public bool SetGameObject(GameObject gameObj)
         {
-            if (gameObj.TryGetComponent(out m_TargetSystem))
+            if (gameObj != null && gameObj.TryGetComponent(out m_TargetSystem))
             {
                 return m_ConditionToFulfill.SetGameObject(gameObj);
             }

@@ -2,11 +2,10 @@ using Sirenix.OdinInspector;
 using Sirenix.Serialization;
 using System;
 using UnityEngine;
-using static UnityEngine.GraphicsBuffer;
 
 namespace SilverPillar.Core
 {
-    public enum VectorFromAxis
+    public enum AxisFilter
     {
         xyz,
         xz,
@@ -17,36 +16,34 @@ namespace SilverPillar.Core
         z
     }
 
-    public class DistanceComparer
+    public class AxisFilterTools
     {
-
-
-        public static float CalculateDistance(VectorFromAxis whatDistanceAxisToCompare, Vector3 firstPos, Vector3 secondPos)
+        public static float CalculateDistance(AxisFilter whatDistanceAxisToCompare, Vector3 firstPos, Vector3 secondPos)
         {
             Vector3 diff = firstPos - secondPos;
             float distance = 0;
 
             switch (whatDistanceAxisToCompare)
             {
-                case VectorFromAxis.xyz:
+                case AxisFilter.xyz:
                     distance = diff.magnitude;
                     break;
-                case VectorFromAxis.xz:
+                case AxisFilter.xz:
                     distance = new Vector3(diff.x, 0, diff.z).magnitude;
                     break;
-                case VectorFromAxis.yz:
+                case AxisFilter.yz:
                     distance = new Vector3(0, diff.y, diff.z).magnitude;
                     break;
-                case VectorFromAxis.xy:
+                case AxisFilter.xy:
                     distance = new Vector3(diff.x, diff.y, 0).magnitude;
                     break;
-                case VectorFromAxis.x:
+                case AxisFilter.x:
                     distance = diff.x;
                     break;
-                case VectorFromAxis.y:
+                case AxisFilter.y:
                     distance = diff.y;
                     break;
-                case VectorFromAxis.z:
+                case AxisFilter.z:
                     distance = diff.z;
                     break;
                 default:
@@ -55,32 +52,32 @@ namespace SilverPillar.Core
 
             return distance;
         }
-        public static float CalculateSquareDistance(VectorFromAxis whatDistanceAxisToCompare, Vector3 first, Vector3 second)
+        public static float CalculateSquareDistance(AxisFilter whatDistanceAxisToCompare, Vector3 first, Vector3 second)
         {
             Vector3 diff = first - second;
             float distanceSqr = 0;
 
             switch (whatDistanceAxisToCompare)
             {
-                case VectorFromAxis.xyz:
+                case AxisFilter.xyz:
                     distanceSqr = diff.sqrMagnitude;
                     break;
-                case VectorFromAxis.xz:
+                case AxisFilter.xz:
                     distanceSqr = new Vector3(diff.x, 0, diff.z).sqrMagnitude;
                     break;
-                case VectorFromAxis.yz:
+                case AxisFilter.yz:
                     distanceSqr = new Vector3(0, diff.y, diff.z).sqrMagnitude;
                     break;
-                case VectorFromAxis.xy:
+                case AxisFilter.xy:
                     distanceSqr = new Vector3(diff.x, diff.y, 0).sqrMagnitude;
                     break;
-                case VectorFromAxis.x:
+                case AxisFilter.x:
                     distanceSqr = diff.x * diff.x;
                     break;
-                case VectorFromAxis.y:
+                case AxisFilter.y:
                     distanceSqr = diff.y * diff.y;
                     break;
-                case VectorFromAxis.z:
+                case AxisFilter.z:
                     distanceSqr = diff.z * diff.z;
                     break;
                 default:
@@ -88,6 +85,20 @@ namespace SilverPillar.Core
             }
 
             return distanceSqr;
+        }
+
+        public static Vector3 GetFilteredVector(Vector3 dir, AxisFilter vectorFromAxis)
+        {
+            switch (vectorFromAxis)
+            {
+                case AxisFilter.xz: return new Vector3(dir.x, 0, dir.z);
+                case AxisFilter.yz: return new Vector3(0, dir.y, dir.z);
+                case AxisFilter.xy: return new Vector3(dir.x, dir.y, 0);
+                case AxisFilter.x: return new Vector3(dir.x, 0, 0);
+                case AxisFilter.y: return new Vector3(0, dir.y, 0);
+                case AxisFilter.z: return new Vector3(0, 0, dir.z);
+                default: return dir; // xyz
+            }
         }
 
     }
@@ -98,7 +109,7 @@ namespace SilverPillar.Core
 
         [Title("What Distance Axis to compare")]
         [SerializeField]
-        private VectorFromAxis m_WhatAxisToCompare = VectorFromAxis.xyz;
+        private AxisFilter m_WhatAxisToCompare = AxisFilter.xyz;
 
         [Title("Comparison")]
         [SerializeField]
@@ -137,25 +148,25 @@ namespace SilverPillar.Core
 
             switch (m_WhatAxisToCompare)
             {
-                case VectorFromAxis.xyz:
+                case AxisFilter.xyz:
                     distanceSqr = diff.sqrMagnitude;
                     break;
-                case VectorFromAxis.xz:
+                case AxisFilter.xz:
                     distanceSqr = new Vector3(diff.x, 0, diff.z).sqrMagnitude;
                     break;
-                case VectorFromAxis.yz:
+                case AxisFilter.yz:
                     distanceSqr = new Vector3(0, diff.y, diff.z).sqrMagnitude;
                     break;
-                case VectorFromAxis.xy:
+                case AxisFilter.xy:
                     distanceSqr = new Vector3(diff.x, diff.y, 0).sqrMagnitude;
                     break;
-                case VectorFromAxis.x:
+                case AxisFilter.x:
                     distanceSqr = diff.x * diff.x;
                     break;
-                case VectorFromAxis.y:
+                case AxisFilter.y:
                     distanceSqr = diff.y * diff.y;
                     break;
-                case VectorFromAxis.z:
+                case AxisFilter.z:
                     distanceSqr = diff.z * diff.z;
                     break;
                 default:

@@ -9,6 +9,17 @@ namespace SilverPillar.Core
 {
     public class TimedActionController : SerializedMonoBehaviour
     {
+
+        public enum WhenToResetTimers
+        {
+            OnEnable,
+            OnStart
+        }
+
+        [Header("Settings")]
+        [SerializeField]
+        private WhenToResetTimers m_WhenToResetTimers = WhenToResetTimers.OnEnable;
+
         [Header("Data Scriptable Objects")]
         [SerializeField]
         private List<SO_Ref<TimedAction>> m_TimedActions = new();
@@ -18,9 +29,12 @@ namespace SilverPillar.Core
         [Header("Non Scriptable Object Data")]
         [OdinSerialize, ShowInInspector]
         private List<TimedActionData> m_TimedActionInstances = new();
-        private List<TimedActionData> m_InstancesToRemove = new();
+
+        private List<TimedActionData> m_RunningInstances = new();
+        private Stack<TimedActionData> m_InstancesToRemove = new();
         void Start()
         {
+
             foreach (var item in m_TimedActionInstances)
             {
                 item.SetGameObject(gameObject);
@@ -38,28 +52,48 @@ namespace SilverPillar.Core
                 m_TimedActionInstances.Add(clone);
             }
 
-            foreach (var actionInstance in m_TimedActionInstances)
+
+            if (m_WhenToResetTimers == WhenToResetTimers.OnStart)
             {
-                actionInstance.StartAction();
+                ResetTimers();
+            }
+
+        }
+
+        private void OnEnable()
+        {
+            if (m_WhenToResetTimers == WhenToResetTimers.OnEnable)
+            {
+                ResetTimers();
             }
         }
 
         void Update()
         {
-            foreach (var actionInstance in m_TimedActionInstances)
+            foreach (var actionInstance in m_RunningInstances)
             {
                 actionInstance.UpdateAction();
 
                 if (!actionInstance.IsRunning())
                 {
-                    m_InstancesToRemove.Add(actionInstance);
+                    m_InstancesToRemove.Push(actionInstance);
                 }
             }
 
             while (m_InstancesToRemove.Count > 0)
             {
-                m_TimedActionInstances.Remove(m_InstancesToRemove.Last());
-                m_InstancesToRemove.Remove(m_InstancesToRemove.Last());
+                m_RunningInstances.Remove(m_InstancesToRemove.Pop());
+            }
+        }
+
+        private void ResetTimers()
+        {
+            m_RunningInstances.Clear();
+            m_RunningInstances.AddRange(m_TimedActionInstances);
+
+            foreach (var actionInstance in m_RunningInstances)
+            {
+                actionInstance.StartAction();
             }
         }
 

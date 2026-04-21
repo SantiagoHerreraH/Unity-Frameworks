@@ -28,6 +28,7 @@ namespace SilverPillar.Integrations.AStar
         {
             if (m_Follower != null)
             {
+                m_Follower.enabled = true;
                 m_Follower.isStopped = true;
             }
         }

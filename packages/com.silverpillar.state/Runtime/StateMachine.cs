@@ -18,6 +18,11 @@ namespace SilverPillar.State
         [OdinSerialize, ShowInInspector]
         private Dictionary<StateTag, State> m_States = new();
 
+
+        [FoldoutGroup("Events")]
+        [SerializeField]
+        private StateEvent m_OnStateChange = null;
+
         public Dictionary<StateTag, State> States { get { return m_States; } }
 
         [FoldoutGroup("Debug")]
@@ -65,6 +70,9 @@ namespace SilverPillar.State
                 m_CurrentState?.EndAction();
                 m_CurrentState = newState;
                 m_CurrentStateTag = stateTag;
+
+                m_OnStateChange?.Invoke(stateTag);
+
                 m_CurrentState.StartAction();
             }
 

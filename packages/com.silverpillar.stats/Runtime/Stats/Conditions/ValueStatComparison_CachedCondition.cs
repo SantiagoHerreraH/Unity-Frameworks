@@ -40,7 +40,7 @@ namespace SilverPillar.Stats
             {
                 float statValue = _cachedStatController.GetStat(m_StatType, m_StatVariable);
 
-                return FloatComparison.Compare(m_Value, m_ConditionOperation, statValue);
+                return FloatComparison.Compare(statValue, m_ConditionOperation, m_Value);
             }
 
             return m_ReturnValueIfNoStatType;
@@ -53,7 +53,8 @@ namespace SilverPillar.Stats
                 m_StatType = this.m_StatType,
                 m_StatVariable = this.m_StatVariable,
                 m_ConditionOperation = this.m_ConditionOperation,
-                m_Value = this.m_Value
+                m_Value = this.m_Value,
+                m_ReturnValueIfNoStatType = this.m_ReturnValueIfNoStatType
             };
             clone.SetGameObject(_cachedGameObject);
             return clone;

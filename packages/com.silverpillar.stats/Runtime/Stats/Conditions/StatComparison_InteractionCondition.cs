@@ -57,9 +57,9 @@ namespace SilverPillar.Stats
             StatController targetStatController = null;
             if (m_CachedStatController == null || target == null) return false;
 
-            bool statsFromOther = (m_CompareThis.From == TargetType.Other || m_AgainstThis.From == TargetType.Other);
+            bool needsStatsFromOther = (m_CompareThis.From == TargetType.Other || m_AgainstThis.From == TargetType.Other);
 
-            if (target.TryGetComponent(out targetStatController) && statsFromOther)
+            if (!target.TryGetComponent(out targetStatController) && needsStatsFromOther)
             {
                 return m_WhatToReturnIfTargetDoesntHaveStatController;
             }
@@ -70,7 +70,7 @@ namespace SilverPillar.Stats
                 float statValue = m_CompareThis.GetValue(m_CachedStatController, targetStatController);
                 float statValueToCompare = m_AgainstThis.GetValue(m_CachedStatController, targetStatController);
 
-                return FloatComparison.Compare(statValueToCompare, m_ConditionOperation, statValue);
+                return FloatComparison.Compare(statValue, m_ConditionOperation, statValueToCompare);
             }
 
             if ((!m_CompareThis.CanGetValue(m_CachedStatController, targetStatController) && m_CompareThis.From == TargetType.Other) ||
