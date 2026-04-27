@@ -32,6 +32,12 @@ namespace SilverPillar.Integrations.AStar
         [SerializeField]
         private float m_ValueIfNullScore = 0f;
 
+
+        public bool Initialize(GameObject gameObj)
+        {
+            return m_ThanDistanceToCompare.SetGameObject(gameObj);
+        }
+
         public bool IsFulfilled(Vector3 firstPosition, Vector3 secondPosition)
         {
             float distanceSqr = AxisFilterTools.CalculateSquareDistance(m_WhatAxisToCompare, firstPosition, secondPosition);
@@ -111,10 +117,12 @@ namespace SilverPillar.Integrations.AStar
 
             bool speedIsGood = m_Speed != null ? m_Speed.SetGameObject(gameObj) : false;
             bool radiusIsGood = m_Radius != null ? m_Radius.SetGameObject(gameObj) : false;
+            bool paramsGood = m_CustomDistanceParams.Initialize(gameObj);
 
             gameObj.TryGetComponent<AIDestinationSetter>(out m_DestinationSetter);
 
             return
+                paramsGood &&
                 speedIsGood &&
                 radiusIsGood &&
                 targetSystemGood &&

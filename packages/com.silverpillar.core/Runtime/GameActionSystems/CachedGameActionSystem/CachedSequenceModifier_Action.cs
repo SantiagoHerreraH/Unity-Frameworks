@@ -31,13 +31,13 @@ namespace SilverPillar.Core
         private CustomTargetType m_From;
         [FoldoutGroup("Targets")]
         [SerializeField, ShowIf(nameof(m_From), CustomTargetType.Custom)]
-        private SimpleCachedGameActionSequence m_CustomFrom;
+        private CachedGameActionExecuter m_CustomFrom;
         [FoldoutGroup("Targets")]
         [SerializeField]
         private CustomTargetType m_To;
         [FoldoutGroup("Targets")]
         [SerializeField, ShowIf(nameof(m_To), CustomTargetType.Custom)]
-        private SimpleCachedGameActionSequence m_CustomTo;
+        private CachedGameActionExecuter m_CustomTo;
 
         [FoldoutGroup("Operations")]
         [SerializeField]
@@ -46,11 +46,11 @@ namespace SilverPillar.Core
         [SerializeField]
         private OperationTypeOnEnd m_OperationTypeOnEnd;
 
-        private SimpleCachedGameActionSequence m_Self = null;
+        private CachedGameActionExecuter m_Self = null;
         private List<ICachedGameAction> m_GameActions = new();
 
-        private SimpleCachedGameActionSequence m_FromSequence = null;
-        private SimpleCachedGameActionSequence m_ToSequence = null;
+        private CachedGameActionExecuter m_FromSequence = null;
+        private CachedGameActionExecuter m_ToSequence = null;
 
         public IAction Clone()
         {
@@ -83,7 +83,7 @@ namespace SilverPillar.Core
         {
             if (gameObj != null)
             {
-                return gameObj.TryGetComponent<SimpleCachedGameActionSequence>(out m_Self);
+                return gameObj.TryGetComponent<CachedGameActionExecuter>(out m_Self);
             }
             return false;
         }
@@ -97,10 +97,8 @@ namespace SilverPillar.Core
 
             m_GameActions.Clear();
 
-            List<ICachedGameAction> sourceActions = new();
-            sourceActions.AddRange(m_FromSequence.ActionsToExecuteBeforeSequence);
-            sourceActions.AddRange(m_FromSequence.ActionsInSequence);
-            sourceActions.AddRange(m_FromSequence.ActionsToExecuteAfterSequence);
+            List<CachedGameActionExecuter.ActionData> sourceActions = new();
+            sourceActions.AddRange(m_FromSequence.Actions);
 
             foreach (var item in sourceActions)
             {
@@ -109,11 +107,11 @@ namespace SilverPillar.Core
                 switch (m_OperationTypeOnStart)
                 {
                     case OperationTypeOnStart.Add:
-                        actionToAdd = item;
-                        m_ToSequence.AddActionToSequence(item);
+                        actionToAdd = item.GameAction;
+                        m_ToSequence.AddGameAction(item.GameAction);
                         break;
                     case OperationTypeOnStart.Clone:
-                        actionToAdd = m_ToSequence.CloneActionToSequence(item);
+                        actionToAdd = m_ToSequence.CloneGameAction(item.GameAction);
                         break;
                     default:
                         break;
@@ -138,7 +136,7 @@ namespace SilverPillar.Core
             {
                 foreach (var item in m_GameActions)
                 {
-                    m_ToSequence.RemoveActionFromSequence(item);
+                    m_ToSequence.RemoveGameAction(item);
                 }
             }
 

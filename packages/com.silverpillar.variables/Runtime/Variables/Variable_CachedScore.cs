@@ -1,4 +1,5 @@
 using SilverPillar.Core;
+using Sirenix.OdinInspector;
 using System;
 using UnityEngine;
 
@@ -16,6 +17,11 @@ namespace SilverPillar.Variables
         private float m_DefaultValue = 0f;
 
         private GameObject m_GameObject;
+
+        [SerializeField]
+        private SelfType m_VariableControllerFromWho;
+
+        [SerializeReference, ShowIf(nameof(m_VariableControllerFromWho), SelfType.CustomGameObject)]
         private IVariableController m_Controller;
 
         public float CalculateScore()
@@ -33,7 +39,11 @@ namespace SilverPillar.Variables
             m_GameObject = self;
             if (self != null)
             {
-                self.TryGetComponent(out m_Controller);
+                if (m_VariableControllerFromWho == SelfType.ThisGameObject)
+                {
+
+                    self.TryGetComponent(out m_Controller);
+                }
             }
             else
             {

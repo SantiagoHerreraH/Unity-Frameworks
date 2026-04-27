@@ -179,7 +179,7 @@ namespace SilverPillar.Core
 
         public void EndAction()
         {
-            if (m_WhenToTriggerActions == WhenToTriggerActions.Update)
+            if (m_WhenToTriggerActions == WhenToTriggerActions.End)
             {
                 Execute();
             }

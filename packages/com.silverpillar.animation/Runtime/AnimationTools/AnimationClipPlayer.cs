@@ -34,7 +34,7 @@ namespace SilverPillar.Animation
         private Animator m_Animator;
         private bool m_Initialized = false;
         private Coroutine m_CurrentAnimationRoutine;
-
+        private AnimationClipPlayable m_CurrentClipPlayable;
         void Awake()
         {
             Initialize();
@@ -68,9 +68,10 @@ namespace SilverPillar.Animation
 
             m_CurrentAnimationRoutine = StartCoroutine(ExecuteAnimationData(data));
         }
-
         private IEnumerator ExecuteAnimationData(AnimationClipData data)
         {
+            Initialize();
+
             IAction action = null;
 
             if (data.Action != null)
@@ -79,21 +80,31 @@ namespace SilverPillar.Animation
                 action.SetGameObject(gameObject);
             }
 
-            // Crear el nodo del clip dentro del grafo
-            var clipPlayable = AnimationClipPlayable.Create(m_Graph, data.Clip);
-            m_Graph.Connect(clipPlayable, 0, m_Mixer, 1);
+            // Clean previous playable connected to input 1
+            if (m_Mixer.GetInput(1).IsValid())
+            {
+                m_Graph.Disconnect(m_Mixer, 1);
+            }
 
-            // Inicio: Eventos y StartAction
+            if (m_CurrentClipPlayable.IsValid())
+            {
+                m_CurrentClipPlayable.Destroy();
+            }
+
+            m_CurrentClipPlayable = AnimationClipPlayable.Create(m_Graph, data.Clip);
+            m_CurrentClipPlayable.SetTime(0);
+
+            m_Graph.Connect(m_CurrentClipPlayable, 0, m_Mixer, 1);
+
             data.OnAnimationStart?.Invoke();
             action?.StartAction();
 
             float duration = data.Clip.length;
             float elapsed = 0f;
-            float transitionTime = data.TransitionTime;
+            float transitionTime = Mathf.Max(0.001f, data.TransitionTime);
 
             while (elapsed < duration)
             {
-                // Gestión de interpolación de pesos (Blending)
                 float currentWeight = 1f;
 
                 if (elapsed < transitionTime)
@@ -105,29 +116,31 @@ namespace SilverPillar.Animation
                     currentWeight = (duration - elapsed) / transitionTime;
                 }
 
+                currentWeight = Mathf.Clamp01(currentWeight);
+
                 m_Mixer.SetInputWeight(1, currentWeight);
                 m_Mixer.SetInputWeight(0, 1f - currentWeight);
 
-                // Lógica Frame a Frame del IAction
                 action?.UpdateAction();
 
                 elapsed += Time.deltaTime;
                 yield return null;
             }
 
-            // Asegurar retorno total a la capa base
             m_Mixer.SetInputWeight(1, 0f);
             m_Mixer.SetInputWeight(0, 1f);
 
-            // Fin: Eventos y EndAction
             action?.EndAction();
             data.OnAnimationEnd?.Invoke();
 
-            // Limpieza de nodos para liberar memoria del grafo
-            if (clipPlayable.IsValid())
+            if (m_Mixer.GetInput(1).IsValid())
             {
                 m_Graph.Disconnect(m_Mixer, 1);
-                clipPlayable.Destroy();
+            }
+
+            if (m_CurrentClipPlayable.IsValid())
+            {
+                m_CurrentClipPlayable.Destroy();
             }
 
             m_CurrentAnimationRoutine = null;
@@ -141,25 +154,25 @@ namespace SilverPillar.Animation
 
         private void Initialize()
         {
-            if (!m_Initialized)
-            {
-                m_Animator = GetComponent<Animator>();
+            if (m_Initialized) return;
 
-                // 1. Creamos el grafo una sola vez
-                m_Graph = PlayableGraph.Create("DinoGraph");
-                m_Graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+            m_Animator = GetComponent<Animator>();
 
-                // 2. Creamos un mezclador para poder conectar clips dinámicamente
-                m_Mixer = AnimationLayerMixerPlayable.Create(m_Graph, 1);
+            m_Graph = PlayableGraph.Create("DinoGraph");
+            m_Graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
 
-                // 3. Conectamos el mezclador a la salida del Animator
-                var output = AnimationPlayableOutput.Create(m_Graph, "AnimationOutput", m_Animator);
-                output.SetSourcePlayable(m_Mixer);
+            // Needs 2 inputs because you use input 0 and input 1
+            m_Mixer = AnimationLayerMixerPlayable.Create(m_Graph, 2);
 
-                m_Graph.Play();
+            var output = AnimationPlayableOutput.Create(m_Graph, "AnimationOutput", m_Animator);
+            output.SetSourcePlayable(m_Mixer);
 
-                m_Initialized = true;
-            }
+            m_Mixer.SetInputWeight(0, 1f);
+            m_Mixer.SetInputWeight(1, 0f);
+
+            m_Graph.Play();
+
+            m_Initialized = true;
         }
     }
 }

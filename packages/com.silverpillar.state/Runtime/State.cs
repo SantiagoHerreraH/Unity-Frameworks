@@ -72,9 +72,12 @@ namespace SilverPillar.State
         private bool m_CanTransitionToOtherStateBeforeCounterEnd = false;
 
         [FoldoutGroup("How To End State")]
-        [SerializeField, ShowIf(nameof(m_HowToEndState), HowToEndState.OnTimeEnd), 
-        Tooltip("This score lets you decide how to calculate the state time. The time will be calculated on State Start")]
-        private ScoreGroup m_Time = new();
+        [OdinSerialize, ShowIf(nameof(m_HowToEndState), HowToEndState.OnTimeEnd), 
+        Tooltip("This score lets you decide how to calculate the state time. " +
+            "The time will be calculated on State Start. " +
+            "If left null, time will be infinite. " +
+            "Time will also be infinite if this value is negative.")]
+        private ICachedScore m_Time;
         private float m_MaxTime;
         private float m_CurrentTime;
 
@@ -96,7 +99,7 @@ namespace SilverPillar.State
             this.m_HowToEndState = other.m_HowToEndState;
             this.m_StateToTransitionToOnTimeEnd = other.m_StateToTransitionToOnTimeEnd;
             this.m_CanTransitionToOtherStateBeforeCounterEnd = other.m_CanTransitionToOtherStateBeforeCounterEnd;
-            this.m_Time = other.m_Time;
+            this.m_Time = other.m_Time.Clone();
             this.m_MaxTime = other.m_MaxTime;
             this.m_CurrentTime = other.m_CurrentTime;
             this.m_StateMachine = other.m_StateMachine;
@@ -124,6 +127,7 @@ namespace SilverPillar.State
             if (gameObj.TryGetComponent(out m_StateMachine))
             {
                 m_CanTransitionIf?.SetGameObject(gameObj);
+                m_Time?.SetGameObject(gameObj);
 
                 if (m_StatesToTransitionTo == null)
                 {
@@ -174,7 +178,7 @@ namespace SilverPillar.State
 
             m_OnStart?.Invoke();
 
-            m_MaxTime = m_Time.CalculateScore(m_StateMachine.gameObject);
+            m_MaxTime = m_Time != null ? m_Time.CalculateScore() : -1;
         }
 
         public void UpdateAction()
@@ -206,6 +210,11 @@ namespace SilverPillar.State
 
                     break;
                 case HowToEndState.OnTimeEnd:
+
+                    if (m_MaxTime < 0)
+                    {
+                        return;
+                    }
 
                     m_CurrentTime += Time.deltaTime;
 
