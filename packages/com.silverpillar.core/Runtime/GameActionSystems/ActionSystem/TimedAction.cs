@@ -87,7 +87,7 @@ namespace SilverPillar.Core
         public ActionTime(ActionTime other)
         {
             Time = other.Time.Clone();
-            Timer = other.Timer;
+            Timer = new(other.Timer);
         }
 
         public ActionTime Clone()

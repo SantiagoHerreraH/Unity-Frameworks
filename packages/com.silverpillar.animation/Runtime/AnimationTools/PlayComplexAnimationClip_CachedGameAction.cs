@@ -57,7 +57,7 @@ namespace SilverPillar.Animation
         {
             if (m_AnimationClipPlayer != null && m_ClipData != null)
             {
-                m_AnimationClipPlayer.PlayOneShot(m_ClipData);
+                m_AnimationClipPlayer.PlayClip(m_ClipData);
             }
         }
 

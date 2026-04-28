@@ -11,6 +11,10 @@ namespace SilverPillar.Animation
         [Title("Data")]
         [SerializeField]
         private AnimationClip m_Clip;
+        [SerializeField]
+        private float m_TransitionTime;
+        [SerializeField, Tooltip("negative is infinite. 1 == played once")]
+        private int m_LoopCount;
 
         [Title("Settings")]
         [SerializeField]
@@ -34,7 +38,7 @@ namespace SilverPillar.Animation
         {
             if (m_AnimationClipPlayer != null && m_Clip != null)
             {
-                m_AnimationClipPlayer.PlayOneShot(m_Clip);
+                m_AnimationClipPlayer.PlayClip(m_Clip, m_TransitionTime, m_LoopCount);
             }
         }
 

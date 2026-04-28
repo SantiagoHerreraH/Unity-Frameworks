@@ -3,6 +3,7 @@ using Sirenix.Serialization;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace SilverPillar.State
 {
@@ -22,6 +23,9 @@ namespace SilverPillar.State
         [FoldoutGroup("Events")]
         [SerializeField]
         private StateEvent m_OnStateChange = null;
+        [FoldoutGroup("Events")]
+        [SerializeField]
+        private UnityEvent m_OnNullState = null;
 
         public Dictionary<StateTag, State> States { get { return m_States; } }
 
@@ -85,6 +89,7 @@ namespace SilverPillar.State
                 m_CurrentState?.EndAction();
                 m_CurrentState = null;
                 m_CurrentStateTag = null;
+                m_OnNullState?.Invoke();
             }
         }
 
