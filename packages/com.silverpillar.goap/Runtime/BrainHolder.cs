@@ -26,13 +26,21 @@ namespace SilverPillar.GOAP
 
     public class BrainHolder : SerializedMonoBehaviour
     {
+        [Serializable]
+        public struct EventData
+        {
+            public BehaviorAction BehaviorAction;
+            public BehaviorActionEvent BehaviorActionEvent;
+
+        }
         [Title("Brain")]
         [SerializeField]
         private SO_Ref<Brain> m_BrainRef = new();
 
         [Title("Events")]
-        [OdinSerialize, ShowInInspector]
-        private Dictionary<BehaviorAction, BehaviorActionEvent> m_BehaviorActionEvents = null;
+        [SerializeField]
+        private List<EventData> m_BehaviorActionEvents = null;
+        private Dictionary<BehaviorAction, BehaviorActionEvent> m_BehaviorActionEventsDictionary = null;
         private BrainInstance m_BrainInstance = null;
         private BehaviorActionInstance m_CurrentActionInstance = null;
         private BehaviorActionEvent m_CurrentEvent;
@@ -46,6 +54,18 @@ namespace SilverPillar.GOAP
         private void Awake()
         {
             m_BrainInstance = m_BrainRef.Get().CreateInstance(gameObject, m_DebugSettings);
+
+            if (m_BehaviorActionEvents != null)
+            {
+                if (m_BehaviorActionEventsDictionary == null)
+                {
+                    m_BehaviorActionEventsDictionary = new();
+                }
+                foreach (var item in m_BehaviorActionEvents)
+                {
+                    m_BehaviorActionEventsDictionary.Add(item.BehaviorAction, item.BehaviorActionEvent);
+                }
+            }
         }
 
         void Update() 
@@ -56,7 +76,7 @@ namespace SilverPillar.GOAP
             {
                 m_CurrentActionInstance?.EndAction();
 
-                if (m_BehaviorActionEvents != null && m_CurrentActionInstance != null && m_BehaviorActionEvents.TryGetValue(m_CurrentActionInstance.Action, out m_CurrentEvent))
+                if (m_BehaviorActionEvents != null && m_CurrentActionInstance != null && m_BehaviorActionEventsDictionary.TryGetValue(m_CurrentActionInstance.Action, out m_CurrentEvent))
                 {
                     m_CurrentEvent.OnEnd?.Invoke();
                 }
@@ -65,7 +85,7 @@ namespace SilverPillar.GOAP
 
                 m_CurrentActionInstance.StartAction();
 
-                if (m_BehaviorActionEvents != null && m_BehaviorActionEvents.TryGetValue(m_CurrentActionInstance.Action, out m_CurrentEvent))
+                if (m_BehaviorActionEvents != null && m_BehaviorActionEventsDictionary.TryGetValue(m_CurrentActionInstance.Action, out m_CurrentEvent))
                 {
                     m_CurrentEvent.OnStart?.Invoke();
                 }

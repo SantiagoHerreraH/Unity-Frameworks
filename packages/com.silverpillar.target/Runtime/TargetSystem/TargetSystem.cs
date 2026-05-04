@@ -92,7 +92,16 @@ namespace SilverPillar.Target
 
         [FoldoutGroup("Events")]
         [SerializeField]
+        private bool m_CallOnOnNewCurrentTargetOnStart = true;
+        [FoldoutGroup("Events")]
+        [SerializeField]
         private UnityEvent<GameObject> m_OnNewCurrentTarget = new();
+        [FoldoutGroup("Events")]
+        [SerializeField]
+        private bool m_CallOnOnNullTargetOnStart = true;
+        [FoldoutGroup("Events")]
+        [SerializeField]
+        private UnityEvent m_OnNullCurrentTarget = new();
 
         [FoldoutGroup("Targets")]
         [SerializeField]
@@ -105,6 +114,8 @@ namespace SilverPillar.Target
         [FoldoutGroup("Debug")]
         [SerializeField]
         private bool m_PrintOnChangeTarget;
+        [SerializeField]
+        private bool m_PrintOnNullTarget;
 
         [FoldoutGroup("Debug")]
         [SerializeField]
@@ -129,6 +140,18 @@ namespace SilverPillar.Target
         private void Awake()
         {
             Initialize();
+        }
+
+        private void Start()
+        {
+            if (m_CallOnOnNewCurrentTargetOnStart && m_CurrentTarget != null)
+            {
+                m_OnNewCurrentTarget?.Invoke(m_CurrentTarget);
+            }
+            else if (m_CallOnOnNullTargetOnStart && m_CurrentTarget == null)
+            {
+                m_OnNullCurrentTarget?.Invoke();
+            }
         }
 
         private void OnEnable()
@@ -200,6 +223,7 @@ namespace SilverPillar.Target
 
         public void ChangeCurrentTarget(GameObject newTarget)
         {
+            if (newTarget == null) return;
             var oldTarget = m_CurrentTarget;
             m_CurrentTarget = newTarget;
 
@@ -211,6 +235,18 @@ namespace SilverPillar.Target
             if (m_PrintOnChangeTarget)
             {
                 Debug.Log($"{gameObject}'s Target System Current Target is {newTarget}.");
+            }
+        }
+
+        public void NullCurrentTarget()
+        {
+            m_CurrentTarget = null;
+
+            m_OnNullCurrentTarget?.Invoke();
+
+            if (m_PrintOnNullTarget)
+            {
+                Debug.Log($"{gameObject}'s Target System Current Target is NULL.");
             }
         }
 
