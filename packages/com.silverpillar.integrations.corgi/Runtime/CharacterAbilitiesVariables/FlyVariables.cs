@@ -5,11 +5,11 @@ using UnityEngine;
 
 namespace SilverPillar.Integrations.Corgi
 {
-    public class HorizontalMovementVariables : MonoBehaviour
+    public class FlyVariables : MonoBehaviour
     {
         [Header("References")]
         [SerializeField, Tooltip("If null will try to get from self")]
-        private CharacterHorizontalMovement m_CharacterHorizontalMovement;
+        private CharacterFly m_CharacterFly;
         [SerializeField, Tooltip("If null will try to get from self")]
         private StatController m_StatController;
         [SerializeField, Tooltip("If null will try to get from self")]
@@ -17,10 +17,11 @@ namespace SilverPillar.Integrations.Corgi
 
         [Header("Stat Variables")]
         [SerializeField]
-        private StatValueRange m_WalkSpeed = new();
-        [SerializeField]
-        private StatValueRange m_AirControl = new();
+        private StatValueRange m_FlySpeed = new();
+
         [Header("Bool Module Variables")]
+        [SerializeField]
+        private BoolModuleType m_FlyPermitted;
         [SerializeField]
         private BoolModuleType m_InstantAcceleration;
 
@@ -37,11 +38,11 @@ namespace SilverPillar.Integrations.Corgi
         {
             bool allGood = true;
 
-            if (m_CharacterHorizontalMovement == null)
+            if (m_CharacterFly == null)
             {
-                if (!gameObject.TryGetComponent(out m_CharacterHorizontalMovement))
+                if (!gameObject.TryGetComponent(out m_CharacterFly))
                 {
-                    Debug.LogError($"{nameof(m_CharacterHorizontalMovement)} is NULL in {nameof(HorizontalMovementVariables)} on gameobject {gameObject.name}.");
+                    Debug.LogError($"{nameof(m_CharacterFly)} is NULL in {this.GetType().Name} on gameobject {gameObject.name}.");
                     allGood = false;
                 }
             }
@@ -50,7 +51,7 @@ namespace SilverPillar.Integrations.Corgi
             {
                 if (!gameObject.TryGetComponent(out m_StatController))
                 {
-                    Debug.LogError($"{nameof(m_StatController)} is NULL in {nameof(HorizontalMovementVariables)} on gameobject {gameObject.name}.");
+                    Debug.LogError($"{nameof(m_StatController)} is NULL in {this.GetType().Name} on gameobject {gameObject.name}.");
                     allGood = false;
                 }
             }
@@ -59,55 +60,54 @@ namespace SilverPillar.Integrations.Corgi
             {
                 if (!gameObject.TryGetComponent(out m_BoolModuleController))
                 {
-                    Debug.LogError($"{nameof(m_BoolModuleController)} is NULL in {nameof(HorizontalMovementVariables)} on gameobject {gameObject.name}.");
+                    Debug.LogError($"{nameof(m_BoolModuleController)} is NULL in {this.GetType().Name} on gameobject {gameObject.name}.");
                     allGood = false;
                 }
             }
 
-            allGood &= IsStatTypeValid(m_WalkSpeed.StatTypeToGetValueFrom.Get(), nameof(m_WalkSpeed));
-            allGood &= IsStatTypeValid(m_AirControl.StatTypeToGetValueFrom.Get(), nameof(m_AirControl));
-          
-            allGood &= IsBoolModuleValid(m_InstantAcceleration, nameof(m_InstantAcceleration));
+            allGood &= IsStatTypeValid(m_FlySpeed.StatTypeToGetValueFrom.Get(), nameof(m_FlySpeed));
+
+            allGood &= IsBoolModuleValid(m_FlyPermitted, nameof(m_FlyPermitted));
+            allGood &= IsBoolModuleValid(m_InstantAcceleration, nameof(m_FlyPermitted));
 
             return allGood;
         }
 
         private void CreateVariables()
         {
-            m_StatController.CreateStatType(m_WalkSpeed.StatTypeToGetValueFrom.Get());
-            m_StatController.CreateStatType(m_AirControl.StatTypeToGetValueFrom.Get());
+            m_StatController.CreateStatType(m_FlySpeed.StatTypeToGetValueFrom.Get());
 
+            m_BoolModuleController.CreateBoolModule(m_FlyPermitted, false);
             m_BoolModuleController.CreateBoolModule(m_InstantAcceleration, false);
         }
 
         private void SubscribeToEvents()
         {
-            m_StatController.SubscribeOnCurrentStatChange(m_WalkSpeed.StatTypeToGetValueFrom.Get(), UpdateWalkSpeed);
-            m_StatController.SubscribeOnCurrentStatChange(m_AirControl.StatTypeToGetValueFrom.Get(), UpdateAirControl);
-           
+            m_StatController.SubscribeOnCurrentStatChange(m_FlySpeed.StatTypeToGetValueFrom.Get(), UpdateFlySpeed);
+
+            m_BoolModuleController.SubscribeOnSetState(m_FlyPermitted, UpdateFlyPermitted);
             m_BoolModuleController.SubscribeOnSetState(m_InstantAcceleration, UpdateInstantAcceleration);
         }
 
-        private void UpdateWalkSpeed(float pastStat, float currentStat)
+        private void UpdateFlySpeed(float pastStat, float currentStat)
         {
-            m_CharacterHorizontalMovement.WalkSpeed = m_WalkSpeed.GetValue(currentStat);
+            m_CharacterFly.FlySpeed = m_FlySpeed.GetValue(currentStat);
         }
 
-        private void UpdateAirControl(float pastStat, float currentStat)
+        private void UpdateFlyPermitted(bool state)
         {
-            m_CharacterHorizontalMovement.AirControl = m_AirControl.GetValue(currentStat);
+            m_CharacterFly.AbilityPermitted = state;
         }
-
         private void UpdateInstantAcceleration(bool state)
         {
-            m_CharacterHorizontalMovement.InstantAcceleration = state;
+            m_CharacterFly.InstantAcceleration = state;
         }
 
         private bool IsStatTypeValid(StatType statType, string variableName)
         {
             if (statType == null)
             {
-                Debug.LogError($"StatType is NULL in {variableName} in {nameof(HorizontalMovementVariables)} in gameobject {gameObject.name}.");
+                Debug.LogError($"StatType is NULL in {variableName} in {this.GetType().Name} in gameobject {gameObject.name}.");
                 return false;
             }
 
@@ -118,7 +118,7 @@ namespace SilverPillar.Integrations.Corgi
         {
             if (type == null)
             {
-                Debug.LogError($"BoolModule is NULL in {variableName} in {nameof(HorizontalMovementVariables)} in gameobject {gameObject.name}.");
+                Debug.LogError($"BoolModule is NULL in {variableName} in {this.GetType().Name} in gameobject {gameObject.name}.");
                 return false;
             }
 

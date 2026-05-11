@@ -75,7 +75,8 @@ namespace SilverPillar.Integrations.AStar
 
         public void StartAction()
         {
-            if (m_AIDestinationSetter && m_TargetSystem && m_FollowerEntity)
+            if (m_AIDestinationSetter.gameObject.activeInHierarchy && 
+                m_AIDestinationSetter && m_TargetSystem && m_FollowerEntity)
             {
                 if (m_TargetSystem.CurrentTarget != null)
                 {

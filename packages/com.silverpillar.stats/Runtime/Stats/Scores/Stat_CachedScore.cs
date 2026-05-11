@@ -11,7 +11,7 @@ namespace SilverPillar.Stats
     public class Stat_CachedScore : ICachedScore
     {
         [SerializeField]
-        private StatValueRange m_StatScore;
+        private StatVariableValueRange m_StatScore;
 
         private GameObject? m_Target;
 

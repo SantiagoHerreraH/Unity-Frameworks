@@ -26,7 +26,7 @@ namespace SilverPillar.Integrations.AStar
 
         public void Execute()
         {
-            if (m_Follower != null)
+            if (m_Follower != null && m_Follower.gameObject.activeInHierarchy)
             {
                 m_Follower.enabled = true;
                 m_Follower.isStopped = true;

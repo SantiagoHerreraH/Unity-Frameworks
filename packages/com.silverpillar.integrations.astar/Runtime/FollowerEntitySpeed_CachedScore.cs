@@ -16,7 +16,6 @@ namespace SilverPillar.Core
     [Serializable]
     public class FollowerEntitySpeed_CachedScore : ICachedScore
     {
-        
 
 #nullable enable
         [SerializeField]
@@ -27,15 +26,14 @@ namespace SilverPillar.Core
         [SerializeField, ShowIf(nameof(m_SpeedFromWho), SelfType.CustomGameObject)]
         private FollowerEntity? m_FollowerEntity;
 
-        /// <summary>
-        /// Returns the magnitude of the FollowerEntity's current velocity.
-        /// </summary>
         public float CalculateScore()
         {
-            // If no entity is assigned, speed is zero
-            if (m_FollowerEntity == null) return 0f;
-
-            // FollowerEntity (A*) uses .velocity to report its current movement vector
+            if (m_FollowerEntity == null) return 0f; 
+            
+            if (!m_FollowerEntity.gameObject.activeInHierarchy)
+            {
+                return 0f;
+            }
 
             switch (m_VelocityType)
             {
@@ -53,9 +51,6 @@ namespace SilverPillar.Core
 
         }
 
-        /// <summary>
-        /// Creates a copy of this score provider.
-        /// </summary>
         public ICachedScore Clone()
         {
             return new FollowerEntitySpeed_CachedScore
@@ -67,20 +62,15 @@ namespace SilverPillar.Core
 
         public GameObject? GetGameObject() => m_FollowerEntity != null ? m_FollowerEntity.gameObject : null;
 
-        /// <summary>
-        /// Sets the reference. If set to Self, it looks for the FollowerEntity on the provided GameObject.
-        /// </summary>
         public bool SetGameObject(GameObject self)
         {
             if (self == null) return false;
 
-            // If configured to use a specific manual reference, check if it's assigned
             if (m_SpeedFromWho == SelfType.CustomGameObject)
             {
                 return m_FollowerEntity != null;
             }
 
-            // Otherwise, try to find the component on the target GameObject
             return self.TryGetComponent<FollowerEntity>(out m_FollowerEntity);
         }
     }

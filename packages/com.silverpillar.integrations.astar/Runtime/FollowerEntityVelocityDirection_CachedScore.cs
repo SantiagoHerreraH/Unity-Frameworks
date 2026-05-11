@@ -45,17 +45,16 @@ namespace SilverPillar.Core
             return m_FollowerEntity != null;
         }
 
-        /// <summary>
-        /// Calcula cuánto de la velocidad actual coincide con el vector de eje 
-        /// en relación con la orientación frontal (forward) del objeto.
-        /// </summary>
         public float CalculateScore()
         {
-            if (m_FollowerEntity == null) return 0f;
-
+            if (m_FollowerEntity == null) return 0f; 
+            
+            if (!m_FollowerEntity.gameObject.activeInHierarchy)
+            {
+                return 0f;
+            }
 
             Vector3 worldAxis = m_FollowerEntity.transform.TransformDirection(speedAxisVector.normalized);
-
 
             Vector3 velocity = m_FollowerEntity.velocity;
 

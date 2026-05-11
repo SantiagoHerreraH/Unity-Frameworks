@@ -41,9 +41,9 @@ namespace SilverPillar.Target
             }
         }
 
-        public enum WhenToChooseTarget
+        public enum TargetOperationModes
         {
-            DontChooseAutomatically,
+            DontDoSoAutomatically,
             OnUpdate,
             OnRegisterPossibleTarget,
             OnUnregisterPossibleTarget,
@@ -51,11 +51,35 @@ namespace SilverPillar.Target
             OnEnable
         }
 
-        public enum WhatToDoIfPossibleTargetDoesntPassFilter
+        public enum WhatToDoIfPossibleTargetDoesntPassChoosingFilter
         {
             KeepInThePossibleTargetsArray,
             RemoveFromThePossibleTargetsArray
         }
+
+        public enum WhatToDoIfPossibleTargetDoesntPassFilter
+        {
+            NullCurrentTarget,
+            ChooseCurrentTarget
+        }
+
+
+        [FoldoutGroup("How to Filter Current Target")]
+        [OdinSerialize, ShowInInspector]
+        private IInteractionCondition m_FilterIfFalse = null;
+        [FoldoutGroup("How to Filter Current Target")]
+        [SerializeField]
+        private WhatToDoIfPossibleTargetDoesntPassFilter m_WhatToDoIfPossibleTargetDoesntPassFilter = WhatToDoIfPossibleTargetDoesntPassFilter.NullCurrentTarget;
+
+        [FoldoutGroup("When to Filter Current Target")]
+        [SerializeField]
+        private TargetOperationModes m_WhenToFilterTarget = TargetOperationModes.DontDoSoAutomatically;
+        [FoldoutGroup("When to Filter Current Target")]
+        [SerializeField, Min(0), Tooltip("0 means every tick"), ShowIf(nameof(m_WhenToFilterTarget), TargetOperationModes.OnUpdate)]
+        private float m_HowOftenToFilterTarget;
+        private float m_TimeSinceLastFilteredCurrentTarget = 0;
+
+
 
         [FoldoutGroup("How to Choose Current Target")]
 
@@ -64,7 +88,7 @@ namespace SilverPillar.Target
         private IInteractionCondition m_ConditionToChooseTheCurrentTarget = null;
         [FoldoutGroup("How to Choose Current Target")]
         [SerializeField]
-        private WhatToDoIfPossibleTargetDoesntPassFilter m_WhatToDoIfPossibleTargetDoesntPassFilter;
+        private WhatToDoIfPossibleTargetDoesntPassChoosingFilter m_WhatToDoIfPossibleTargetDoesntPassChoosingFilter;
 
         [Space(10)]
 
@@ -83,10 +107,10 @@ namespace SilverPillar.Target
 
         [FoldoutGroup("When to Choose Current Target")]
         [SerializeField]
-        private WhenToChooseTarget m_WhenToChooseTarget = WhenToChooseTarget.DontChooseAutomatically;
+        private TargetOperationModes m_WhenToChooseTarget = TargetOperationModes.DontDoSoAutomatically;
 
         [FoldoutGroup("When to Choose Current Target")]
-        [SerializeField, Min(0), Tooltip("0 means every tick"), ShowIf(nameof(m_WhenToChooseTarget), WhenToChooseTarget.OnUpdate)]
+        [SerializeField, Min(0), Tooltip("0 means every tick"), ShowIf(nameof(m_WhenToChooseTarget), TargetOperationModes.OnUpdate)]
         private float m_HowOftenToRecalculateCurrentTarget;
         private float m_TimeSinceLastCalculatedCurrentTarget = 0;
 
@@ -114,6 +138,7 @@ namespace SilverPillar.Target
         [FoldoutGroup("Debug")]
         [SerializeField]
         private bool m_PrintOnChangeTarget;
+        [FoldoutGroup("Debug")]
         [SerializeField]
         private bool m_PrintOnNullTarget;
 
@@ -156,14 +181,25 @@ namespace SilverPillar.Target
 
         private void OnEnable()
         {
-            if (m_WhenToChooseTarget == WhenToChooseTarget.OnEnable)
+            if (m_WhenToChooseTarget == TargetOperationModes.OnEnable)
             {
                 ChooseCurrentTarget();
+            }
+
+            if (m_WhenToFilterTarget == TargetOperationModes.OnEnable)
+            {
+                FilterCurrentTarget();
             }
         }
         private void Update()
         {
-            if (m_WhenToChooseTarget != WhenToChooseTarget.OnUpdate) return;
+            UpdateChooseTarget();
+            UpdateFilterTarget();
+        }
+
+        private void UpdateChooseTarget()
+        {
+            if (m_WhenToChooseTarget != TargetOperationModes.OnUpdate) return;
 
             m_TimeSinceLastCalculatedCurrentTarget += Time.deltaTime;
             if (m_HowOftenToRecalculateCurrentTarget <= m_TimeSinceLastCalculatedCurrentTarget)
@@ -171,7 +207,17 @@ namespace SilverPillar.Target
                 ChooseCurrentTarget();
                 m_TimeSinceLastCalculatedCurrentTarget = 0;
             }
+        }
+        private void UpdateFilterTarget()
+        {
+            if (m_WhenToFilterTarget != TargetOperationModes.OnUpdate) return;
 
+            m_TimeSinceLastFilteredCurrentTarget += Time.deltaTime;
+            if (m_HowOftenToFilterTarget <= m_TimeSinceLastFilteredCurrentTarget)
+            {
+                FilterCurrentTarget();
+                m_TimeSinceLastFilteredCurrentTarget = 0;
+            }
         }
 
         public void RegisterPossibleTarget(GameObject possibleTarget)
@@ -187,10 +233,16 @@ namespace SilverPillar.Target
                     Debug.Log($"{gameObject.name}'s Target System <b><color=#F44336>[Registered Target]</color></b> {possibleTarget.name}");
                 }
 
-                if (m_WhenToChooseTarget == WhenToChooseTarget.OnRegisterPossibleTarget ||
-                    m_WhenToChooseTarget == WhenToChooseTarget.OnRegisterAndUnregisterPossibleTarget)
+                if (m_WhenToChooseTarget == TargetOperationModes.OnRegisterPossibleTarget ||
+                    m_WhenToChooseTarget == TargetOperationModes.OnRegisterAndUnregisterPossibleTarget)
                 {
                     ChooseCurrentTarget();
+                }
+
+                if (m_WhenToFilterTarget == TargetOperationModes.OnRegisterPossibleTarget ||
+                    m_WhenToFilterTarget == TargetOperationModes.OnRegisterAndUnregisterPossibleTarget)
+                {
+                    FilterCurrentTarget();
                 }
             }
         }
@@ -208,10 +260,15 @@ namespace SilverPillar.Target
                     Debug.Log($"{gameObject.name}'s Target System <b><color=#F44336>[Unregistered Target]</color></b> {possibleTarget.name}");
                 }
 
-                if (m_WhenToChooseTarget == WhenToChooseTarget.OnUnregisterPossibleTarget ||
-                    m_WhenToChooseTarget == WhenToChooseTarget.OnRegisterAndUnregisterPossibleTarget)
+                if (m_WhenToChooseTarget == TargetOperationModes.OnUnregisterPossibleTarget ||
+                    m_WhenToChooseTarget == TargetOperationModes.OnRegisterAndUnregisterPossibleTarget)
                 {
                     ChooseCurrentTarget();
+                }
+                if (m_WhenToFilterTarget == TargetOperationModes.OnUnregisterPossibleTarget ||
+                    m_WhenToFilterTarget == TargetOperationModes.OnRegisterAndUnregisterPossibleTarget)
+                {
+                    FilterCurrentTarget();
                 }
             }
         }
@@ -252,7 +309,7 @@ namespace SilverPillar.Target
 
         [FoldoutGroup("Debug")]
         [Button]
-        private void ChooseCurrentTarget()
+        public void ChooseCurrentTarget()
         {
             AppendStatic();
             Initialize();
@@ -271,8 +328,8 @@ namespace SilverPillar.Target
                     m_QualifiedTargets.Add(new TargetAndScore { Target = possibleTarget, Score = finalScore });
                 }
                 else if(
-                    m_WhatToDoIfPossibleTargetDoesntPassFilter ==
-                    WhatToDoIfPossibleTargetDoesntPassFilter.RemoveFromThePossibleTargetsArray)
+                    m_WhatToDoIfPossibleTargetDoesntPassChoosingFilter ==
+                    WhatToDoIfPossibleTargetDoesntPassChoosingFilter.RemoveFromThePossibleTargetsArray)
                 {
                     if(targetsToRemove == null)
                     {
@@ -319,6 +376,34 @@ namespace SilverPillar.Target
             }
         }
 
+
+        [FoldoutGroup("Debug")]
+        [Button]
+        public void FilterCurrentTarget()
+        {
+            AppendStatic();
+            Initialize();
+
+            if (m_FilterIfFalse == null || !m_FilterIfFalse.IsFulfilled(m_CurrentTarget))
+            {
+                switch (m_WhatToDoIfPossibleTargetDoesntPassFilter)
+                {
+                    case WhatToDoIfPossibleTargetDoesntPassFilter.NullCurrentTarget:
+                        NullCurrentTarget();
+
+                        break;
+                    case WhatToDoIfPossibleTargetDoesntPassFilter.ChooseCurrentTarget:
+
+                        ChooseCurrentTarget();
+
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+        }
+
         private void Initialize()
         {
             if (!m_Initialized)
@@ -327,6 +412,7 @@ namespace SilverPillar.Target
                 AppendStatic();
                 m_HowToCalculateScore?.SetGameObject(gameObject);
                 m_ConditionToChooseTheCurrentTarget?.SetGameObject(gameObject);
+                m_FilterIfFalse?.SetGameObject(gameObject);
                 m_Initialized = true;
 
             }

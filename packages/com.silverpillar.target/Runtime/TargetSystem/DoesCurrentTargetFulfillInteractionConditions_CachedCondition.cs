@@ -12,6 +12,9 @@ namespace SilverPillar.Target
         [OdinSerialize, ShowInInspector]
         private IInteractionCondition m_ConditionToFulfill = null;
 
+        [SerializeField]
+        private bool m_ReturnValueIfCurrentTargetIsNull;
+
         private TargetSystem m_TargetSystem;
 
         public DoesCurrentTargetFulfillInteractionConditions_CachedCondition() { }
@@ -20,6 +23,7 @@ namespace SilverPillar.Target
         {
             m_ConditionToFulfill = other.m_ConditionToFulfill.Clone();
             m_TargetSystem = other.m_TargetSystem;
+            m_ReturnValueIfCurrentTargetIsNull = other.m_ReturnValueIfCurrentTargetIsNull;
         }
 
         public ICachedCondition Clone()
@@ -34,9 +38,14 @@ namespace SilverPillar.Target
 
         public bool IsFulfilled()
         {
-            if (m_TargetSystem != null && m_TargetSystem.CurrentTarget != null)
+            if (m_TargetSystem != null)
             {
-                return m_ConditionToFulfill.IsFulfilled(m_TargetSystem.CurrentTarget);
+                if (m_TargetSystem.CurrentTarget != null)
+                {
+                    return m_ConditionToFulfill.IsFulfilled(m_TargetSystem.CurrentTarget);
+                }
+
+                return m_ReturnValueIfCurrentTargetIsNull;
             }
 
             return false;

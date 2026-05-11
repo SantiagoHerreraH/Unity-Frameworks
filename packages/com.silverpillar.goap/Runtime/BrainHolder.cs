@@ -3,7 +3,6 @@ using SilverPillar.Core;
 using System.Collections.Generic;
 using UnityEngine.Events;
 using System;
-using Sirenix.Serialization;
 using Sirenix.OdinInspector;
 
 namespace SilverPillar.GOAP
@@ -66,6 +65,12 @@ namespace SilverPillar.GOAP
                     m_BehaviorActionEventsDictionary.Add(item.BehaviorAction, item.BehaviorActionEvent);
                 }
             }
+        }
+
+        private void OnEnable()
+        {
+            m_CurrentActionInstance = null;
+            m_CurrentEvent = null;
         }
 
         void Update() 

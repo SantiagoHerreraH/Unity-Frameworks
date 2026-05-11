@@ -23,6 +23,23 @@ namespace SilverPillar.Stats
     public struct StatValueRange
     {
         public SO_Ref<StatType> StatTypeToGetValueFrom;
+        public ValueRange ValueRange;
+
+        public float GetValue(StatController statController, StatVariable statVariable)
+        {
+            return ValueRange.GetValue(statController, StatTypeToGetValueFrom.Get(), statVariable);
+        }
+
+        public float GetValue(float value)
+        {
+            return ValueRange.GetValue(value);
+        }
+    }
+
+    [Serializable]
+    public struct StatVariableValueRange
+    {
+        public SO_Ref<StatType> StatTypeToGetValueFrom;
         public StatVariable StatVariable;
         public ValueRange ValueRange;
 

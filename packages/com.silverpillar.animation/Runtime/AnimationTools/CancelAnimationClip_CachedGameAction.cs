@@ -21,7 +21,7 @@ namespace SilverPillar.Animation
         [SerializeField, HideIf(nameof(m_CancelType), CancelType.OnlyCancelQueued)]
         private float m_OutTransitionTime = 0.2f;
 
-        [SerializeField]
+        [SerializeField, Tooltip("If null, will cancel the current clip independently of what it is")]
         private AnimationClip m_ClipToCancel;
 
         [SerializeField]
@@ -36,6 +36,8 @@ namespace SilverPillar.Animation
 
         public CancelAnimationClip_CachedGameAction(CancelAnimationClip_CachedGameAction other)
         {
+            m_OutTransitionTime = other.m_OutTransitionTime;
+            m_CancelType = other.m_CancelType;
             m_ClipToCancel = other.m_ClipToCancel;
             m_FromWho = other.m_FromWho;
             m_Player = other.m_Player;
@@ -49,28 +51,48 @@ namespace SilverPillar.Animation
 
         public void Execute()
         {
-            if (m_ClipToCancel == null)
-                return;
 
             AnimationClipPlayer player = GetPlayer();
 
             if (player == null)
                 return;
 
-            switch (m_CancelType)
+            if (m_ClipToCancel != null)
             {
-                case CancelType.CancelClipCurrentOrQueued:
-                    player.CancelClip(m_ClipToCancel, m_OutTransitionTime, true);
-                    break;
-                case CancelType.OnlyCancelCurrent:
-                    player.CancelClip(m_ClipToCancel, m_OutTransitionTime, false);
-                    break;
-                case CancelType.OnlyCancelQueued:
-                    player.CancelIfQueued(m_ClipToCancel);
-                    break;
-                default:
-                    break;
+                switch (m_CancelType)
+                {
+                    case CancelType.CancelClipCurrentOrQueued:
+                        player.CancelClip(m_ClipToCancel, m_OutTransitionTime, true);
+                        break;
+                    case CancelType.OnlyCancelCurrent:
+                        player.CancelClip(m_ClipToCancel, m_OutTransitionTime, false);
+                        break;
+                    case CancelType.OnlyCancelQueued:
+                        player.CancelQueuedClip(m_ClipToCancel);
+                        break;
+                    default:
+                        break;
+                }
             }
+            else
+            {
+                switch (m_CancelType)
+                {
+                    case CancelType.CancelClipCurrentOrQueued:
+                        player.CancelCurrentClip(m_OutTransitionTime, true);
+                        break;
+                    case CancelType.OnlyCancelCurrent:
+                        player.CancelCurrentClip(m_OutTransitionTime, false);
+                        break;
+                    case CancelType.OnlyCancelQueued:
+                        player.CancelCurrentQueuedClip();
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+           
 
         }
 

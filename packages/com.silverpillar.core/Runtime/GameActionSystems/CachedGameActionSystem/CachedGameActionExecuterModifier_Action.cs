@@ -6,7 +6,7 @@ using UnityEngine;
 namespace SilverPillar.Core
 {
     [Serializable]
-    public class CachedSequenceModifier_Action : IAction
+    public class CachedGameActionExecuterModifier_Action : IAction
     {
         public enum CustomTargetType
         {
@@ -54,7 +54,7 @@ namespace SilverPillar.Core
 
         public IAction Clone()
         {
-            var clone = new CachedSequenceModifier_Action
+            var clone = new CachedGameActionExecuterModifier_Action
             {
                 m_From = this.m_From,
                 m_CustomFrom = this.m_CustomFrom,
@@ -94,6 +94,11 @@ namespace SilverPillar.Core
             m_ToSequence = (m_To == CustomTargetType.Self) ? m_Self : m_CustomTo;
 
             if (m_FromSequence == null || m_ToSequence == null) return;
+
+            if (m_GameActions == null)
+            {
+                m_GameActions = new();
+            }
 
             m_GameActions.Clear();
 

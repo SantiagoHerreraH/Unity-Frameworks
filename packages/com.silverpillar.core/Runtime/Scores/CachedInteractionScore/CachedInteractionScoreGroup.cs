@@ -54,7 +54,7 @@ namespace SilverPillar.Core
 
             foreach (var score in m_Scores)
             {
-                if (score.SetGameObject(self))
+                if (!score.SetGameObject(self))
                 {
                     allGood = false;
                 }

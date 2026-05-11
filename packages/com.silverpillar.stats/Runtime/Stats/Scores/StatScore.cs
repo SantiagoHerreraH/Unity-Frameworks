@@ -6,7 +6,7 @@ namespace SilverPillar.Stats
     public class StatScore : IScore
     {
         [SerializeField]
-        private StatValueRange m_StatScore;
+        private StatVariableValueRange m_StatScore;
 
         public float CalculateScore(GameObject gameObj)
         {

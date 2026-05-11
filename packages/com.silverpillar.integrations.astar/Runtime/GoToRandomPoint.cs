@@ -137,8 +137,7 @@ namespace SilverPillar.Integrations.AStar
 
         public void UpdateAction()
         {
-            if (m_FollowerEntity &&
-                ReachedDestination())
+            if (ReachedDestination())
             {
                 SetRandomPointAsDestination();
             }
@@ -149,7 +148,7 @@ namespace SilverPillar.Integrations.AStar
 
         private void SetRandomPointAsDestination()
         {
-            if (m_FollowerEntity)
+            if (m_FollowerEntity && m_FollowerEntity.gameObject.activeInHierarchy)
             {
                 m_FollowerEntity.enabled = true;
 
@@ -185,6 +184,11 @@ namespace SilverPillar.Integrations.AStar
 
         private bool ReachedDestination()
         {
+            if (!m_FollowerEntity.gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+
             switch (m_HowToCalculateOnReachDestination)
             {
                 case HowToCalculateOnReachDestination.ReachDestination:

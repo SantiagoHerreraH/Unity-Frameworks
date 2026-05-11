@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -52,5 +53,44 @@ namespace SilverPillar.Modules
 
             return false;
         }
+
+        #region Subscribe and Unsubscribe
+
+        public void SubscribeOnChangeState(BoolModuleType type, Action<bool> action)
+        {
+            var boolModule = GetBoolModule(type);
+            if (boolModule != null)
+            {
+                boolModule.SubscribeOnChangeState(action);
+            }
+        }
+
+        public void UnsubscribeOnChangeState(BoolModuleType type, Action<bool> action)
+        {
+            var boolModule = GetBoolModule(type);
+            if (boolModule != null)
+            {
+                boolModule.UnsubscribeOnChangeState(action);
+            }
+        }
+        public void SubscribeOnSetState(BoolModuleType type, Action<bool> action)
+        {
+            var boolModule = GetBoolModule(type);
+            if (boolModule != null)
+            {
+                boolModule.SubscribeOnSetState(action);
+            }
+        }
+
+        public void UnsubscribeOnSetState(BoolModuleType type, Action<bool> action)
+        {
+            var boolModule = GetBoolModule(type);
+            if (boolModule != null)
+            {
+                boolModule.UnsubscribeOnSetState(action);
+            }
+        }
+
+        #endregion
     }
 }

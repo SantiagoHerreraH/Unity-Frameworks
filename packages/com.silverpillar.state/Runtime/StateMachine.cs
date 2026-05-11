@@ -14,8 +14,8 @@ namespace SilverPillar.State
         private bool m_AllowNullState = true;
 
         [FoldoutGroup("Data")]
-        [SerializeField, Tooltip("If you don't allow null state and this is null, it will get a random state")]
-        private StateTag m_StateOnStart = null;
+        [SerializeField, Tooltip("If you don't allow null state and this is null, it will keep whatever state it had previous to on enable, whether it is null or any other state. If this is null, state on enable will be null.")]
+        private StateTag m_StateOnEnable = null;
 
         [FoldoutGroup("Data")]
         [OdinSerialize, ShowInInspector]
@@ -67,15 +67,15 @@ namespace SilverPillar.State
             }
         }
 
-        private void Start()
+        private void OnEnable()
         {
-            if (m_StateOnStart != null)
+            if (m_StateOnEnable != null)
             {
-                ChangeState(m_StateOnStart);
+                ChangeState(m_StateOnEnable);
             }
-            else if (!m_AllowNullState && m_States.Count > 0)
+            else if (m_AllowNullState)
             {
-                ChangeState(m_States.Keys.FirstOrDefault());
+                NullCurrentState();
             }
         }
 

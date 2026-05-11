@@ -61,6 +61,10 @@ namespace SilverPillar.Integrations.AStar
         private void ApplyRotationSetting(RotationAction action)
         {
             if (m_FollowerEntity == null) return;
+            if (!m_FollowerEntity.gameObject.activeInHierarchy)
+            {
+                return;
+            }
 
             bool shouldRotate = (action == RotationAction.ActivateRotationControl);
             m_FollowerEntity.updateRotation = shouldRotate;

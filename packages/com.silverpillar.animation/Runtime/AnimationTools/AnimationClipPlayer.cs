@@ -172,8 +172,15 @@ namespace SilverPillar.Animation
                 return;
             }
 
+            bool isPausedOnLastFrame =
+                m_CurrentAnimationRoutine == null &&
+                m_CurrentAnimationData != null &&
+                m_CurrentAnimationData.PauseOnLastFrame &&
+                m_ActiveClipSlot >= 0 &&
+                IsSlotValid(m_ActiveClipSlot);
+
             bool canBlendFromCurrent =
-                m_CurrentAnimationRoutine != null &&
+                (m_CurrentAnimationRoutine != null || isPausedOnLastFrame) &&
                 m_ActiveClipSlot >= 0 &&
                 IsSlotValid(m_ActiveClipSlot);
 
@@ -190,6 +197,33 @@ namespace SilverPillar.Animation
             }
         }
 
+        public void CancelCurrentClip(float transitionTime, bool cancelQueued)
+        {
+
+            if (cancelQueued)
+            {
+                CancelCurrentQueuedClip();
+            }
+
+            if (m_CurrentAnimationData == null)
+                return;
+
+            if (m_ActiveClipSlot < 0 || !IsSlotValid(m_ActiveClipSlot))
+                return;
+
+            Coroutine routineToStop = m_CurrentAnimationRoutine;
+            m_CurrentAnimationRoutine = StartCoroutine(FadeCurrentClipToAnimator(transitionTime, routineToStop));
+        }
+
+        public void CancelCurrentQueuedClip()
+        {
+            if (m_QueuedAnimationData == null)
+                return;
+
+            m_QueuedAnimationData = null;
+        }
+
+
         public void CancelClip(AnimationClip clip, float transitionTime, bool cancelQueued)
         {
             if (clip == null)
@@ -197,7 +231,7 @@ namespace SilverPillar.Animation
 
             if (cancelQueued)
             {
-                CancelIfQueued(clip);
+                CancelQueuedClip(clip);
             }
 
             if (m_CurrentAnimationData == null || m_CurrentAnimationData.Clip != clip)
@@ -210,7 +244,7 @@ namespace SilverPillar.Animation
             m_CurrentAnimationRoutine = StartCoroutine(FadeCurrentClipToAnimator(transitionTime, routineToStop));
         }
 
-        public void CancelIfQueued(AnimationClip clip)
+        public void CancelQueuedClip(AnimationClip clip)
         {
             if (clip == null || m_QueuedAnimationData == null)
                 return;
@@ -326,7 +360,8 @@ namespace SilverPillar.Animation
 
                 if (m_CurrentClipPlayable.IsValid())
                 {
-                    m_CurrentClipPlayable.SetTime(data.Clip.length);
+                    float freezeTime = Mathf.Max(0f, data.Clip.length - 0.001f);
+                    m_CurrentClipPlayable.SetTime(freezeTime);
                     m_CurrentClipPlayable.SetSpeed(0f);
                 }
 
@@ -334,7 +369,10 @@ namespace SilverPillar.Animation
                 data.OnAnimationEnd?.Invoke();
                 data.PrintEnd(gameObject);
 
-                CompleteAnimationAndPlayQueued();
+                if (m_QueuedAnimationData != null)
+                {
+                    CompleteAnimationAndPlayQueued();
+                }
             }
             else
             {
@@ -416,7 +454,8 @@ namespace SilverPillar.Animation
 
                             if (IsSlotValid(currentSlot))
                             {
-                                m_ClipPlayables[currentSlot].SetTime(currentData.Clip.length);
+                                float freezeTime = Mathf.Max(0f, currentData.Clip.length - 0.001f);
+                                m_ClipPlayables[currentSlot].SetTime(freezeTime);
                                 m_ClipPlayables[currentSlot].SetSpeed(0f);
                             }
 
@@ -434,6 +473,28 @@ namespace SilverPillar.Animation
                         currentElapsed = 0f;
                         currentClipCompletedLoops = 0;
                         break;
+                    }
+                    if (currentData.PauseOnLastFrame)
+                    {
+                        yield return PlayClipUntilFinalFade(currentData, currentAction, currentSlot, currentElapsed);
+
+                        SetOnlyClipWeight(currentSlot, 1f);
+
+                        if (IsSlotValid(currentSlot))
+                        {
+                            float freezeTime = Mathf.Max(0f, currentData.Clip.length - 0.001f);
+                            m_ClipPlayables[currentSlot].SetTime(freezeTime);
+                            m_ClipPlayables[currentSlot].SetSpeed(0f);
+                        }
+
+                        currentAction?.EndAction();
+                        currentData.OnAnimationEnd?.Invoke();
+                        currentData.PrintEnd(gameObject);
+
+                        m_CurrentAnimationRoutine = null;
+                        m_CurrentAnimationData = currentData;
+                        m_CurrentAction = currentAction;
+                        yield break;
                     }
 
                     int nextOrderIndex = orderIndex + 1;
@@ -775,7 +836,8 @@ namespace SilverPillar.Animation
 
                 if (IsSlotValid(slot))
                 {
-                    m_ClipPlayables[slot].SetTime(data.Clip.length);
+                    float freezeTime = Mathf.Max(0f, data.Clip.length - 0.001f);
+                    m_ClipPlayables[slot].SetTime(freezeTime);
                     m_ClipPlayables[slot].SetSpeed(0f);
                 }
 
@@ -783,7 +845,10 @@ namespace SilverPillar.Animation
                 data.OnAnimationEnd?.Invoke();
                 data.PrintEnd(gameObject);
 
-                CompleteAnimationAndPlayQueued();
+                if (m_QueuedAnimationData != null)
+                {
+                    CompleteAnimationAndPlayQueued();
+                }
             }
             else
             {
