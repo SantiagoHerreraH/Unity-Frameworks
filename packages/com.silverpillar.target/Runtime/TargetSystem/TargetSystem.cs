@@ -384,7 +384,9 @@ namespace SilverPillar.Target
             AppendStatic();
             Initialize();
 
-            if (m_FilterIfFalse == null || !m_FilterIfFalse.IsFulfilled(m_CurrentTarget))
+            if (m_FilterIfFalse == null ||
+                m_CurrentTarget == null || 
+                !m_FilterIfFalse.IsFulfilled(m_CurrentTarget))
             {
                 switch (m_WhatToDoIfPossibleTargetDoesntPassFilter)
                 {
