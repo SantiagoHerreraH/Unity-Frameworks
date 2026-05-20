@@ -18,6 +18,17 @@ namespace SilverPillar.Core
         [SerializeField]
         private float m_Value;
 
+        public Constant_CachedScore() { }
+        public Constant_CachedScore(float value) 
+        {
+            m_Value = value;
+        }
+
+        public Constant_CachedScore(Constant_CachedScore value)
+        {
+            m_Value = value.m_Value;
+        }
+
         public float CalculateScore()
         {
             return m_Value;

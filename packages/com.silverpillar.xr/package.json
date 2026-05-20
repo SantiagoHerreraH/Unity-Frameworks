@@ -1,0 +1,10 @@
+{
+  "name": "com.silverpillar.tag",
+  "displayName": "Silver Pillar XR Systems",
+  "version": "1.0.0",
+  "unity": "2022.3",
+  "description": "XR Systems for the SilverPillar framework.",
+  "author": {
+    "name": "Santiago Herrera Huerta"
+  }
+}
