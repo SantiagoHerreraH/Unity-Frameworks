@@ -1,3 +1,4 @@
+using SilverPillar.Core;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.XR.ARFoundation;
 
-namespace SilverPillar.Core
+namespace SilverPillar.XR
 {
     public class XRSpawnPool : MonoBehaviour
     {
@@ -61,6 +62,19 @@ namespace SilverPillar.Core
             OnlyChangePosition
         }
 
+        public enum HowToGetARAnchorManager
+        {
+            GetProcedurallyFromScene,
+            GetFromThisGameObject,
+            DirectReference
+        }
+
+        [Title("References")]
+        [SerializeField]
+        private HowToGetARAnchorManager m_HowToGetARAnchorManager;
+        [SerializeField, ShowIf(nameof(m_HowToGetARAnchorManager), HowToGetARAnchorManager.DirectReference)]
+        private ARAnchorManager m_ARAnchorManager;
+
         [Title("Spawn Data")]
         [SerializeField]
         private GameObject m_SpawnPrefab;
@@ -85,9 +99,6 @@ namespace SilverPillar.Core
         [SerializeField]
         private bool m_ParentToDefaultSpawnPoint;
 
-        [Title("AR")]
-        [SerializeField]
-        private ARAnchorManager m_ARAnchorManager;
 
         [Title("Default Raycast Settings")]
         [SerializeField]
@@ -120,7 +131,7 @@ namespace SilverPillar.Core
             {
                 CreateNewInstance(false);
             }
-
+            
             m_Initialized = true;
         }
 
@@ -297,10 +308,12 @@ namespace SilverPillar.Core
             if (obj == null)
                 return;
 
-            if (m_ARAnchorManager == null)
+            ARAnchorManager anchorManager = GetARAnchorManager();
+
+            if (anchorManager == null)
             {
                 Debug.LogWarning(
-                    $"{nameof(XRSpawnPool)}: No ARAnchorManager assigned."
+                    $"{nameof(XRSpawnPool)}: No ARAnchorManager found."
                 );
 
                 return;
@@ -311,7 +324,7 @@ namespace SilverPillar.Core
                 obj.transform.rotation
             );
 
-            var result = await m_ARAnchorManager.TryAddAnchorAsync(pose);
+            var result = await anchorManager.TryAddAnchorAsync(pose);
 
             if (!result.status.IsSuccess())
             {
@@ -354,6 +367,64 @@ namespace SilverPillar.Core
         public void Spawn(RaycastHit hit)
         {
             Spawn(hit, m_DefaultRaycastSpawningSettings);
+        }
+
+        private ARAnchorManager GetARAnchorManager()
+        {
+            switch (m_HowToGetARAnchorManager)
+            {
+                case HowToGetARAnchorManager.GetProcedurallyFromScene:
+
+                    m_ARAnchorManager =
+                        SingletonWrapper<ARAnchorManager>.Instance;
+
+                    if (m_ARAnchorManager == null)
+                    {
+                        Debug.LogError(
+                            $"{nameof(XRSpawnPool)}: Could not find an " +
+                            $"{nameof(ARAnchorManager)} procedurally in the scene."
+                        );
+                    }
+
+                    return m_ARAnchorManager;
+
+                case HowToGetARAnchorManager.GetFromThisGameObject:
+
+                    if (m_ARAnchorManager == null)
+                    {
+                        if (!TryGetComponent(out m_ARAnchorManager))
+                        {
+                            Debug.LogError(
+                                $"{nameof(XRSpawnPool)}: " +
+                                $"No {nameof(ARAnchorManager)} found on " +
+                                $"GameObject '{gameObject.name}'."
+                            );
+                        }
+                    }
+
+                    return m_ARAnchorManager;
+
+                case HowToGetARAnchorManager.DirectReference:
+
+                    if (m_ARAnchorManager == null)
+                    {
+                        Debug.LogError(
+                            $"{nameof(XRSpawnPool)}: " +
+                            $"{nameof(ARAnchorManager)} direct reference is null."
+                        );
+                    }
+
+                    return m_ARAnchorManager;
+
+                default:
+
+                    Debug.LogError(
+                        $"{nameof(XRSpawnPool)}: Invalid " +
+                        $"{nameof(HowToGetARAnchorManager)} mode."
+                    );
+
+                    return null;
+            }
         }
 
         private GameObject CreateNewInstance(bool activate)
