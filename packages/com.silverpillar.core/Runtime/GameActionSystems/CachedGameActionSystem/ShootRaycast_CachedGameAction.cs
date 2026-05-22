@@ -85,6 +85,15 @@ namespace SilverPillar.Core
             public WhereToGetTransformDataFrom WhereToGetLocalPositionFromData;
         }
 
+        [Serializable]
+        public struct TransformationData
+        {
+            public Space TransformationSpace;
+            [ShowIf(nameof(TransformationSpace), Space.Self)]
+            public WhereToGetTransformDataFrom Source;
+        }
+
+
         [Title("Settings")]
         [SerializeField] private LayerMask m_LayerMask = ~0;
         [SerializeField] private RaycastType m_RaycastType = RaycastType.Raycast;
@@ -128,8 +137,10 @@ namespace SilverPillar.Core
             Distance = new Constant_CachedScore(100f)
         };
 
-        [SerializeField, ShowIf(nameof(m_WhereToShoot), WhereToShoot.RotationDirection)]
-        private WhereToGetTransformDataFrom m_RotationSource;
+
+        [SerializeField, HideIf(nameof(m_WhereToShoot), WhereToShoot.Transform)]
+        private TransformationData m_TransformationData;
+
 
         [Title("Raycast Actions")]
         [OdinSerialize, ShowInInspector]
@@ -180,7 +191,7 @@ namespace SilverPillar.Core
                 m_VectorOffset = m_VectorOffset,
                 m_VectorDirection = m_VectorDirection.Clone(),
                 m_LocalRotationDirection = m_LocalRotationDirection.Clone(),
-                m_RotationSource = m_RotationSource,
+                m_TransformationData = m_TransformationData,
 
                 m_RaycastActions = clonedActions,
 
@@ -372,7 +383,6 @@ namespace SilverPillar.Core
                 _ => Vector3.zero
             };
         }
-
         private Vector3 GetDirectionAndUpdateDistance(Vector3 origin)
         {
             Vector3 delta;
@@ -385,26 +395,75 @@ namespace SilverPillar.Core
                     return delta;
 
                 case WhereToShoot.Position:
-                    delta = GetPosition(m_ToPosition) - origin;
+                    Vector3 targetPosition = ApplyTransformationToPosition(m_ToPosition.Position);
+                    delta = targetPosition - origin;
                     m_MaxDistance = delta.magnitude;
                     return delta;
 
                 case WhereToShoot.VectorOffset:
-                    m_MaxDistance = m_VectorOffset.magnitude;
-                    return m_VectorOffset;
+                    Vector3 offset = ApplyTransformationToVector(m_VectorOffset);
+                    m_MaxDistance = offset.magnitude;
+                    return offset;
 
                 case WhereToShoot.VectorDirection:
+                    Vector3 direction = ApplyTransformationToDirection(m_VectorDirection.Vector);
                     m_MaxDistance = m_VectorDirection.CalculateDistance();
-                    return m_VectorDirection.Vector;
+                    return direction;
 
                 case WhereToShoot.RotationDirection:
+                    Vector3 rotationDirection = ApplyTransformationToDirection(m_LocalRotationDirection.Vector);
                     m_MaxDistance = m_LocalRotationDirection.CalculateDistance();
-                    return GetRotationSource(m_RotationSource) * m_LocalRotationDirection.Vector;
+                    return rotationDirection;
 
                 default:
                     m_MaxDistance = 0f;
                     return Vector3.zero;
             }
+        }
+
+        private Vector3 ApplyTransformationToPosition(Vector3 position)
+        {
+            if (m_TransformationData.TransformationSpace == Space.World)
+                return position;
+
+            Transform source = GetTransformationSourceTransform();
+
+            if (source == null)
+                return position;
+
+            return source.TransformPoint(position);
+        }
+
+        private Vector3 ApplyTransformationToVector(Vector3 vector)
+        {
+            if (m_TransformationData.TransformationSpace == Space.World)
+                return vector;
+
+            Transform source = GetTransformationSourceTransform();
+
+            if (source == null)
+                return vector;
+
+            return source.TransformVector(vector);
+        }
+
+        private Vector3 ApplyTransformationToDirection(Vector3 direction)
+        {
+            if (m_TransformationData.TransformationSpace == Space.World)
+                return direction;
+
+            Transform source = GetTransformationSourceTransform();
+
+            if (source == null)
+                return direction;
+
+            return source.TransformDirection(direction);
+        }
+
+        private Transform GetTransformationSourceTransform()
+        {
+            GameObject source = GetGameObjectFromData(m_TransformationData.Source);
+            return source != null ? source.transform : null;
         }
 
         private Vector3 GetPosition(PositionData data)
@@ -428,16 +487,6 @@ namespace SilverPillar.Core
                 return Vector3.zero;
 
             return target.transform.position;
-        }
-
-        private Quaternion GetRotationSource(WhereToGetTransformDataFrom data)
-        {
-            GameObject target = GetGameObjectFromData(data);
-
-            if (target == null)
-                return Quaternion.identity;
-
-            return target.transform.rotation;
         }
 
         private GameObject GetGameObjectFromData(WhereToGetTransformDataFrom data)
