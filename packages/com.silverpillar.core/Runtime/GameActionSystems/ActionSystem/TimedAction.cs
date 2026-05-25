@@ -150,19 +150,19 @@ namespace SilverPillar.Core
         [FoldoutGroup("Data")]
         [FoldoutGroup("Data/Action Events")]
         [SerializeField]
-        private UnityEvent m_OnStartActionTime = new();
+        private UnityEvent m_OnStartActionTime = null;
         [FoldoutGroup("Data")]
         [FoldoutGroup("Data/Action Events")]
         [SerializeField]
-        private UnityEvent m_OnEndActionTime = new();
+        private UnityEvent m_OnEndActionTime = null;
         [FoldoutGroup("Data")]
         [FoldoutGroup("Data/Wait Time Events")]
         [SerializeField]
-        private UnityEvent m_OnStartWaitTime = new();
+        private UnityEvent m_OnStartWaitTime = null;
         [FoldoutGroup("Data")]
         [FoldoutGroup("Data/Wait Time Events")]
         [SerializeField]
-        private UnityEvent m_OnEndWaitTime = new();
+        private UnityEvent m_OnEndWaitTime = null;
 
 
         [FoldoutGroup("Debug")]
@@ -302,7 +302,7 @@ namespace SilverPillar.Core
 
         private void StartAllActions()
         {
-            m_OnStartActionTime.Invoke();
+            m_OnStartActionTime?.Invoke();
             foreach (var action in m_Actions)
                 action.StartAction();
         }
@@ -316,7 +316,7 @@ namespace SilverPillar.Core
 
         private void EndAllActions()
         {
-            m_OnEndActionTime.Invoke();
+            m_OnEndActionTime?.Invoke();
             foreach (var action in m_Actions)
                 action.EndAction();
 
@@ -352,7 +352,7 @@ namespace SilverPillar.Core
                         ++m_CurrentRepetitions;
                     }
 
-                    m_OnEndWaitTime.Invoke();
+                    m_OnEndWaitTime?.Invoke();
                     m_IsOnWaitTime = false;
 
                     if (ReachedRepetitionNumber())
@@ -413,7 +413,7 @@ namespace SilverPillar.Core
         {
             if (m_UsesWaitTime && m_IsOnWaitTime)
             {
-                m_OnStartWaitTime.Invoke();
+                m_OnStartWaitTime?.Invoke();
                 m_WaitTime.ResetTimer();
             }
             else 
