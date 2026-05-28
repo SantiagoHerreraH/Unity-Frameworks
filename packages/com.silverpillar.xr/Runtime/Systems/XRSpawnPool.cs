@@ -19,13 +19,13 @@ namespace SilverPillar.XR
             AlignOnZ
         }
 
-        public enum RaycastPositioning
+        public enum HitPositioning
         {
             PlaceInHitPosition,
             PositionInHitObjectPosition
         }
 
-        public enum RaycastRotation
+        public enum HitRotation
         {
             DontModifyRotation,
             AlignRotationToHitNormal,
@@ -40,11 +40,27 @@ namespace SilverPillar.XR
             [Tooltip("If enabled, the spawned object will be attached to an AR Anchor.")]
             public bool ParentToARAnchor;
 
-            public RaycastPositioning RaycastPositioning;
+            public HitPositioning RaycastPositioning;
 
-            public RaycastRotation RaycastRotation;
+            public HitRotation RaycastRotation;
 
-            [ShowIf(nameof(RaycastRotation), RaycastRotation.AlignRotationToHitNormal)]
+            [ShowIf(nameof(RaycastRotation), HitRotation.AlignRotationToHitNormal)]
+            public AlignmentSettings RotationAlignmentSettings;
+        }
+
+        [Serializable]
+        public struct CollisionSpawningSettings
+        {
+            public bool ParentToHit;
+
+            [Tooltip("If enabled, the spawned object will be attached to an AR Anchor.")]
+            public bool ParentToARAnchor;
+
+            public HitPositioning HitPositioning;
+
+            public HitRotation HitRotation;
+
+            [ShowIf(nameof(HitRotation), HitRotation.AlignRotationToHitNormal)]
             public AlignmentSettings RotationAlignmentSettings;
         }
 
@@ -103,6 +119,24 @@ namespace SilverPillar.XR
         [Title("Default Raycast Settings")]
         [SerializeField]
         private RaycastSpawningSettings m_DefaultRaycastSpawningSettings;
+
+
+        [Title("Default Collision Settings")]
+        [SerializeField]
+        private bool m_CallOnSelfCollisionEnter;
+        [SerializeField]
+        private bool m_CallOnSelfCollisionExit;
+        [SerializeField]
+        private CollisionSpawningSettings m_CollisionSpawningSettings;
+
+
+        [Title("Default Trigger Settings")]
+        [SerializeField]
+        private bool m_CallOnSelfTriggerEnter;
+        [SerializeField]
+        private bool m_CallOnSelfTriggerExit;
+        [SerializeField]
+        private CollisionSpawningSettings m_TriggerSpawningSettings;
 
         [Title("Events")]
         [SerializeField]
@@ -253,11 +287,11 @@ namespace SilverPillar.XR
 
             switch (raycastSpawningSettings.RaycastPositioning)
             {
-                case RaycastPositioning.PlaceInHitPosition:
+                case HitPositioning.PlaceInHitPosition:
                     position = hit.point;
                     break;
 
-                case RaycastPositioning.PositionInHitObjectPosition:
+                case HitPositioning.PositionInHitObjectPosition:
                     position = hitTransform != null
                         ? hitTransform.position
                         : hit.point;
@@ -270,17 +304,17 @@ namespace SilverPillar.XR
 
             switch (raycastSpawningSettings.RaycastRotation)
             {
-                case RaycastRotation.DontModifyRotation:
+                case HitRotation.DontModifyRotation:
                     rotation = Quaternion.identity;
                     break;
 
-                case RaycastRotation.CopyRotationFromHitObject:
+                case HitRotation.CopyRotationFromHitObject:
                     rotation = hitTransform != null
                         ? hitTransform.rotation
                         : Quaternion.identity;
                     break;
 
-                case RaycastRotation.AlignRotationToHitNormal:
+                case HitRotation.AlignRotationToHitNormal:
                     rotation = GetRotationAlignedToNormal(
                         hit.normal,
                         raycastSpawningSettings.RotationAlignmentSettings
@@ -367,6 +401,162 @@ namespace SilverPillar.XR
         public void Spawn(RaycastHit hit)
         {
             Spawn(hit, m_DefaultRaycastSpawningSettings);
+        }
+
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (!m_CallOnSelfCollisionEnter)
+                return;
+
+            Spawn(collision);
+        }
+
+        private void OnTriggerEnter(Collider other)
+        {
+            if (!m_CallOnSelfTriggerEnter)
+                return;
+
+            Spawn(other);
+        }
+
+        private void OnCollisionExit(Collision collision)
+        {
+            if (!m_CallOnSelfCollisionExit)
+                return;
+
+            Spawn(collision);
+        }
+
+        private void OnTriggerExit(Collider other)
+        {
+            if (!m_CallOnSelfTriggerExit)
+                return;
+
+            Spawn(other);
+        }
+
+        public void Spawn(Collider collider)
+        {
+            Spawn(collider, m_TriggerSpawningSettings);
+        }
+        public void Spawn(Collider collider, CollisionSpawningSettings settings)
+        {
+            Vector3 closestPoint = collider.ClosestPoint(transform.position);
+            Vector3 normal =
+                (transform.position - closestPoint).normalized;
+
+            if (normal.sqrMagnitude <= Mathf.Epsilon)
+            {
+                normal = Vector3.up;
+            }
+
+            HandleCollisionSpawn(
+                collider.transform,
+                closestPoint,
+                normal,
+                settings
+            );
+        }
+
+        public void Spawn(Collision collision)
+        {
+            Spawn(collision, m_CollisionSpawningSettings);
+        }
+
+        public void Spawn(Collision collision, CollisionSpawningSettings settings)
+        {
+            HandleCollisionSpawn(
+               collision.transform,
+               collision.contacts.Length > 0
+                   ? collision.contacts[0].point
+                   : collision.transform.position,
+               collision.contacts.Length > 0
+                   ? collision.contacts[0].normal
+                   : Vector3.up,
+               settings
+           );
+        }
+
+
+        
+
+        private void HandleCollisionSpawn(
+            Transform hitTransform,
+            Vector3 hitPoint,
+            Vector3 hitNormal,
+            CollisionSpawningSettings settings)
+        {
+            Vector3 position;
+            Quaternion rotation;
+
+            switch (settings.HitPositioning)
+            {
+                case HitPositioning.PlaceInHitPosition:
+
+                    position = hitPoint;
+
+                    break;
+
+                case HitPositioning.PositionInHitObjectPosition:
+
+                    position = hitTransform != null
+                        ? hitTransform.position
+                        : hitPoint;
+
+                    break;
+
+                default:
+
+                    position = hitPoint;
+
+                    break;
+            }
+
+            switch (settings.HitRotation)
+            {
+                case HitRotation.DontModifyRotation:
+
+                    rotation = Quaternion.identity;
+
+                    break;
+
+                case HitRotation.CopyRotationFromHitObject:
+
+                    rotation = hitTransform != null
+                        ? hitTransform.rotation
+                        : Quaternion.identity;
+
+                    break;
+
+                case HitRotation.AlignRotationToHitNormal:
+
+                    rotation = GetRotationAlignedToNormal(
+                        hitNormal,
+                        settings.RotationAlignmentSettings
+                    );
+
+                    break;
+
+                default:
+
+                    rotation = Quaternion.identity;
+
+                    break;
+            }
+
+            GameObject? obj = Spawn(
+                position,
+                rotation,
+                settings.ParentToARAnchor
+            );
+
+            if (obj == null)
+                return;
+
+            if (settings.ParentToHit && hitTransform != null)
+            {
+                obj.transform.SetParent(hitTransform, true);
+            }
         }
 
         private ARAnchorManager GetARAnchorManager()
