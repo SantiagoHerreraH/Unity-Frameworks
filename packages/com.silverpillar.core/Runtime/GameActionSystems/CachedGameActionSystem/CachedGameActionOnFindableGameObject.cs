@@ -75,23 +75,37 @@ namespace SilverPillar.Core
         private GameObject m_StartGameObject;
         private GameObject m_FoundGameObject;
 
+        public CachedGameActionOnFindableGameObject()
+        {
+        }
+
+        public CachedGameActionOnFindableGameObject(CachedGameActionOnFindableGameObject other)
+        {
+            if (other == null)
+                return;
+
+            m_WhereToStartSearch = other.m_WhereToStartSearch;
+            m_CustomSearchStart = other.m_CustomSearchStart;
+            m_SearchOn = other.m_SearchOn;
+            m_WhatToDoIfDidntFindGameObject = other.m_WhatToDoIfDidntFindGameObject;
+            m_CustomReturnIfSearchFailed = other.m_CustomReturnIfSearchFailed;
+            m_WhatToReturnInGetGameObject = other.m_WhatToReturnInGetGameObject;
+
+            m_Condition = other.m_Condition?.Clone();
+            m_CachedGameAction = other.m_CachedGameAction?.Clone();
+
+            m_CloneCachedGameActionToTest = null;
+
+            m_PrintWarningOnDidntFindTarget = other.m_PrintWarningOnDidntFindTarget;
+
+            m_SelfGameObject = other.m_SelfGameObject;
+            m_StartGameObject = other.m_StartGameObject;
+            m_FoundGameObject = other.m_FoundGameObject;
+        }
+
         public ICachedGameAction Clone()
         {
-            return new CachedGameActionOnFindableGameObject
-            {
-                m_WhereToStartSearch = m_WhereToStartSearch,
-                m_CustomSearchStart = m_CustomSearchStart,
-                m_SearchOn = m_SearchOn,
-                m_WhatToDoIfDidntFindGameObject = m_WhatToDoIfDidntFindGameObject,
-                m_CustomReturnIfSearchFailed = m_CustomReturnIfSearchFailed,
-                m_WhatToReturnInGetGameObject = m_WhatToReturnInGetGameObject,
-                m_Condition = m_Condition?.Clone(),
-                m_CachedGameAction = m_CachedGameAction?.Clone(),
-                m_SelfGameObject = m_SelfGameObject,
-                m_StartGameObject = m_StartGameObject,
-                m_FoundGameObject = m_FoundGameObject,
-                m_PrintWarningOnDidntFindTarget = m_PrintWarningOnDidntFindTarget
-            };
+            return new CachedGameActionOnFindableGameObject(this);
         }
 
         public void Execute()

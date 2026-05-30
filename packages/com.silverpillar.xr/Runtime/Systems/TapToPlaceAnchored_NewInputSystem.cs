@@ -125,12 +125,6 @@ namespace SilverPillar.XR
             m_OnReuse.AddListener(action);
         }
 
-        private bool TryGetCurrentPrefab(out GameObject prefab)
-        {
-            prefab = m_CurrentPrefabToPlace;
-            return prefab != null;
-        }
-
         private void RegisterPrefabIfNeeded(GameObject prefab)
         {
             if (prefab == null)

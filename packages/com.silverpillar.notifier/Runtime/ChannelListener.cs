@@ -4,32 +4,26 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using SilverPillar.Core;
+using Sirenix.Serialization;
 
 namespace SilverPillar.Notifier
 {
-    public enum WhenToCheckActions
-    {
-        DontCheckAtRuntime,
-        OnAwake,
-        OnStart,
-        BeforeExecutingAction
-    }
 
-    public class ChannelListener : MonoBehaviour
+    public class ChannelListener : SerializedMonoBehaviour
     {
-        [Header("Settings")]
+        [Title("Settings")]
         [SerializeField, Tooltip("The gameObject has to be active at least once for it to listen to anything")]
         private bool m_ListenEvenIfDeactivated;
 
 
-        [Header("Channels")]
+        [Title("Channels")]
         [SerializeField]
         private bool m_ListenOnAllChannels;
         [SerializeField]
         private List<Channel> m_ChannelsToListenTo = new();
 
 
-        [Header("Events")]
+        [Title("Events")]
         [SerializeField, Tooltip("Triggered on static and non static calls. Triggered before everything.")]
         private UnityEvent m_OnListen = new();
         [SerializeField, Tooltip("Triggered only on non static calls")]
@@ -47,7 +41,7 @@ namespace SilverPillar.Notifier
             ExecuteOnNotifier
         }
 
-        [Header("Actions")]
+        [Title("Actions")]
         [SerializeField]
         private bool m_DebugWarningsIfActionsDidNotExecute;
         [SerializeField]
@@ -57,25 +51,22 @@ namespace SilverPillar.Notifier
 
         
 
-        [Header("Actions On Self")]
+        [Title("Actions On Self")]
 
-        [SerializeField, Tooltip("Debug warnings have to be turned on if you want to see any debug warnings")]
-        private WhenToCheckActions m_WhenToCheckActionsOnSelf;
         [Button("Check Actions On Self")]
         private void CheckActionsOnSelfButton()
         {
             CheckActionsOnSelf(true);
         }
 
-        [SerializeField, Tooltip("These actions are executed on listen")]
-        private List<IGameAction> m_ActionsToExecuteOnSelf = new();
+        [OdinSerialize, Tooltip("These actions are executed on listen")]
+        private List<ICachedGameAction> m_ActionsToExecuteOnSelf = new();
+        private bool m_InitializedActionsOnSelf = false;
 
-        [Header("Actions On Notifier")]
+        [Title("Actions On Notifier")]
 
-        [SerializeField]
-        private bool m_CheckIfActionsOnNotifierCanExecuteBeforeExecutingThem;
-        [SerializeField, Tooltip("These actions are executed on listen.")]
-        private List<IGameAction> m_ActionsToExecuteOnNotifier = new();
+        [OdinSerialize, Tooltip("These actions are executed on listen.")]
+        private List<ICachedGameAction> m_ActionsToExecuteOnNotifier = new();
 
         private static HashSet<ChannelListener> m_AllChannelListeners = new();
         private static Dictionary<Channel, HashSet<ChannelListener>> m_Channel_To_ChannelListeners = new();
@@ -162,18 +153,6 @@ namespace SilverPillar.Notifier
         private void Awake()
         {
             Register(this);
-
-            if (m_WhenToCheckActionsOnSelf == WhenToCheckActions.OnAwake)
-            {
-                CheckActionsOnSelf(m_DebugWarningsIfActionsDidNotExecute);
-            }
-        }
-        private void Start()
-        {
-            if (m_WhenToCheckActionsOnSelf == WhenToCheckActions.OnStart)
-            {
-                CheckActionsOnSelf(m_DebugWarningsIfActionsDidNotExecute);
-            }
         }
 
         private void OnDestroy()
@@ -260,13 +239,16 @@ namespace SilverPillar.Notifier
 
         private void TriggerSelfActions()
         {
-            bool canExecute = true;
-            for (int i = 0; i < m_ActionsToExecuteOnSelf.Count; i++)
+            if (m_ActionsToExecuteOnSelf == null)
             {
-                if (m_WhenToCheckActionsOnSelf == WhenToCheckActions.BeforeExecutingAction)
+                return;
+            }
+
+            if (!m_InitializedActionsOnSelf)
+            {
+                for (int i = 0; i < m_ActionsToExecuteOnSelf.Count; ++i)
                 {
-                    canExecute = m_ActionsToExecuteOnSelf[i].CanExecute(gameObject);
-                    if (!canExecute && m_DebugWarningsIfActionsDidNotExecute)
+                    if (!m_ActionsToExecuteOnSelf[i].SetGameObject(gameObject))
                     {
                         Debug.LogWarning(
                             $"Could not execute action on self of type {m_ActionsToExecuteOnSelf[i].GetType().Name}" +
@@ -274,13 +256,12 @@ namespace SilverPillar.Notifier
                             $" component in gameObject {gameObject.name}");
                     }
                 }
+                m_InitializedActionsOnSelf = true;
+            }
 
-                if (canExecute)
-                {
-                    m_ActionsToExecuteOnSelf[i].Execute(gameObject);
-                }
-
-                canExecute = true;
+            for (int i = 0; i < m_ActionsToExecuteOnSelf.Count; i++)
+            {
+                m_ActionsToExecuteOnSelf[i].Execute();
             }
         }
 
@@ -288,25 +269,17 @@ namespace SilverPillar.Notifier
         {
             for (int i = 0; i < m_ActionsToExecuteOnNotifier.Count; i++)
             {
-                if (m_CheckIfActionsOnNotifierCanExecuteBeforeExecutingThem)
+                if (m_ActionsToExecuteOnNotifier[i].SetGameObject(notifier.gameObject))
                 {
-                    if (m_ActionsToExecuteOnNotifier[i].CanExecute(notifier.gameObject))
-                    {
-                        m_ActionsToExecuteOnNotifier[i].Execute(notifier.gameObject);
-                    }
-                    else if (m_DebugWarningsIfActionsDidNotExecute)
-                    {
-                        Debug.LogWarning(
-                            $"Could not execute action of type {m_ActionsToExecuteOnNotifier[i].GetType().Name}" +
-                            $" in Channel Notifier. Warning from {nameof(ChannelListener)}" +
-                            $" component in gameObject {gameObject.name}");
-                    }
+                    m_ActionsToExecuteOnNotifier[i].Execute();
                 }
-                else
+                else if (m_DebugWarningsIfActionsDidNotExecute)
                 {
-                    m_ActionsToExecuteOnNotifier[i].Execute(notifier.gameObject);
+                    Debug.LogWarning(
+                        $"Could not execute action of type {m_ActionsToExecuteOnNotifier[i].GetType().Name}" +
+                        $" in Channel Notifier. Warning from {nameof(ChannelListener)}" +
+                        $" component in gameObject {gameObject.name}");
                 }
-                
             }
         }
 
@@ -314,7 +287,7 @@ namespace SilverPillar.Notifier
         {
             for (int i = 0; i < m_ActionsToExecuteOnSelf.Count; i++)
             {
-                if (!m_ActionsToExecuteOnSelf[i].CanExecute(gameObject) && showDebugWarnings)
+                if (!m_ActionsToExecuteOnSelf[i].SetGameObject(gameObject) && showDebugWarnings)
                 {
                     Debug.LogWarning(
                         $"Could not execute action on self of type {m_ActionsToExecuteOnNotifier[i].GetType().Name}" +

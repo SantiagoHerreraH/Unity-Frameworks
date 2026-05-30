@@ -308,10 +308,8 @@ namespace SilverPillar.Core
             [SerializeField]
             private ExecutionOrder m_ExecutionOrderOnEnd;
 
-            [NonSerialized]
-            private readonly List<InstanceData> m_CreatedInstances = new();
+            private List<InstanceData> m_CreatedInstances = new();
 
-            [NonSerialized]
             private int m_CurrentInstanceIndex = -1;
 
             public WhatPrefabToUse WhatPrefabToUse => m_WhatPrefabToUse;
@@ -385,6 +383,11 @@ namespace SilverPillar.Core
             }
             public void SetFirstAsCurrent()
             {
+                if (m_CreatedInstances == null || m_CreatedInstances.Count == 0)
+                {
+                    return;
+                }
+
                 m_CurrentInstanceIndex = m_CreatedInstances.Count > 0 ? 0 : -1;
             }
 
@@ -407,16 +410,20 @@ namespace SilverPillar.Core
                 m_CurrentInstanceIndex = m_CreatedInstances.Count > 0 ? m_CreatedInstances.Count - 1 : -1;
             }
 
-            public void CreateAll(InstanceControllerSystem controller)
+            public void CreateAll(InstanceControllerSystem controller, bool callStart)
             {
+                if (m_CreatedInstances == null)
+                {
+                    m_CreatedInstances = new();
+                }
                 while (m_CreatedInstances.Count < m_NumberOfInstances)
-                    CreateNext(controller);
+                    CreateNext(controller, callStart);
 
                 if (m_CurrentInstanceIndex < 0)
                     SetFirstAsCurrent();
             }
 
-            public GameObject CreateNext(InstanceControllerSystem controller)
+            public GameObject CreateNext(InstanceControllerSystem controller, bool callStart)
             {
                 if (controller == null)
                     return null;
@@ -443,6 +450,9 @@ namespace SilverPillar.Core
 
                 m_CreatedInstances.Add(instanceData);
                 m_CurrentInstanceIndex = m_CreatedInstances.Count - 1;
+
+                if (callStart)
+                    instanceData.Start(m_ExecutionOrderOnStart, m_OnStart);
 
                 return instance;
             }
@@ -565,11 +575,12 @@ namespace SilverPillar.Core
         private List<ICachedGameAction> m_EndActionsOnAll = new();
 
         [Title("Loop Settings")]
+        [InfoBox("Loop as in called create next and already created all data instances.")]
         [SerializeField]
         private WhatHappensWhenLoopEnds m_WhatHappensWhenLoopEnds;
 
         [SerializeField]
-        [ShowIf(nameof(m_WhatHappensWhenLoopEnds), WhatHappensWhenLoopEnds.CreateInstancesAgain)]
+        [ShowIf(nameof(m_WhatHappensWhenLoopEnds), WhatHappensWhenLoopEnds.CreateInstancesAgain), Tooltip("Negative numbers mean infinite times.")]
         private int m_NumberOfTimesThatCanCreateInstancesAgain = -1;
 
         [SerializeField]
@@ -578,12 +589,44 @@ namespace SilverPillar.Core
         [SerializeField]
         private BehaviorOnReachEndOfInstanceListInData m_BehaviorOnReachEndOfInstanceListInData;
 
+        public enum WhenToCallStart
+        {
+            AfterInstancing,
+            OnEnable,
+            Both,
+            DontAutoCall
+        }
 
+        public enum WhenToCallUpdate
+        {
+            OnUpdate,
+            OnFixedUpdate,
+            OnLateUpdate,
+            DontAutoCall
+        }
+
+        public enum WhenToCallEnd
+        {
+            OnDisable,
+            OnDestroy,
+            DontAutoCall
+        }
+
+        [Title("Auto Calling")]
+
+        [SerializeField, Tooltip("Start is called on Instancing")]
+        private WhenToCallStart m_WhenCallStart;
+
+        [SerializeField]
+        private WhenToCallUpdate m_WhenToCallUpdate;
+
+        [SerializeField]
+        private WhenToCallEnd m_WhenToCallEnd;
 
         private int m_CurrentDataIndex = -1;
         private int m_TimesCreatedInstancesAgain;
 
-        private readonly List<int> m_RandomizedDataOrder = new();
+        private List<int> m_RandomizedDataOrder = new();
         private int m_CurrentRandomizedIndex = -1;
 
         private PrefabData CurrentData
@@ -622,21 +665,19 @@ namespace SilverPillar.Core
                     return null;
             }
         }
-
-        [Title("Functions")]
-
-        [Button]
+        [FoldoutGroup("Functions")]
+        [Button, BoxGroup("Functions/Data Creation")]
         public void CreateFirstData()
         {
             if (!HasData())
                 return;
 
             SetCurrentData(0);
-            CurrentData.CreateAll(this);
+            CurrentData.CreateAll(this, CanCallStartOnCreate());
             CurrentData.SetFirstAsCurrent();
         }
 
-        [Button]
+        [Button, BoxGroup("Functions/Data Creation")]
         public void CreateNextData()
         {
             if (!HasData())
@@ -651,21 +692,21 @@ namespace SilverPillar.Core
             }
 
             SetCurrentData(nextIndex);
-            CurrentData.CreateAll(this);
+            CurrentData.CreateAll(this, CanCallStartOnCreate());
         }
 
-        [Button]
+        [Button, BoxGroup("Functions/Data Creation")]
         public void CreateLastData()
         {
             if (!HasData())
                 return;
 
             SetCurrentData(m_InstanceData.Count - 1);
-            CurrentData.CreateAll(this);
+            CurrentData.CreateAll(this, CanCallStartOnCreate());
             CurrentData.SetLastAsCurrent();
         }
 
-        [Button]
+        [Button, BoxGroup("Functions/Data Creation")]
         public void CreateNextRandomData()
         {
             if (!HasData())
@@ -677,12 +718,12 @@ namespace SilverPillar.Core
             int randomizedDataIndex = m_RandomizedDataOrder[m_CurrentRandomizedIndex];
 
             SetCurrentData(randomizedDataIndex);
-            CurrentData.CreateAll(this);
+            CurrentData.CreateAll(this , CanCallStartOnCreate());
 
             m_CurrentRandomizedIndex++;
         }
 
-        [Button]
+        [Button, BoxGroup("Functions/Data Creation")]
         public void CreateAllData()
         {
             if (!HasData())
@@ -691,23 +732,23 @@ namespace SilverPillar.Core
             for (int i = 0; i < m_InstanceData.Count; i++)
             {
                 SetCurrentData(i);
-                m_InstanceData[i].CreateAll(this);
+                m_InstanceData[i].CreateAll(this, CanCallStartOnCreate());
             }
 
             SetCurrentData(0);
         }
 
-        [Button]
+        [Button, BoxGroup("Functions/Instance Creation")]
         public void CreateFirstInstance()
         {
             if (!EnsureCurrentData())
                 return;
 
-            CurrentData.CreateNext(this);
+            CurrentData.CreateNext(this, CanCallStartOnCreate());
             CurrentData.SetFirstAsCurrent();
         }
 
-        [Button]
+        [Button, BoxGroup("Functions/Instance Creation")]
         public void CreateNextInstance()
         {
             if (!EnsureCurrentData())
@@ -715,26 +756,27 @@ namespace SilverPillar.Core
 
             if (CurrentData.CreatedInstancesCount < CurrentData.NumberOfInstances)
             {
-                CurrentData.CreateNext(this);
+                CurrentData.CreateNext(this, CanCallStartOnCreate());
                 return;
             }
 
             HandleReachEndOfInstanceList();
         }
 
-        [Button]
+        [Button, BoxGroup("Functions/Instance Creation")]
         public void CreateLastInstance()
         {
             if (!EnsureCurrentData())
                 return;
 
             while (CurrentData.CreatedInstancesCount < CurrentData.NumberOfInstances)
-                CurrentData.CreateNext(this);
+                CurrentData.CreateNext(this, CanCallStartOnCreate());
 
             CurrentData.SetLastAsCurrent();
         }
 
-        [Button]
+
+        [Button, BoxGroup("Functions/Execution")]
         public void StartAll()
         {
             ExecuteActionsOnAllInstances(m_StartActionsOnAll);
@@ -743,7 +785,7 @@ namespace SilverPillar.Core
                 data?.StartAll();
         }
 
-        [Button]
+        [Button, BoxGroup("Functions/Execution")]
         public void UpdateAll()
         {
             ExecuteActionsOnAllInstances(m_UpdateActionsOnAll);
@@ -752,13 +794,18 @@ namespace SilverPillar.Core
                 data?.UpdateAll();
         }
 
-        [Button]
+        [Button, BoxGroup("Functions/Execution")]
         public void EndAll()
         {
             ExecuteActionsOnAllInstances(m_EndActionsOnAll);
 
             foreach (PrefabData data in m_InstanceData)
                 data?.EndAll();
+        }
+
+        private bool CanCallStartOnCreate()
+        {
+            return m_WhenCallStart == WhenToCallStart.AfterInstancing || m_WhenCallStart == WhenToCallStart.Both;
         }
 
         private void SetCurrentData(int index)
