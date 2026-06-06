@@ -5,13 +5,13 @@ using UnityEngine;
 
 namespace SilverPillar.Core
 {
-    public interface IChoose //change this to just querier without enumerable
+    public interface IChooseGameObject //change this to just querier without enumerable
     {
         public GameObject Choose(GameObject querier, IEnumerable<GameObject> enumerable);
     }
 
     [Serializable]
-    public class ChooseNearest : IChoose
+    public class ChooseNearest : IChooseGameObject
     {
         public GameObject Choose(GameObject querier, IEnumerable<GameObject> enumerable)
         {
@@ -22,7 +22,7 @@ namespace SilverPillar.Core
     }
 
     [Serializable]
-    public class ChooseFurthest : IChoose
+    public class ChooseFurthest : IChooseGameObject
     {
         public GameObject Choose(GameObject querier, IEnumerable<GameObject> enumerable)
         {

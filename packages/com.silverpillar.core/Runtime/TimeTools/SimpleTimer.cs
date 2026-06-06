@@ -64,6 +64,49 @@ namespace SilverPillar.Core
     }
 
     [Serializable]
+    public class TimerType_CachedScore : ICachedScore
+    {
+        [OdinSerialize, ShowInInspector]
+        private ITimerType m_TimerType = new DeltaSeconds_TimerType();
+
+        private GameObject m_GameObject;
+        private float m_CurrentTime;
+
+        public ICachedScore Clone()
+        {
+            return new TimerType_CachedScore
+            {
+                m_TimerType = m_TimerType,
+                m_GameObject = m_GameObject,
+                m_CurrentTime = m_CurrentTime
+            };
+        }
+
+        public GameObject GetGameObject()
+        {
+            return m_GameObject;
+        }
+
+        public bool SetGameObject(GameObject self)
+        {
+            m_GameObject = self;
+            return true;
+        }
+
+        public float CalculateScore()
+        {
+            if (m_TimerType == null)
+            {
+                Debug.LogError($"{nameof(TimerType_CachedScore)} could not calculate score because no {nameof(ITimerType)} was assigned.");
+                return m_CurrentTime;
+            }
+
+            m_CurrentTime = m_TimerType.IncreaseTime(m_CurrentTime);
+            return m_CurrentTime;
+        }
+    }
+
+    [Serializable]
     public class SimpleTimer 
     {
         [OdinSerialize, ShowInInspector]

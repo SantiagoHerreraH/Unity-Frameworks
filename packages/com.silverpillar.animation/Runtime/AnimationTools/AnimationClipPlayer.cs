@@ -234,7 +234,8 @@ namespace SilverPillar.Animation
                 CancelQueuedClip(clip);
             }
 
-            if (m_CurrentAnimationData == null || m_CurrentAnimationData.Clip != clip)
+            if (m_CurrentAnimationData == null || 
+                m_CurrentAnimationData.Clip.GetInstanceID() != clip.GetInstanceID())
                 return;
 
             if (m_ActiveClipSlot < 0 || !IsSlotValid(m_ActiveClipSlot))
@@ -249,7 +250,7 @@ namespace SilverPillar.Animation
             if (clip == null || m_QueuedAnimationData == null)
                 return;
 
-            if (m_QueuedAnimationData.Clip == clip)
+            if (m_QueuedAnimationData.Clip.GetInstanceID() == clip.GetInstanceID())
                 m_QueuedAnimationData = null;
         }
 

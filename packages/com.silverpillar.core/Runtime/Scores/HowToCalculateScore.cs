@@ -14,7 +14,9 @@ namespace SilverPillar.Core
         ChooseLowest,
         Mean,
         Medium,
-        Mode
+        Mode,
+        ChooseFirst,
+        ChooseLast
     }
 
     public class ScoreTools
@@ -31,6 +33,8 @@ namespace SilverPillar.Core
                 HowToCalculateScore.Mode => values.GroupBy(v => v)
                                                   .OrderByDescending(g => g.Count())
                                                   .First().Key,
+                HowToCalculateScore.ChooseFirst => values.First(),
+                HowToCalculateScore.ChooseLast => values.Last(),
                 _ => 0f
             };
         }

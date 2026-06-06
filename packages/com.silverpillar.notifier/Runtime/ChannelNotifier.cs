@@ -380,6 +380,11 @@ namespace SilverPillar.Notifier
 
         private void TriggerListenerActions(ChannelListener listener)
         {
+            if (m_ActionsToExecuteOnListener == null)
+            {
+                return;
+            }
+
             for (int i = 0; i < m_ActionsToExecuteOnListener.Count; i++)
             {
                 if (m_ActionsToExecuteOnListener[i].SetGameObject(listener.gameObject))
@@ -399,6 +404,14 @@ namespace SilverPillar.Notifier
 
         private void CheckActionsOnSelf(bool showDebugWarnings)
         {
+            if (m_ActionsToExecuteOnSelf == null)
+            {
+                Debug.LogWarning(
+                        $"No Actions On Self" +
+                        $" in Channel Listener. Warning from {nameof(ChannelNotifier)}" +
+                        $" component in gameObject {gameObject.name}");
+            }
+
             for (int i = 0; i < m_ActionsToExecuteOnSelf.Count; i++)
             {
                 if (!m_ActionsToExecuteOnSelf[i].SetGameObject(gameObject) && showDebugWarnings)

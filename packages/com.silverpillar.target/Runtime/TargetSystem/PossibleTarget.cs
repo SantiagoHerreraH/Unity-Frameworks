@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SilverPillar.Target
@@ -21,6 +22,31 @@ namespace SilverPillar.Target
 
         [SerializeField]
         private WhenToUnregisterPossibleTarget m_WhenToUnregisterPossibleTarget = WhenToUnregisterPossibleTarget.OnDestroy;
+
+        public HashSet<TargetSystem> TargetSystemsThatChoseThisAsTarget { get; private set; } = new();
+
+        public bool RegisterTargetSystem(TargetSystem targetSystem)
+        {
+            if (TargetSystemsThatChoseThisAsTarget == null)
+            {
+                TargetSystemsThatChoseThisAsTarget = new();
+            }
+            return TargetSystemsThatChoseThisAsTarget.Add(targetSystem);
+        }
+
+        public bool UnregisterTargetSystem(TargetSystem targetSystem)
+        {
+            if (TargetSystemsThatChoseThisAsTarget == null)
+            {
+                TargetSystemsThatChoseThisAsTarget = new();
+            }
+            return TargetSystemsThatChoseThisAsTarget.Remove(targetSystem); 
+        }
+
+        public bool HasTargetSystem(TargetSystem targetSystem)
+        {
+            return TargetSystemsThatChoseThisAsTarget.Contains(targetSystem);
+        }
 
         private void Awake()
         {

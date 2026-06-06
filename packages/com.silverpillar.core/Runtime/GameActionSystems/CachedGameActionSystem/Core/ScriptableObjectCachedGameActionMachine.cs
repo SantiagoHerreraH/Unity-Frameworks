@@ -6,7 +6,7 @@ using UnityEngine.Events;
 
 namespace SilverPillar.Core
 {
-    public class CachedGameActionMachine : MonoBehaviour
+    public class ScriptableObjectCachedGameActionMachine : MonoBehaviour
     {
         [Serializable]
         public class ActionData

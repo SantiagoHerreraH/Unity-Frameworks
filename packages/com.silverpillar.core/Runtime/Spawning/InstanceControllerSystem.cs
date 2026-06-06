@@ -265,8 +265,10 @@ namespace SilverPillar.Core
             private GameObject m_CustomPrefab;
 
             [FoldoutGroup("Data")]
-            [SerializeField, Min(1)]
-            private int m_NumberOfInstances = 1;
+            [SerializeField, Tooltip("Only calculated once on Awake.")]
+            private IntCachedScore m_NumberOfInstancesCalculator = new();
+            private int m_NumberOfInstances = -1;
+            public int NumberOfInstances => m_NumberOfInstances;
 
             [FoldoutGroup("Actions")]
             [OdinSerialize, ShowInInspector]
@@ -314,7 +316,7 @@ namespace SilverPillar.Core
 
             public WhatPrefabToUse WhatPrefabToUse => m_WhatPrefabToUse;
             public GameObject CustomPrefab => m_CustomPrefab;
-            public int NumberOfInstances => m_NumberOfInstances;
+            
             public int CreatedInstancesCount => m_CreatedInstances.Count;
 
             public GameObject CurrentInstance
@@ -333,13 +335,26 @@ namespace SilverPillar.Core
 
             public IReadOnlyList<InstanceData> CreatedInstances => m_CreatedInstances;
 
+            public void Initialize(InstanceControllerSystem controller)
+            {
+                if (m_NumberOfInstances < 1)
+                {
+                    GameObject prefab = controller.GetPrefabForData(this);
+                    m_NumberOfInstancesCalculator.SetGameObject(prefab);
+                    m_NumberOfInstances = m_NumberOfInstancesCalculator.CalculateScoreAsInt();
+
+                    m_NumberOfInstances = m_NumberOfInstances < 1 ? 1 : m_NumberOfInstances;
+                }
+            }
+
+
             public PrefabData CloneData()
             {
                 return new PrefabData
                 {
                     m_WhatPrefabToUse = m_WhatPrefabToUse,
                     m_CustomPrefab = m_CustomPrefab,
-                    m_NumberOfInstances = m_NumberOfInstances,
+                    m_NumberOfInstancesCalculator = m_NumberOfInstancesCalculator,
 
                     m_StartActions = CloneCachedActionList(m_StartActions),
                     m_UpdateActions = CloneCachedActionList(m_UpdateActions),
@@ -416,6 +431,9 @@ namespace SilverPillar.Core
                 {
                     m_CreatedInstances = new();
                 }
+
+                Initialize(controller);
+
                 while (m_CreatedInstances.Count < m_NumberOfInstances)
                     CreateNext(controller, callStart);
 
@@ -666,6 +684,14 @@ namespace SilverPillar.Core
             }
         }
         [FoldoutGroup("Functions")]
+
+
+        [Button, BoxGroup("Functions/Resetting")]
+        private void ResetNumberOfTimesThatCreatedInstances()
+        {
+            m_NumberOfTimesThatCanCreateInstancesAgain = 0;
+        }
+
         [Button, BoxGroup("Functions/Data Creation")]
         public void CreateFirstData()
         {
@@ -754,6 +780,8 @@ namespace SilverPillar.Core
             if (!EnsureCurrentData())
                 return;
 
+            CurrentData.Initialize(this);
+
             if (CurrentData.CreatedInstancesCount < CurrentData.NumberOfInstances)
             {
                 CurrentData.CreateNext(this, CanCallStartOnCreate());
@@ -768,6 +796,9 @@ namespace SilverPillar.Core
         {
             if (!EnsureCurrentData())
                 return;
+
+
+            CurrentData.Initialize(this);
 
             while (CurrentData.CreatedInstancesCount < CurrentData.NumberOfInstances)
                 CurrentData.CreateNext(this, CanCallStartOnCreate());

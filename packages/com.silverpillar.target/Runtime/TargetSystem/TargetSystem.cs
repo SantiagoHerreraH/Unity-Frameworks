@@ -130,6 +130,7 @@ namespace SilverPillar.Target
         [FoldoutGroup("Targets")]
         [SerializeField]
         private GameObject m_CurrentTarget;
+        private PossibleTarget m_CurrentTargetAsPossibleTarget;
         [FoldoutGroup("Targets")]
         [SerializeField]
         private List<GameObject> m_PossibleTargets = new(); // for iteration
@@ -284,9 +285,23 @@ namespace SilverPillar.Target
             var oldTarget = m_CurrentTarget;
             m_CurrentTarget = newTarget;
 
+
             if (newTarget != oldTarget)
             {
-                m_OnNewCurrentTarget.Invoke(newTarget);
+                m_CurrentTargetAsPossibleTarget?.UnregisterTargetSystem(this);
+
+                PossibleTarget possibleTarget = null;
+                if (newTarget.TryGetComponent(out possibleTarget))
+                {
+                    m_CurrentTargetAsPossibleTarget = possibleTarget;
+                    m_CurrentTargetAsPossibleTarget.RegisterTargetSystem(this);
+                }
+                else
+                {
+                    m_CurrentTargetAsPossibleTarget = null;
+                }
+
+                 m_OnNewCurrentTarget.Invoke(newTarget);
             }
 
             if (m_PrintOnChangeTarget)
@@ -298,6 +313,9 @@ namespace SilverPillar.Target
         public void NullCurrentTarget()
         {
             m_CurrentTarget = null;
+
+            m_CurrentTargetAsPossibleTarget?.UnregisterTargetSystem(this);
+            m_CurrentTargetAsPossibleTarget = null;
 
             m_OnNullCurrentTarget?.Invoke();
 
