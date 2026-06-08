@@ -14,6 +14,11 @@ namespace SilverPillar.Stats
         [SerializeField, HideIf(nameof(m_InterpretModificationValueAsPercentageOfWorldMax))]
         private StatVariable m_InterpretModificationValueAsAPercentageOf;
 
+
+        public StatTarget FromWhoToGetModifierStat { get { return m_FromWhoToGetModifierStat; } set{ m_FromWhoToGetModifierStat = value; } }
+        public bool InterpretModificationValueAsPercentageOfWorldMax { get { return m_InterpretModificationValueAsPercentageOfWorldMax; } set { m_InterpretModificationValueAsPercentageOfWorldMax = value; } }
+        public StatVariable InterpretModificationValueAsAPercentageOf { get { return m_InterpretModificationValueAsAPercentageOf; } set { m_InterpretModificationValueAsAPercentageOf = value; } }
+
         public float GetModificationValue(StatController self, StatController target, StatType statType)
         {
             StatController used = null;

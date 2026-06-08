@@ -19,6 +19,13 @@ namespace SilverPillar.Stats
         [SerializeField] private StatType m_OtherStatType;
         [SerializeField] private StatVariable m_OtherStatVariable;
 
+        public StatType StatType { get { return m_StatType; }  set { m_StatType = value; } }
+        public StatVariable StatVariable { get { return m_StatVariable; } set { m_StatVariable = value; } }
+        public StatType OtherStatType { get { return m_OtherStatType; } set { m_OtherStatType = value; } }
+        public StatVariable OtherStatVariable { get { return m_OtherStatVariable; } set { m_OtherStatVariable = value; } }
+        public FloatComparison.OperationType ConditionOperation { get { return m_ConditionOperation; } set { m_ConditionOperation = value; } }
+
+
         private GameObject _cachedGameObject;
         private StatController _cachedStatController;
 

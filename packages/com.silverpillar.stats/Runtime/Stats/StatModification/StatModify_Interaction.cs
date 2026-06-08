@@ -27,17 +27,18 @@ namespace SilverPillar.Stats
         public StatModify_Interaction(StatModify_Interaction other)
         {
             m_WhichStatModifiersToUse = other.m_WhichStatModifiersToUse;
+            m_SelfController = other.m_SelfController;
 
             if (other.m_Modifiers != null)
             {
-                m_Modifiers = new();
+                m_Modifiers ??= new();
 
-                m_Modifiers.AddRange(other.m_Modifiers);
+                for (int i = 0; i < other.m_Modifiers.Count; i++)
+                {
+                    m_Modifiers.Add(other.m_Modifiers[i].Clone());
+                }
+
             }
-
-            m_SelfController = other.m_SelfController;
-
-            m_Modifiers = other.m_Modifiers;
         }
 
         public void Interact(GameObject target)
@@ -86,6 +87,20 @@ namespace SilverPillar.Stats
         public IInteraction Clone()
         {
             return new StatModify_Interaction(this);
+        }
+
+        public void SetData(WhichStatModifiersToUse whichStatModifiersToUse, List<IStatModifier> modifiers)
+        {
+            m_WhichStatModifiersToUse = whichStatModifiersToUse;
+
+            m_Modifiers ??= new List<IStatModifier>();
+
+            m_Modifiers.Clear();
+
+            for (int i = 0; i < modifiers.Count; i++)
+            {
+                m_Modifiers.Add(modifiers[i].Clone());
+            }
         }
     }
 }

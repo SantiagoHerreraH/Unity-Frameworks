@@ -3,7 +3,6 @@ using Sirenix.Serialization;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using static UnityEngine.GraphicsBuffer;
 
 namespace SilverPillar.Stats
 {
@@ -75,46 +74,41 @@ namespace SilverPillar.Stats
         }
 
     }
+    public enum WhenToModifyStatTypeToOperate
+    {
+        BeforeModifyingIncomingValue,
+        AfterModifyingIncomingValue
+    }
 
     [Serializable]
     public class SimpleStatOperation : IStatOperation
     {
-        public enum WhenToModifyStatTypeToOperate
-        {
-            BeforeModifyingIncomingValue,
-            AfterModifyingIncomingValue
-        }
-
         [Title("Stat Operation")]
-        [SerializeField]
-        private StatType m_StatTypeToOperateModification;
-        [SerializeField]
-        private StatOperation m_StatOperation;
-        [SerializeField]
-        private StatVariable m_StatVariable;
+        public StatType StatTypeToOperateModification;
+        public StatOperation StatOperation;
+        public StatVariable StatVariable;
 
         [Title("Operation on Stat Type To Operate")]
-        [SerializeField]
-        private bool m_ApplyOperationToStatTypeToOperate;
-        [SerializeField, ShowIf(nameof(m_ApplyOperationToStatTypeToOperate))]
-        private StatOperation m_StatOperationToApplyOnStatTypeToOperate;
-        [SerializeField, ShowIf(nameof(m_ApplyOperationToStatTypeToOperate))]
-        private StatVariable m_StatVariableToModifyOnStatTypeToOperate;
-        [SerializeField, ShowIf(nameof(m_ApplyOperationToStatTypeToOperate))]
-        private WhenToModifyStatTypeToOperate m_WhenToModifyStatTypeToOperate;
+        public bool ApplyOperationToStatTypeToOperate;
+        [ShowIf(nameof(ApplyOperationToStatTypeToOperate))]
+        public StatOperation StatOperationToApplyOnStatTypeToOperate;
+        [ShowIf(nameof(ApplyOperationToStatTypeToOperate))]
+        public StatVariable StatVariableToModifyOnStatTypeToOperate;
+        [ShowIf(nameof(ApplyOperationToStatTypeToOperate))]
+        public WhenToModifyStatTypeToOperate WhenToModifyStatTypeToOperate;
 
         public float ModifyIncomingValue(StatController controllerThatWantsToBeModified, float incomingModificationValueFromData)
         {
-            if (controllerThatWantsToBeModified.HasStatType(m_StatTypeToOperateModification))
+            if (controllerThatWantsToBeModified.HasStatType(StatTypeToOperateModification))
             {
-                float modValue = controllerThatWantsToBeModified.GetStat(m_StatTypeToOperateModification, m_StatVariable);
+                float modValue = controllerThatWantsToBeModified.GetStat(StatTypeToOperateModification, StatVariable);
 
-                if (m_ApplyOperationToStatTypeToOperate && m_WhenToModifyStatTypeToOperate == WhenToModifyStatTypeToOperate.BeforeModifyingIncomingValue)
+                if (ApplyOperationToStatTypeToOperate && WhenToModifyStatTypeToOperate == WhenToModifyStatTypeToOperate.BeforeModifyingIncomingValue)
                 {
-                    controllerThatWantsToBeModified.Modify(m_StatTypeToOperateModification, incomingModificationValueFromData, m_StatOperationToApplyOnStatTypeToOperate, m_StatVariableToModifyOnStatTypeToOperate);
+                    controllerThatWantsToBeModified.Modify(StatTypeToOperateModification, incomingModificationValueFromData, StatOperationToApplyOnStatTypeToOperate, StatVariableToModifyOnStatTypeToOperate);
                 }
 
-                switch (m_StatOperation)
+                switch (StatOperation)
                 {
                     case StatOperation.Add:
                         incomingModificationValueFromData += modValue;
@@ -132,9 +126,9 @@ namespace SilverPillar.Stats
                         break;
                 }
 
-                if (m_ApplyOperationToStatTypeToOperate && m_WhenToModifyStatTypeToOperate == WhenToModifyStatTypeToOperate.AfterModifyingIncomingValue)
+                if (ApplyOperationToStatTypeToOperate && WhenToModifyStatTypeToOperate == WhenToModifyStatTypeToOperate.AfterModifyingIncomingValue)
                 {
-                    controllerThatWantsToBeModified.Modify(m_StatTypeToOperateModification, incomingModificationValueFromData, m_StatOperationToApplyOnStatTypeToOperate, m_StatVariableToModifyOnStatTypeToOperate);
+                    controllerThatWantsToBeModified.Modify(StatTypeToOperateModification, incomingModificationValueFromData, StatOperationToApplyOnStatTypeToOperate, StatVariableToModifyOnStatTypeToOperate);
                 }
             }
 
@@ -145,7 +139,7 @@ namespace SilverPillar.Stats
     [Serializable]
     public struct StatOperationGroup
     {
-        [OdinSerialize]
+        [OdinSerialize, ShowInInspector]
         public List<IStatOperation> StatOperatorsThatModifyIncoming;
 
         public float ModifyIncomingValue(StatController controllerThatWantsToBeModified, float incomingModificationValueFromData)
