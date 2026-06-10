@@ -9,10 +9,19 @@ namespace SilverPillar.Core
     [Serializable]
     public class ChooseInteractionCondition : IInteractionCondition, IChoose
     {
+        [Title("Forced Conditions")]
+        [OdinSerialize, ShowInInspector, Tooltip("If null or empty will return true.")]
+        private IInteractionCondition m_InteractionsConditionToAlwaysChoose;
+
+        [Title("Operation")]
+        [SerializeField]
+        private BoolOperation m_OperationBetweenForcedAndChosen;
+
+        [Title("Conditions To Choose")]
         [SerializeField]
         private ConditionType m_ConditionType;
         [SerializeField]
-        private bool m_ReturnValueOnNotCosen;
+        private bool m_ReturnValueOnNotChosen;
         [OdinSerialize, ShowInInspector]
         private IChooseData<IInteractionCondition> m_Chooser;
         public IChooseData<IInteractionCondition> Chooser => m_Chooser;
@@ -36,6 +45,11 @@ namespace SilverPillar.Core
                 {
                     m_ChosenConditions.Add(other.m_ChosenConditions[i].Clone());
                 }
+            }
+
+            if (other.m_InteractionsConditionToAlwaysChoose != null)
+            {
+                m_InteractionsConditionToAlwaysChoose = other.m_InteractionsConditionToAlwaysChoose.Clone();
             }
         }
         public IInteractionCondition Clone()
@@ -79,12 +93,33 @@ namespace SilverPillar.Core
 
         public bool IsFulfilled(GameObject target)
         {
+            bool fulfilledChosen = false;
             if (m_ChosenConditions == null || m_ChosenConditions.Count == 0)
             {
-                return m_ReturnValueOnNotCosen;
+                fulfilledChosen = m_ReturnValueOnNotChosen;
+            }
+            else
+            {
+                fulfilledChosen = InteractionConditions.IsFulfilled(m_ConditionType, m_ChosenConditions, target);
             }
 
-            return InteractionConditions.IsFulfilled(m_ConditionType, m_ChosenConditions, target);
+
+            bool fulfilledForced = m_InteractionsConditionToAlwaysChoose != null ? m_InteractionsConditionToAlwaysChoose.IsFulfilled(target) : true;
+
+            switch (m_OperationBetweenForcedAndChosen)
+            {
+                case BoolOperation.And:
+                    return fulfilledForced && fulfilledChosen;
+                case BoolOperation.Or:
+                    return fulfilledForced || fulfilledChosen;
+                case BoolOperation.NotEqual:
+                    return fulfilledForced != fulfilledChosen;
+                case BoolOperation.Equals:
+                    return fulfilledForced == fulfilledChosen;
+                default:
+                    return fulfilledForced && fulfilledChosen;
+            }
+
         }
     }
 }

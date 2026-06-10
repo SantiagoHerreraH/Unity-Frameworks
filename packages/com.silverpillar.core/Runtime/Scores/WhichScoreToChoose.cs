@@ -7,4 +7,10 @@ namespace SilverPillar.Core
         Highest,
         Lowest
     }
+
+    public enum HowToOrderScores
+    {
+        HighestToLowest,
+        LowestToHighest
+    }
 }

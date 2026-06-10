@@ -4,8 +4,9 @@ using UnityEngine;
 
 namespace SilverPillar.Core
 {
-    public class InteractionConditionChooser : SerializedMonoBehaviour, IInteractionCondition, IChoose
+    public class CachedInteractionScoreChooser : SerializedMonoBehaviour, ICachedInteractionScore, IChoose
     {
+
         [Title("Settings")]
         [SerializeField]
         private WhenToAutomaticallyChoose m_WhenToAutomaticallyChoose;
@@ -18,8 +19,7 @@ namespace SilverPillar.Core
 
         [Title("Data")]
         [OdinSerialize, ShowInInspector]
-        private ChooseInteractionCondition m_ChooseInteractionCondition;
-
+        private ChooseCachedInteractionScore m_ChooseCachedInteractionScore;
 
         private void Awake()
         {
@@ -64,47 +64,47 @@ namespace SilverPillar.Core
         }
         public void Choose()
         {
-            if (m_ChooseInteractionCondition == null)
+            if (m_ChooseCachedInteractionScore == null)
                 return;
 
             SetChosenGameObject();
-            m_ChooseInteractionCondition.Choose();
+            m_ChooseCachedInteractionScore.Choose();
         }
 
-        public IInteractionCondition Clone()
+        public ICachedInteractionScore Clone()
         {
-            return m_ChooseInteractionCondition.Clone();
+            return m_ChooseCachedInteractionScore.Clone();
         }
 
         public GameObject GetGameObject()
         {
-            return m_ChooseInteractionCondition.GetGameObject();
+            return m_ChooseCachedInteractionScore.GetGameObject();
         }
 
-        public bool IsFulfilled(GameObject target)
+        public float CalculateScore(GameObject target)
         {
-            return m_ChooseInteractionCondition.IsFulfilled(target);
+            return m_ChooseCachedInteractionScore.CalculateScore(target);
         }
 
         public bool SetGameObject(GameObject gameObj)
         {
-            return m_ChooseInteractionCondition.SetGameObject(gameObj);
+            return m_ChooseCachedInteractionScore.SetGameObject(gameObj);
         }
 
         private void SetChosenGameObject()
         {
-            if (m_ChooseInteractionCondition == null)
+            if (m_ChooseCachedInteractionScore == null)
                 return;
 
             switch (m_WhichGameObjectToSet)
             {
                 case SelfType.ThisGameObject:
-                    m_ChooseInteractionCondition.SetGameObject(gameObject);
+                    m_ChooseCachedInteractionScore.SetGameObject(gameObject);
                     break;
 
                 case SelfType.CustomGameObject:
                     if (m_CustomGameObject != null)
-                        m_ChooseInteractionCondition.SetGameObject(m_CustomGameObject);
+                        m_ChooseCachedInteractionScore.SetGameObject(m_CustomGameObject);
                     break;
             }
         }

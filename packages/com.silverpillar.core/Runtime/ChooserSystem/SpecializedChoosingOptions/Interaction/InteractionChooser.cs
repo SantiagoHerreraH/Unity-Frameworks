@@ -4,8 +4,9 @@ using UnityEngine;
 
 namespace SilverPillar.Core
 {
-    public class InteractionConditionChooser : SerializedMonoBehaviour, IInteractionCondition, IChoose
+    public class InteractionChooser : SerializedMonoBehaviour, IInteraction, IChoose
     {
+
         [Title("Settings")]
         [SerializeField]
         private WhenToAutomaticallyChoose m_WhenToAutomaticallyChoose;
@@ -18,8 +19,7 @@ namespace SilverPillar.Core
 
         [Title("Data")]
         [OdinSerialize, ShowInInspector]
-        private ChooseInteractionCondition m_ChooseInteractionCondition;
-
+        private ChooseInteraction m_ChooseInteraction;
 
         private void Awake()
         {
@@ -64,47 +64,47 @@ namespace SilverPillar.Core
         }
         public void Choose()
         {
-            if (m_ChooseInteractionCondition == null)
+            if (m_ChooseInteraction == null)
                 return;
 
             SetChosenGameObject();
-            m_ChooseInteractionCondition.Choose();
+            m_ChooseInteraction.Choose();
         }
 
-        public IInteractionCondition Clone()
+        public IInteraction Clone()
         {
-            return m_ChooseInteractionCondition.Clone();
+            return m_ChooseInteraction.Clone();
         }
 
-        public GameObject GetGameObject()
+        public GameObject GetSelf()
         {
-            return m_ChooseInteractionCondition.GetGameObject();
+            return m_ChooseInteraction.GetSelf();
         }
 
-        public bool IsFulfilled(GameObject target)
+        public void Interact(GameObject other)
         {
-            return m_ChooseInteractionCondition.IsFulfilled(target);
+            m_ChooseInteraction.Interact(other);
         }
 
-        public bool SetGameObject(GameObject gameObj)
+        public bool SetSelf(GameObject self)
         {
-            return m_ChooseInteractionCondition.SetGameObject(gameObj);
+            return m_ChooseInteraction.SetSelf(self);
         }
 
         private void SetChosenGameObject()
         {
-            if (m_ChooseInteractionCondition == null)
+            if (m_ChooseInteraction == null)
                 return;
 
             switch (m_WhichGameObjectToSet)
             {
                 case SelfType.ThisGameObject:
-                    m_ChooseInteractionCondition.SetGameObject(gameObject);
+                    m_ChooseInteraction.SetSelf(gameObject);
                     break;
 
                 case SelfType.CustomGameObject:
                     if (m_CustomGameObject != null)
-                        m_ChooseInteractionCondition.SetGameObject(m_CustomGameObject);
+                        m_ChooseInteraction.SetSelf(m_CustomGameObject);
                     break;
             }
         }
