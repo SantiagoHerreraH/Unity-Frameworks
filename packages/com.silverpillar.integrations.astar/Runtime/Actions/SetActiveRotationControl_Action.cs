@@ -19,7 +19,7 @@ namespace SilverPillar.Integrations.AStar
         [SerializeField]
         private RotationAction m_RotationActionOnEnd;
 
-        private FollowerEntity m_FollowerEntity;
+        private IAstarAI m_AStarAI = null;
         private GameObject m_Owner;
 
         public IAction Clone()
@@ -28,7 +28,7 @@ namespace SilverPillar.Integrations.AStar
             {
                 m_RotationActionOnStart = this.m_RotationActionOnStart,
                 m_RotationActionOnEnd = this.m_RotationActionOnEnd,
-                m_FollowerEntity = this.m_FollowerEntity,
+                m_AStarAI = this.m_AStarAI,
                 m_Owner = this.m_Owner
             };
         }
@@ -41,7 +41,9 @@ namespace SilverPillar.Integrations.AStar
 
             m_Owner = gameObj;
 
-            return gameObj.TryGetComponent(out m_FollowerEntity);
+            gameObj.TryGetComponent(out m_AStarAI);
+
+            return m_AStarAI != null ;
         }
 
         public void StartAction()
@@ -49,9 +51,7 @@ namespace SilverPillar.Integrations.AStar
             ApplyRotationSetting(m_RotationActionOnStart);
         }
 
-        public void UpdateAction()
-        {
-        }
+        public void UpdateAction() { }
 
         public void EndAction()
         {
@@ -60,14 +60,14 @@ namespace SilverPillar.Integrations.AStar
 
         private void ApplyRotationSetting(RotationAction action)
         {
-            if (m_FollowerEntity == null) return;
-            if (!m_FollowerEntity.gameObject.activeInHierarchy)
-            {
-                return;
-            }
+            if (m_Owner == null || !m_Owner.activeInHierarchy) return;
 
             bool shouldRotate = (action == RotationAction.ActivateRotationControl);
-            m_FollowerEntity.updateRotation = shouldRotate;
+
+            if (m_AStarAI != null)
+            {
+                m_AStarAI.updateRotation = shouldRotate;
+            }
         }
     }
 }

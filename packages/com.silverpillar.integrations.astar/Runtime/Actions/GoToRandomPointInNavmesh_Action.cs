@@ -8,7 +8,6 @@ using System;
 
 namespace SilverPillar.Integrations.AStar
 {
-
     [Serializable]
     public class GoToRandomPointInNavmesh_Action : IAction
     {
@@ -20,12 +19,6 @@ namespace SilverPillar.Integrations.AStar
             ReachCustomDistance
         }
 
-        public enum WhoIsTheCenterOfTheRadius
-        {
-            Self,
-            CurrentTarget
-        }
-
         [SerializeField]
         private HowToCalculateOnReachDestination m_HowToCalculateOnReachDestination;
 
@@ -34,12 +27,12 @@ namespace SilverPillar.Integrations.AStar
 
         [SerializeField]
         private int m_GraphIndexOfNavMesh = 0;
+
         [OdinSerialize, ShowInInspector]
         private ICachedScore m_Speed;
 
-
         private AIDestinationSetter m_DestinationSetter = null;
-        private FollowerEntity m_FollowerEntity = null;
+        private IAstarAI m_AStarAI = null;
         private TargetSystem m_TargetSystem = null;
 
         public GoToRandomPointInNavmesh_Action() { }
@@ -47,43 +40,36 @@ namespace SilverPillar.Integrations.AStar
         public GoToRandomPointInNavmesh_Action(GoToRandomPointInNavmesh_Action other)
         {
             m_GraphIndexOfNavMesh = other.m_GraphIndexOfNavMesh;
-            m_Speed = other.m_Speed.Clone();
+            m_Speed = other.m_Speed?.Clone();
 
-            m_FollowerEntity = other.m_FollowerEntity;
+            m_AStarAI = other.m_AStarAI;
             m_TargetSystem = other.m_TargetSystem;
 
             m_HowToCalculateOnReachDestination = other.m_HowToCalculateOnReachDestination;
             m_CustomDistanceParams = new(other.m_CustomDistanceParams);
         }
 
-        public IAction Clone()
-        {
-            return new GoToRandomPointInNavmesh_Action(this);
-
-        }
+        public IAction Clone() => new GoToRandomPointInNavmesh_Action(this);
 
         public GameObject GetGameObject()
         {
-            var go =
-                m_FollowerEntity ? m_FollowerEntity.gameObject : null;
-            return go;
+            return m_DestinationSetter.gameObject;
         }
 
         public bool SetGameObject(GameObject gameObj)
         {
-            bool speedIsGood = m_Speed != null ? m_Speed.SetGameObject(gameObj) : false;
+            bool speedIsGood = m_Speed?.SetGameObject(gameObj) ?? false;
+            m_CustomDistanceParams.Initialize(gameObj);
 
-            gameObj.TryGetComponent<AIDestinationSetter>(out m_DestinationSetter); //not necessary since you will just disable it
-            return
-                speedIsGood &&
-                gameObj.TryGetComponent<FollowerEntity>(out m_FollowerEntity);
+            gameObj.TryGetComponent(out m_DestinationSetter);
+            gameObj.TryGetComponent(out m_AStarAI);
+
+            bool hasMovementComponent = m_AStarAI != null;
+
+            return speedIsGood && hasMovementComponent;
         }
 
-
-        public void StartAction()
-        {
-            SetRandomPointAsDestination();
-        }
+        public void StartAction() => SetRandomPointAsDestination();
 
         public void UpdateAction()
         {
@@ -92,55 +78,54 @@ namespace SilverPillar.Integrations.AStar
                 SetRandomPointAsDestination();
             }
         }
-        public void EndAction()
-        {
-        }
+
+        public void EndAction() { }
 
         private void SetRandomPointAsDestination()
         {
-            if (m_FollowerEntity && m_FollowerEntity.gameObject.activeInHierarchy)
+            GameObject agentGo = GetGameObject();
+            if (agentGo == null || !agentGo.activeInHierarchy) return;
+
+            if (m_DestinationSetter) m_DestinationSetter.enabled = false;
+
+            // Obtener punto aleatorio del NavMesh/Recast Graph
+            var graph = AstarPath.active.graphs[m_GraphIndexOfNavMesh];
+            var sample = graph.RandomPointOnSurface(NearestNodeConstraint.Walkable);
+
+            float speed = m_Speed?.CalculateScore() ?? 1f;
+
+            if (m_AStarAI != null)
             {
-
-                m_FollowerEntity.enabled = true;
-                m_FollowerEntity.isStopped = false;
-
-                if (m_DestinationSetter)
-                {
-                    m_DestinationSetter.enabled = false;
-                }
-
-                var graph = AstarPath.active.graphs[m_GraphIndexOfNavMesh];
-                var sample = graph.RandomPointOnSurface(NearestNodeConstraint.Walkable);
-
-                if (m_Speed != null)
-                {
-                    m_FollowerEntity.maxSpeed = m_Speed.CalculateScore();
-                }
-
-                m_FollowerEntity.destination = sample.position;
-
+                MonoBehaviour mono = m_AStarAI as MonoBehaviour;
+                mono.enabled = true;
+                m_AStarAI.isStopped = false;
+                m_AStarAI.maxSpeed = speed;
+                m_AStarAI.destination = sample.position;
             }
         }
 
         private bool ReachedDestination()
         {
-            if (!m_FollowerEntity.gameObject.activeInHierarchy)
-            {
-                return false;
-            }
+            GameObject agentGo = GetGameObject();
+            if (agentGo == null || !agentGo.activeInHierarchy) return false;
+
+            bool reachedDest    = m_AStarAI.reachedDestination;
+            bool reachedEnd     = m_AStarAI.reachedEndOfPath;
+            Vector3 currentDest = m_AStarAI.destination;
 
             switch (m_HowToCalculateOnReachDestination)
             {
                 case HowToCalculateOnReachDestination.ReachDestination:
-                    return m_FollowerEntity.reachedDestination;
+                    return reachedDest;
                 case HowToCalculateOnReachDestination.ReachEndOfPath:
-                    return m_FollowerEntity.reachedEndOfPath;
+                    return reachedEnd;
                 case HowToCalculateOnReachDestination.ReachEndOfCrowdedPath:
-                    return m_FollowerEntity.reachedCrowdedEndOfPath;
+
+                    FollowerEntity entity = m_AStarAI as FollowerEntity;
+
+                    return entity ? entity.reachedCrowdedEndOfPath : reachedEnd;
                 case HowToCalculateOnReachDestination.ReachCustomDistance:
-                    return m_CustomDistanceParams.IsFulfilled(m_FollowerEntity.gameObject.transform.position, m_FollowerEntity.destination);
-                default:
-                    break;
+                    return m_CustomDistanceParams.IsFulfilled(agentGo.transform.position, currentDest);
             }
 
             return false;

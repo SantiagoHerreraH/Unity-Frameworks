@@ -17,9 +17,7 @@ namespace SilverPillar.EventTools
             OnEnable,
             OnUpdate,
             OnFixedUpdate,
-            OnLateUpdate,
-            OnDisable,
-            OnDestroy
+            OnLateUpdate
         }
 
         [SerializeField]
@@ -91,18 +89,12 @@ namespace SilverPillar.EventTools
 
         private void OnDisable()
         {
-            if (m_WhenToAutoCall == WhenToAutoCallEvent.OnDisable)
-            {
-                ExecuteEvent();
-            }
+            StopEventTimer();
         }
 
         private void OnDestroy()
         {
-            if (m_WhenToAutoCall == WhenToAutoCallEvent.OnDestroy)
-            {
-                m_Event?.Invoke();
-            }
+            StopEventTimer();
         }
 
         private void Initialize()
