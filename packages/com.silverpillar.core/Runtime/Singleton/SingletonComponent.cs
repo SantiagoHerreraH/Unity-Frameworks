@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using Sirenix.OdinInspector;
+using System;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -7,13 +8,32 @@ using UnityEditor;
 
 namespace SilverPillar.Core
 {
+#if UNITY_EDITOR
+    /// <summary>
+    /// Internal non-generic class to handle Editor events safely.
+    /// Unity attributes like [InitializeOnLoadMethod] do not support generic classes.
+    /// </summary>
+    internal static class SingletonEditorWarmup
+    {
+        public static event Action OnPostExitPlayMode;
+
+        [InitializeOnLoadMethod]
+        private static void Init()
+        {
+            EditorApplication.playModeStateChanged += state =>
+            {
+                if (state == PlayModeStateChange.ExitingPlayMode)
+                {
+                    OnPostExitPlayMode?.Invoke();
+                }
+            };
+        }
+    }
+#endif
+
     /// <summary>
     /// Generic singleton base class for MonoBehaviours using Odin's SerializedMonoBehaviour.
     /// Provides a thread-safe, scene-persistent singleton pattern with full lifecycle control.
-    ///
-    /// Usage:
-    ///   public class MyManager : SingletonComponent&lt;MyManager&gt; { ... }
-    ///   MyManager.Instance.DoSomething();
     /// </summary>
     public abstract class SingletonComponent<T> : SerializedMonoBehaviour
         where T : SingletonComponent<T>
@@ -23,7 +43,6 @@ namespace SilverPillar.Core
         [TitleGroup("Singleton Settings")]
         [Tooltip("If true, this GameObject will persist across scene loads.")]
         [SerializeField] private bool m_Persistent = true;
-
 
         // ─── Static State ────────────────────────────────────────────────────────
 
@@ -35,7 +54,6 @@ namespace SilverPillar.Core
 
         /// <summary>
         /// Returns the singleton instance. Returns null during application quit.
-        /// Will log a warning if accessed before Awake has run.
         /// </summary>
         public static T Instance
         {
@@ -43,8 +61,7 @@ namespace SilverPillar.Core
             {
                 if (m_ApplicationIsQuitting)
                 {
-                    Debug.LogWarning(
-                        $"[SingletonComponent] Instance of '{typeof(T).Name}' requested after application quit. Returning null.");
+                    Debug.LogWarning($"[SingletonComponent] Instance of '{typeof(T).Name}' requested after application quit.");
                     return null;
                 }
 
@@ -56,9 +73,7 @@ namespace SilverPillar.Core
 
                         if (m_Instance == null)
                         {
-                            Debug.LogWarning(
-                                $"[SingletonComponent] No instance of '{typeof(T).Name}' found in scene. " +
-                                "Make sure it is present in the scene before accessing it.");
+                            Debug.LogWarning($"[SingletonComponent] No instance of '{typeof(T).Name}' found in scene.");
                         }
                     }
 
@@ -67,9 +82,6 @@ namespace SilverPillar.Core
             }
         }
 
-        /// <summary>
-        /// True once Awake has run and the instance is ready.
-        /// </summary>
         public static bool IsInitialized => m_Instance != null;
 
         // ─── Lifecycle ───────────────────────────────────────────────────────────
@@ -80,9 +92,7 @@ namespace SilverPillar.Core
             {
                 if (m_Instance != null && m_Instance != this)
                 {
-                    Debug.LogWarning(
-                             $"[SingletonComponent] Duplicate instance of '{typeof(T).Name}' detected on " +
-                             $"'{gameObject.name}'. Destroying duplicate.");
+                    Debug.LogWarning($"[SingletonComponent] Duplicate instance of '{typeof(T).Name}' detected. Destroying duplicate.");
                     Destroy(gameObject);
                     return;
                 }
@@ -90,14 +100,17 @@ namespace SilverPillar.Core
                 m_Instance = (T)this;
                 m_ApplicationIsQuitting = false;
 
+#if UNITY_EDITOR
+                // Subscribe this specific generic instance to the editor cleanup event
+                SingletonEditorWarmup.OnPostExitPlayMode -= ResetStatics;
+                SingletonEditorWarmup.OnPostExitPlayMode += ResetStatics;
+#endif
+
                 if (m_Persistent)
                 {
-                    // Only call DontDestroyOnLoad on root GameObjects.
                     if (transform.parent != null)
                     {
-                        Debug.LogWarning(
-                            $"[SingletonComponent] '{typeof(T).Name}' is marked persistent but is not a root " +
-                            "GameObject. DontDestroyOnLoad requires a root object. Detaching from parent.");
+                        Debug.LogWarning($"[SingletonComponent] '{typeof(T).Name}' is persistent but not root. Detaching.");
                         transform.SetParent(null);
                     }
                     DontDestroyOnLoad(gameObject);
@@ -111,6 +124,9 @@ namespace SilverPillar.Core
         {
             if (m_Instance == this)
             {
+#if UNITY_EDITOR
+                SingletonEditorWarmup.OnPostExitPlayMode -= ResetStatics;
+#endif
                 OnShutdown();
                 m_Instance = null;
             }
@@ -124,42 +140,24 @@ namespace SilverPillar.Core
 
         // ─── Extension Points ────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Called once after this instance is confirmed as the singleton.
-        /// Override instead of Awake for initialization logic.
-        /// </summary>
         protected abstract void OnAwake();
+        protected abstract void OnShutdown();
 
         /// <summary>
-        /// Called when the singleton instance is destroyed or the application quits.
-        /// Override for cleanup logic (unsubscribing events, releasing resources, etc.).
+        /// Resets the static references. Called manually or via Editor event.
         /// </summary>
-        protected abstract void OnShutdown();
+        private static void ResetStatics()
+        {
+            m_Instance = null;
+            m_ApplicationIsQuitting = false;
+        }
 
         // ─── Editor Utilities ─────────────────────────────────────────────────────
 
 #if UNITY_EDITOR
         [TitleGroup("Singleton Settings")]
-        [ShowInInspector, ReadOnly]
-        [LabelText("Is Active Instance")]
+        [ShowInInspector, ReadOnly, LabelText("Is Active Instance")]
         private bool m_IsActiveInstance => m_Instance == this;
-
-        /// <summary>
-        /// Resets the static instance reference when exiting play mode in the editor,
-        /// preventing stale references between play sessions.
-        /// </summary>
-        [InitializeOnLoadMethod]
-        private static void ResetOnExitPlayMode()
-        {
-            EditorApplication.playModeStateChanged += state =>
-            {
-                if (state == PlayModeStateChange.ExitingPlayMode)
-                {
-                    m_Instance = null;
-                    m_ApplicationIsQuitting = false;
-                }
-            };
-        }
 #endif
     }
 }

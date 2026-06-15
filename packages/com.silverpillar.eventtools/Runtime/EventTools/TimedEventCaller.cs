@@ -156,8 +156,6 @@ namespace SilverPillar.EventTools
             {
                 m_CurrentTime += Time.deltaTime;
                 yield return null;
-
-                timeToTrigger = GetTimeToTrigger();
             }
 
             m_CurrentTime = 0f;

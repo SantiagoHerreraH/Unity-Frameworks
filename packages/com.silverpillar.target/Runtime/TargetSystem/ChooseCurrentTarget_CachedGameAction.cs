@@ -11,6 +11,11 @@ namespace SilverPillar.Target
     [Serializable]
     public class ChooseCurrentTarget_CachedGameAction : ICachedGameAction
     {
+        [Title("Which Target System")]
+        [SerializeField]
+        private SelfType m_WhichTargetSystem;
+        [SerializeField, ShowIf(nameof(m_WhichTargetSystem), SelfType.CustomGameObject)]
+        private TargetSystem m_TargetSystem;
         [Title("Filter")]
         [OdinSerialize, ShowInInspector]
         private IInteractionCondition m_ConditionToChooseTheCurrentTarget = null;
@@ -21,7 +26,6 @@ namespace SilverPillar.Target
         [OdinSerialize, ShowInInspector]
         private ICachedInteractionScore m_HowToCalculateScore = null;
 
-        private TargetSystem m_TargetSystem;
 
         private List<TargetAndScore> m_QualifiedTargets = new();
         public ChooseCurrentTarget_CachedGameAction() { }
@@ -100,7 +104,12 @@ namespace SilverPillar.Target
             bool conditionGood = m_ConditionToChooseTheCurrentTarget != null ? m_ConditionToChooseTheCurrentTarget.SetGameObject(gameObj) : false;
             bool scoreGood = m_HowToCalculateScore != null ? m_HowToCalculateScore.SetGameObject(gameObj) : false;
 
-            return conditionGood && scoreGood && gameObj.TryGetComponent(out m_TargetSystem);
+            if (m_WhichTargetSystem == SelfType.ThisGameObject)
+            {
+                gameObj.TryGetComponent(out m_TargetSystem);
+            }
+
+            return conditionGood && scoreGood && m_TargetSystem != null;
         }
     }
 }

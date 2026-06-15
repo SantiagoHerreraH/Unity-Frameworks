@@ -3,7 +3,6 @@ using Sirenix.Serialization;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using static Codice.Client.Common.EventTracking.TrackFeatureUseEvent.Features.DesktopGUI.Filters;
 
 namespace SilverPillar.Core
 {

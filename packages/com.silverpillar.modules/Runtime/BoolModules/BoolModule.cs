@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace SilverPillar.Modules
 {
@@ -9,8 +10,10 @@ namespace SilverPillar.Modules
         [SerializeField]
         private bool m_State;
 
-        private Action<bool> m_OnChangeState;
-        private Action<bool> m_OnSetState;
+        [SerializeField]
+        private UnityEvent<bool> m_OnChangeState;
+        [SerializeField]
+        private UnityEvent<bool> m_OnSetState;
 
         public BoolModule() { }
         public BoolModule(bool state)
@@ -18,23 +21,23 @@ namespace SilverPillar.Modules
             m_State = state;
         }
 
-        public void SubscribeOnChangeState(Action<bool> action)
+        public void SubscribeOnChangeState(UnityAction<bool> action)
         {
-            m_OnChangeState += action;
+            m_OnChangeState.AddListener(action);
         }
 
-        public void UnsubscribeOnChangeState(Action<bool> action)
+        public void UnsubscribeOnChangeState(UnityAction<bool> action)
         {
-            m_OnChangeState -= action;
+            m_OnChangeState.RemoveListener(action);
         }
-        public void SubscribeOnSetState(Action<bool> action)
+        public void SubscribeOnSetState(UnityAction<bool> action)
         {
-            m_OnSetState += action;
+            m_OnSetState.AddListener(action);
         }
 
-        public void UnsubscribeOnSetState(Action<bool> action)
+        public void UnsubscribeOnSetState(UnityAction<bool> action)
         {
-            m_OnSetState -= action;
+            m_OnSetState.RemoveListener(action);
         }
 
         public void SetState(bool state)
