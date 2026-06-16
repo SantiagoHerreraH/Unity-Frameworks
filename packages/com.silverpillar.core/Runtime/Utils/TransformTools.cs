@@ -13,6 +13,12 @@ namespace SilverPillar.Core
             m_AwakeWorldPosition = transform.position;
         }
 
+        public void SetParent(GameObject gameObject)
+        {
+            transform.localPosition = Vector3.zero;
+            transform.rotation = Quaternion.identity;
+            transform.SetParent(gameObject.transform, false);
+        }
         public void CopyWorldTransform(GameObject from)
         {
             Transform t = GetTransform(from);
