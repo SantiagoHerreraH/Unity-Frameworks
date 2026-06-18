@@ -1,0 +1,16 @@
+{
+  "name": "SilverPillar.Patrol",
+  "rootNamespace": "SilverPillar.Patrol",
+  "references": [
+    "SilverPillar.Core"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

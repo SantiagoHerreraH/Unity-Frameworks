@@ -13,17 +13,23 @@ namespace SilverPillar.Core
         [Serializable]
         public class ActionData
         {
+            [Title("Condition")]
             [OdinSerialize, ShowInInspector]
             private ICachedCondition m_Condition;
 
+            [Title("Actions")]
             [OdinSerialize, ShowInInspector]
             private List<ICachedGameAction> m_Actions = new();
 
+            [Title("Event")]
             [SerializeField]
-            private UnityEvent m_OnExecute = new();
+            private UnityEvent<GameObject> m_OnExecute = new();
+
+            private GameObject m_GameObject;
 
             public void SetGameObject(GameObject gameObject)
             {
+                m_GameObject = gameObject;
                 m_Condition?.SetGameObject(gameObject);
 
                 if (m_Actions == null)
@@ -48,7 +54,7 @@ namespace SilverPillar.Core
                     }
                 }
 
-                m_OnExecute?.Invoke();
+                m_OnExecute?.Invoke(m_GameObject);
                 return true;
             }
         }
@@ -77,6 +83,13 @@ namespace SilverPillar.Core
         [Title("AutoCall Settings")]
         [SerializeField]
         private WhenToAutoCall m_WhenToAutoCall = WhenToAutoCall.Update;
+
+
+        [Title("Who To Execute On")]
+        [SerializeField]
+        private SelfType m_WhoToExecuteOn = SelfType.ThisGameObject;
+        [SerializeField, ShowIf(nameof(m_WhoToExecuteOn), SelfType.CustomGameObject)]
+        private GameObject m_CustomGameObject;
 
         [Title("Conditions")]
         [SerializeField]
@@ -162,9 +175,24 @@ namespace SilverPillar.Core
             if (m_IsInitialized)
                 return;
 
-            m_IsInitialized = true;
 
-            m_ConditionToCheckAllActions?.SetGameObject(gameObject);
+            switch (m_WhoToExecuteOn)
+            {
+                case SelfType.ThisGameObject:
+                    m_ConditionToCheckAllActions?.SetGameObject(gameObject);
+                    break;
+                case SelfType.CustomGameObject:
+                    if (m_CustomGameObject == null)
+                    {
+                        Debug.LogError($"Custom game object is null in {nameof(CachedGameActionMachine)} in gameobject {gameObject.name}");
+                        return;
+                    }
+                    m_ConditionToCheckAllActions?.SetGameObject(m_CustomGameObject);
+                    break;
+                default:
+                    break;
+            }
+
 
             if (m_ActionData == null)
                 return;
@@ -173,11 +201,43 @@ namespace SilverPillar.Core
             {
                 item?.SetGameObject(gameObject);
             }
+
+            m_IsInitialized = true;
         }
 
         [Button(ButtonSizes.Medium)]
         public void Execute()
         {
+            Initialize();
+
+            if (m_ConditionToCheckAllActions != null &&
+                !m_ConditionToCheckAllActions.IsFulfilled())
+            {
+                return;
+            }
+
+            if (m_ActionData == null)
+                return;
+
+            switch (m_ExecutionMode)
+            {
+                case ExecutionMode.AllExecuteIfConditionFulfilled:
+                    ExecuteAllFulfilled();
+                    break;
+
+                case ExecutionMode.OnlyFirstToFulfillConditionExecutes:
+                    ExecuteOnlyFirstFulfilled();
+                    break;
+            }
+        }
+
+        [Button(ButtonSizes.Medium)]
+        public void Execute(GameObject gameObject)
+        {
+            m_WhoToExecuteOn = SelfType.CustomGameObject;
+            m_CustomGameObject = gameObject;
+            m_IsInitialized = false;
+
             Initialize();
 
             if (m_ConditionToCheckAllActions != null &&

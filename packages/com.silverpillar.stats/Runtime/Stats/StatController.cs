@@ -338,7 +338,7 @@ namespace SilverPillar.Stats
 
         [FoldoutGroup("Target Modifiers")]
         [Title("Stat Modifier Factories")]
-        [SerializeField, Tooltip("These modifier factories create target stat modifiers")]
+        [OdinSerialize, ShowInInspector, Tooltip("These modifier factories create target stat modifiers")]
         private StatModifierFactoryData m_TargetStatModifierFactoryData = new();
 
         [FoldoutGroup("Target Modifiers")]
@@ -350,7 +350,7 @@ namespace SilverPillar.Stats
 
         [FoldoutGroup("Stat Modifier Operations")]
         [Title("Stat Modifiers")]
-        [SerializeField]
+        [OdinSerialize, ShowInInspector]
         private StatModificationOperationController m_StatModificationOperationController = new();
 
 
@@ -650,7 +650,7 @@ namespace SilverPillar.Stats
         {
             if (HasStatType(statType))
             {
-                ModificationType modType = new ModificationType{StatType = statType, StatOperation = statOperation, StatVariable = statVariable};
+                ModificationType modType = new ModificationType{StatTypeThatIsBeingAffected = statType, StatOperationOnAffectedStat = statOperation, StatVariableOfAffectedStat = statVariable};
 
                 value = m_StatModificationOperationController.ModifyIncoming(modType, this, value);
                 m_StatType_To_Stat[statType].ModifyStat(value, statOperation, statVariable);

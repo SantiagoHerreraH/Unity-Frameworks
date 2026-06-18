@@ -126,6 +126,8 @@ namespace SilverPillar.Stats
                         break;
                 }
 
+                incomingModificationValueFromData = Mathf.Clamp(incomingModificationValueFromData, StatConfiguration.Instance.MinStatValue, StatConfiguration.Instance.MaxStatValue);
+
                 if (ApplyOperationToStatTypeToOperate && WhenToModifyStatTypeToOperate == WhenToModifyStatTypeToOperate.AfterModifyingIncomingValue)
                 {
                     controllerThatWantsToBeModified.Modify(StatTypeToOperateModification, incomingModificationValueFromData, StatOperationToApplyOnStatTypeToOperate, StatVariableToModifyOnStatTypeToOperate);
@@ -180,9 +182,9 @@ namespace SilverPillar.Stats
     [Serializable]
     public struct ModificationType : IEquatable<ModificationType>
     {
-        public StatType StatType;
-        public StatOperation StatOperation;
-        public StatVariable StatVariable;
+        public StatType StatTypeThatIsBeingAffected;
+        public StatOperation StatOperationOnAffectedStat;
+        public StatVariable StatVariableOfAffectedStat;
 
         public override bool Equals(object obj)
         {
@@ -191,16 +193,16 @@ namespace SilverPillar.Stats
 
         public bool Equals(ModificationType other)
         {
-            return StatType == other.StatType &&
-               StatOperation == other.StatOperation &&
-               StatVariable == other.StatVariable;
+            return StatTypeThatIsBeingAffected == other.StatTypeThatIsBeingAffected &&
+               StatOperationOnAffectedStat == other.StatOperationOnAffectedStat &&
+               StatVariableOfAffectedStat == other.StatVariableOfAffectedStat;
         }
 
         public override int GetHashCode()
         {
-            uint objectPart = (uint)(StatType != null ? StatType.GetInstanceID() & 0xFFFF : 0);
-            uint enumAPart = (uint)((byte)StatOperation);
-            uint enumBPart = (uint)((byte)StatVariable);
+            uint objectPart = (uint)(StatTypeThatIsBeingAffected != null ? StatTypeThatIsBeingAffected.GetInstanceID() & 0xFFFF : 0);
+            uint enumAPart = (uint)((byte)StatOperationOnAffectedStat);
+            uint enumBPart = (uint)((byte)StatVariableOfAffectedStat);
 
             uint hash = (objectPart << 16) | (enumAPart << 8) | enumBPart;
             return hash.GetHashCode();
@@ -219,7 +221,7 @@ namespace SilverPillar.Stats
         {
             modificationValue = StatOperationGroup.ModifyIncomingValue(target, modificationValue);
 
-            target.Modify(ModificationType.StatType, modificationValue, ModificationType.StatOperation, ModificationType.StatVariable);
+            target.Modify(ModificationType.StatTypeThatIsBeingAffected, modificationValue, ModificationType.StatOperationOnAffectedStat, ModificationType.StatVariableOfAffectedStat);
         }
     }
 
@@ -282,7 +284,7 @@ namespace SilverPillar.Stats
             }
         }
 
-        [SerializeField]
+        [OdinSerialize, ShowInInspector]
         private List<StatModificationOperation> m_StatModificationOperations = new();
 
         private Dictionary<ModificationType, Data> m_Data = new();

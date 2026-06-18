@@ -9,12 +9,16 @@ namespace SilverPillar.Modules
     [Serializable]
     public class BoolModuleModifier_Interaction : IInteraction
     {
+        [SerializeField]
+        private SelfType m_BoolControllerFromWho;
+        [SerializeField, ShowIf(nameof(m_BoolControllerFromWho), SelfType.CustomGameObject)]
+        BoolModuleController m_SelfController = null;
+
+
         [OdinSerialize, ShowInInspector]
         private IBoolModifier m_BoolModifier;
 
-        [SerializeField]
         private GameObject m_Self;
-        BoolModuleController m_SelfController = null;
 
         public IInteraction Clone()
         {
@@ -33,7 +37,7 @@ namespace SilverPillar.Modules
         public bool SetSelf(GameObject self)
         {
             m_Self = self;
-            if (m_Self != null)
+            if (m_Self != null && m_BoolControllerFromWho == SelfType.ThisGameObject)
                 m_Self.TryGetComponent(out m_SelfController);
             return m_Self != null && m_SelfController != null;
         }

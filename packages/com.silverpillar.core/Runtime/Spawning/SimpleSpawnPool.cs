@@ -295,6 +295,14 @@ namespace SilverPillar.Core
             Spawn(hit, m_DefaultRaycastSpawningSettings);
         }
 
+        public void DespawnAll()
+        {
+            for (int i = 0; i < m_Instances.Count; i++)
+            {
+                m_Instances[i].SetActive(false);
+            }
+        }
+
         private void OnCollisionEnter(Collision collision)
         {
             if (!m_CallOnSelfCollisionEnter)

@@ -41,6 +41,22 @@ namespace SilverPillar.Core
         [SerializeField]
         private WhenToAutoCallActions m_WhenToAutoCallActions = WhenToAutoCallActions.DontAutoCall;
 
+        private bool m_ShowUseIntervals => 
+            m_WhenToAutoCallActions == WhenToAutoCallActions.OnUpdate ||
+            m_WhenToAutoCallActions == WhenToAutoCallActions.OnFixedUpdate ||
+            m_WhenToAutoCallActions == WhenToAutoCallActions.OnLateUpdate;
+
+        private bool m_ShowInterval => m_ShowUseIntervals && m_UseIntervals;
+
+        [SerializeField, ShowIf(nameof(m_ShowUseIntervals))]
+        private bool m_UseIntervals = false;
+        [OdinSerialize, ShowInInspector, ShowIf(nameof(m_ShowInterval))]
+        private ICachedScore m_Interval;
+        [SerializeField, Tooltip("Whether to call when timer is zero, or wait for current time to reach the interval."), ShowIf(nameof(m_ShowInterval))]
+        private bool m_CallOnTimeZero = true;
+        private float m_CurrentInterval = 0;
+        private float m_CurrentTime = 0;
+
         [Title("Actions")]
         [SerializeField]
         private SelfType m_ExecuteOnWho;
@@ -90,19 +106,70 @@ namespace SilverPillar.Core
         private void Update()
         {
             if (m_WhenToAutoCallActions == WhenToAutoCallActions.OnUpdate)
-                Execute();
+            {
+                if (m_UseIntervals)
+                {
+                    Initialize();
+                    m_CurrentTime += Time.deltaTime;
+                    if (m_CurrentTime >= m_CurrentInterval)
+                    {
+                        m_CurrentInterval = m_Interval.CalculateScore();
+                        m_CurrentTime = 0;
+                        Execute();
+                    }
+
+                }
+                else
+                {
+                    Execute();
+                }
+            }
         }
 
         private void FixedUpdate()
         {
             if (m_WhenToAutoCallActions == WhenToAutoCallActions.OnFixedUpdate)
-                Execute();
+            {
+                if (m_UseIntervals)
+                {
+                    Initialize();
+                    m_CurrentTime += Time.fixedDeltaTime;
+                    if (m_CurrentTime >= m_CurrentInterval)
+                    {
+                        m_CurrentInterval = m_Interval.CalculateScore();
+                        m_CurrentTime = 0;
+                        Execute();
+                    }
+
+                }
+                else
+                {
+                    Execute();
+                }
+            }
         }
 
         private void LateUpdate()
         {
             if (m_WhenToAutoCallActions == WhenToAutoCallActions.OnLateUpdate)
-                Execute();
+            {
+                if (m_UseIntervals)
+                {
+                    Initialize();
+                    m_CurrentTime += Time.deltaTime;
+                    if (m_CurrentTime >= m_CurrentInterval)
+                    {
+                        m_CurrentInterval = m_Interval.CalculateScore();
+                        m_CurrentTime = 0;
+                        Execute();
+                    }
+
+                }
+                else
+                {
+                    Execute();
+                }
+            }
         }
 
         private bool Initialize()
@@ -116,6 +183,17 @@ namespace SilverPillar.Core
             SortActionsByPriority();
 
             m_Initialized = SetGameObject(m_ChosenGameObject);
+
+            if (m_UseIntervals)
+            {
+                m_Initialized &= m_Interval.SetGameObject(m_ChosenGameObject);
+
+                if (m_CallOnTimeZero)
+                {
+                    m_CurrentInterval = m_Interval.CalculateScore();
+                }
+            }
+
             return m_Initialized;
         }
 
