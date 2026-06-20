@@ -8,7 +8,7 @@ using UnityEngine.Events;
 namespace SilverPillar.Core
 {
     [Serializable]
-    public class ShootRaycast_CachedGameAction : ICachedGameAction
+    public class ShootRaycast_CachedGameAction : ICachedGameAction, IDebugDraw
     {
         public enum RaycastType
         {
@@ -151,6 +151,23 @@ namespace SilverPillar.Core
         [SerializeField] private UnityEvent<GameObject> m_OnHitGameObject;
         [SerializeField] private UnityEvent m_OnMiss;
 
+        [Title("Hit Nearest Events")]
+
+        [SerializeField, HideIf(nameof(m_RaycastType), RaycastType.Raycast)] private UnityEvent<RaycastHit> m_OnHitNearest;
+        [SerializeField, HideIf(nameof(m_RaycastType), RaycastType.Raycast)] private UnityEvent<GameObject> m_OnHitNearestGameObject;
+
+        [Title("Hit Furthest Events")]
+        [SerializeField, HideIf(nameof(m_RaycastType), RaycastType.Raycast)] private UnityEvent<RaycastHit> m_OnHitFurthest;
+        [SerializeField, HideIf(nameof(m_RaycastType), RaycastType.Raycast)] private UnityEvent<GameObject> m_OnHitFurthestGameObject;
+
+        [Title("Debug")]
+        [SerializeField]
+        private bool m_PrintHitGameObjects;
+        [SerializeField, HideIf(nameof(m_RaycastType), RaycastType.Raycast)]
+        private bool m_PrintNearestHitGameObjects;
+        [SerializeField, HideIf(nameof(m_RaycastType), RaycastType.Raycast)]
+        private bool m_PrintFurthestHitGameObjects;
+
         private GameObject m_GameObject;
         private RaycastHit[] m_NonAllocHits;
 
@@ -199,8 +216,17 @@ namespace SilverPillar.Core
                 m_OnHitGameObject = m_OnHitGameObject,
                 m_OnMiss = m_OnMiss,
 
+                m_OnHitNearest = m_OnHitNearest,
+                m_OnHitNearestGameObject = m_OnHitNearestGameObject,
+                m_OnHitFurthest = m_OnHitFurthest,
+                m_OnHitFurthestGameObject = m_OnHitFurthestGameObject,
+
                 m_GameObject = m_GameObject,
-                m_MaxDistance = m_MaxDistance
+                m_MaxDistance = m_MaxDistance,
+
+                m_PrintHitGameObjects = m_PrintHitGameObjects,
+                m_PrintNearestHitGameObjects = m_PrintNearestHitGameObjects,
+                m_PrintFurthestHitGameObjects = m_PrintFurthestHitGameObjects,
             };
         }
 
@@ -332,12 +358,13 @@ namespace SilverPillar.Core
 
             LastHit = hits[0];
 
+            InvokeNearestAndFurthestHits(hits);
+
             foreach (RaycastHit hit in hits)
                 InvokeHit(hit);
 
             ExecuteRaycastActions();
         }
-
         private void ExecuteRaycastNonAlloc(Vector3 origin, Vector3 direction)
         {
             if (m_NonAllocHits == null || m_NonAllocHits.Length != m_NonAllocSize)
@@ -367,6 +394,8 @@ namespace SilverPillar.Core
             Array.Sort(LastHits, (a, b) => a.distance.CompareTo(b.distance));
 
             LastHit = LastHits[0];
+
+            InvokeNearestAndFurthestHits(LastHits);
 
             for (int i = 0; i < LastHits.Length; i++)
                 InvokeHit(LastHits[i]);
@@ -503,8 +532,213 @@ namespace SilverPillar.Core
         {
             m_OnHit?.Invoke(hit);
 
+            if (m_PrintHitGameObjects)
+                PrintHitGameObject("Hit", hit);
+
             if (hit.collider != null)
                 m_OnHitGameObject?.Invoke(hit.collider.gameObject);
+        }
+
+        private void InvokeNearestAndFurthestHits(RaycastHit[] sortedHits)
+        {
+            if (sortedHits == null || sortedHits.Length == 0)
+                return;
+
+            RaycastHit nearestHit = sortedHits[0];
+            RaycastHit furthestHit = sortedHits[sortedHits.Length - 1];
+
+            InvokeNearestHit(nearestHit);
+            InvokeFurthestHit(furthestHit);
+        }
+
+        private void InvokeNearestHit(RaycastHit hit)
+        {
+            m_OnHitNearest?.Invoke(hit);
+
+            if (m_PrintNearestHitGameObjects)
+                PrintHitGameObject("Nearest Hit", hit);
+
+            if (hit.collider != null)
+                m_OnHitNearestGameObject?.Invoke(hit.collider.gameObject);
+        }
+
+        private void InvokeFurthestHit(RaycastHit hit)
+        {
+            m_OnHitFurthest?.Invoke(hit);
+
+            if (m_PrintFurthestHitGameObjects)
+                PrintHitGameObject("Furthest Hit", hit);
+
+            if (hit.collider != null)
+                m_OnHitFurthestGameObject?.Invoke(hit.collider.gameObject);
+        }
+
+        private void PrintHitGameObject(string hitType, RaycastHit hit)
+        {
+            if (hit.collider == null)
+            {
+                Debug.Log(
+                    $"[{nameof(ShootRaycast_CachedGameAction)}] {hitType}: No collider. Distance: {hit.distance}",
+                    m_GameObject);
+
+                return;
+            }
+
+            GameObject hitGameObject = hit.collider.gameObject;
+
+            Debug.Log(
+                $"[{nameof(ShootRaycast_CachedGameAction)}] {hitType}: {hitGameObject.name}. " +
+                $"Distance: {hit.distance}. Point: {hit.point}. Normal: {hit.normal}.",
+                hitGameObject);
+        }
+
+        public void DebugDraw(WhereToDraw whereToDraw)
+        {
+            Vector3 origin = GetOrigin();
+            Vector3 direction = GetDirectionAndUpdateDistance(origin);
+
+            const float hitMarkerSize = 0.12f;
+            const float normalLength = 0.35f;
+
+            if (direction.sqrMagnitude <= Mathf.Epsilon || m_MaxDistance <= 0f)
+            {
+                DrawCross(origin, hitMarkerSize, Color.red, whereToDraw);
+                return;
+            }
+
+            direction.Normalize();
+
+            Vector3 endPoint = origin + direction * m_MaxDistance;
+
+            RaycastHit[] debugHits = GetDebugHits(origin, direction);
+
+            DrawCross(origin, hitMarkerSize, Color.cyan, whereToDraw);
+
+            if (debugHits == null || debugHits.Length == 0)
+            {
+                DrawLine(origin, endPoint, Color.red, whereToDraw);
+                return;
+            }
+
+            Array.Sort(debugHits, (a, b) => a.distance.CompareTo(b.distance));
+
+            RaycastHit firstHit = debugHits[0];
+
+            Vector3 firstHitPoint = firstHit.collider != null
+                ? firstHit.point
+                : origin + direction * Mathf.Clamp(firstHit.distance, 0f, m_MaxDistance);
+
+            DrawLine(origin, firstHitPoint, Color.green, whereToDraw);
+            DrawLine(firstHitPoint, endPoint, Color.red, whereToDraw);
+
+            for (int i = 0; i < debugHits.Length; i++)
+            {
+                RaycastHit hit = debugHits[i];
+
+                if (hit.collider == null)
+                    continue;
+
+                DrawCross(hit.point, hitMarkerSize, Color.yellow, whereToDraw);
+                DrawRay(hit.point, hit.normal * normalLength, Color.blue, whereToDraw);
+            }
+        }
+
+        private RaycastHit[] GetDebugHits(Vector3 origin, Vector3 direction)
+        {
+            switch (m_RaycastType)
+            {
+                case RaycastType.Raycast:
+                    {
+                        if (Physics.Raycast(
+                                origin,
+                                direction,
+                                out RaycastHit hit,
+                                m_MaxDistance,
+                                m_LayerMask,
+                                m_QueryTriggerInteraction))
+                        {
+                            return new[] { hit };
+                        }
+
+                        return Array.Empty<RaycastHit>();
+                    }
+
+                case RaycastType.RaycastAll:
+                    {
+                        return Physics.RaycastAll(
+                            origin,
+                            direction,
+                            m_MaxDistance,
+                            m_LayerMask,
+                            m_QueryTriggerInteraction);
+                    }
+
+                case RaycastType.RaycastNonAlloc:
+                    {
+                        if (m_NonAllocHits == null || m_NonAllocHits.Length != m_NonAllocSize)
+                            m_NonAllocHits = new RaycastHit[m_NonAllocSize];
+
+                        int count = Physics.RaycastNonAlloc(
+                            origin,
+                            direction,
+                            m_NonAllocHits,
+                            m_MaxDistance,
+                            m_LayerMask,
+                            m_QueryTriggerInteraction);
+
+                        if (count <= 0)
+                            return Array.Empty<RaycastHit>();
+
+                        RaycastHit[] hits = new RaycastHit[count];
+                        Array.Copy(m_NonAllocHits, hits, count);
+
+                        return hits;
+                    }
+
+                default:
+                    return Array.Empty<RaycastHit>();
+            }
+        }
+
+        private void DrawLine(Vector3 from, Vector3 to, Color color, WhereToDraw whereToDraw)
+        {
+            switch (whereToDraw)
+            {
+                case WhereToDraw.Runtime:
+                    Debug.DrawLine(from, to, color);
+                    break;
+
+                case WhereToDraw.OnDrawGizmos:
+                    Gizmos.color = color;
+                    Gizmos.DrawLine(from, to);
+                    break;
+            }
+        }
+
+        private void DrawRay(Vector3 origin, Vector3 direction, Color color, WhereToDraw whereToDraw)
+        {
+            DrawLine(origin, origin + direction, color, whereToDraw);
+        }
+
+        private void DrawCross(Vector3 position, float size, Color color, WhereToDraw whereToDraw)
+        {
+            DrawLine(
+                position - Vector3.right * size,
+                position + Vector3.right * size,
+                color,
+                whereToDraw);
+
+            DrawLine(
+                position - Vector3.up * size,
+                position + Vector3.up * size,
+                color,
+                whereToDraw);
+
+            DrawLine(
+                position - Vector3.forward * size,
+                position + Vector3.forward * size,
+                color,
+                whereToDraw);
         }
     }
 }

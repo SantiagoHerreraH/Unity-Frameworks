@@ -170,6 +170,13 @@ namespace SilverPillar.Stats
 
         public void CreateStatModifiersFromFactories(StatController statController)
         {
+            if (m_StatModifierFactories == null || m_StatModifierFactories.Count == 0)
+            {
+                return;
+            }
+            m_StatModifiersCreatedByFactories ??= new();
+            m_StatModifierFactory_To_StatModifiers ??= new();
+
             m_StatModifiersCreatedByFactories.Clear();
             m_StatModifierFactory_To_StatModifiers.Clear();
 

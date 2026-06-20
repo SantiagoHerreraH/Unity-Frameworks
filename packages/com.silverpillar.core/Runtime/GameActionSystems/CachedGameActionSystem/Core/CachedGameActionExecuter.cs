@@ -57,6 +57,10 @@ namespace SilverPillar.Core
         private float m_CurrentInterval = 0;
         private float m_CurrentTime = 0;
 
+        [Title("Debug")]
+        [SerializeField]
+        private bool m_DrawDebug = false;
+
         [Title("Actions")]
         [SerializeField]
         private SelfType m_ExecuteOnWho;
@@ -172,6 +176,34 @@ namespace SilverPillar.Core
             }
         }
 
+        private void OnDrawGizmos()
+        {
+            if (!m_DrawDebug)
+            {
+                return;
+            }
+
+            if (m_Actions == null || m_Actions.Count == 0)
+            {
+                return;
+            }
+
+            if (m_ExecuteOnWho == SelfType.ThisGameObject || m_ChosenGameObject == null)
+                m_ChosenGameObject = gameObject;
+
+            foreach (var item in m_Actions)
+            {
+                var debugDraw = item.GameAction as IDebugDraw;
+
+                if (debugDraw != null)
+                {
+                    if (item.GameAction.SetGameObject(m_ChosenGameObject))
+                    {
+                        debugDraw.DebugDraw(WhereToDraw.OnDrawGizmos);
+                    }
+                }
+            }
+        }
         private bool Initialize()
         {
             if (m_Initialized)
@@ -281,6 +313,7 @@ namespace SilverPillar.Core
 
         public void Execute(GameObject gameObject)
         {
+            m_ExecuteOnWho = SelfType.CustomGameObject;
             SetGameObject(gameObject);
             Execute();
         }

@@ -175,31 +175,31 @@ namespace SilverPillar.Core
             if (m_IsInitialized)
                 return;
 
-
+            GameObject chosen = gameObject;
             switch (m_WhoToExecuteOn)
             {
                 case SelfType.ThisGameObject:
-                    m_ConditionToCheckAllActions?.SetGameObject(gameObject);
                     break;
                 case SelfType.CustomGameObject:
                     if (m_CustomGameObject == null)
                     {
-                        Debug.LogError($"Custom game object is null in {nameof(CachedGameActionMachine)} in gameobject {gameObject.name}");
-                        return;
+                        Debug.LogError($"Custom game object is null in {nameof(CachedGameActionMachine)} in gameobject {gameObject.name}. Falling back to this game object.");
+                        break;
                     }
-                    m_ConditionToCheckAllActions?.SetGameObject(m_CustomGameObject);
+                    chosen = m_CustomGameObject;
                     break;
                 default:
                     break;
             }
 
+            m_ConditionToCheckAllActions?.SetGameObject(chosen);
 
             if (m_ActionData == null)
                 return;
 
             foreach (var item in m_ActionData)
             {
-                item?.SetGameObject(gameObject);
+                item?.SetGameObject(chosen);
             }
 
             m_IsInitialized = true;

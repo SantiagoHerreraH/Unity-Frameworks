@@ -154,6 +154,11 @@ namespace SilverPillar.Core
             UnregisterData(WhenToStopQueuingAction.OnDestroy);
         }
 
+        public void ExecuteNextInQueue(QueuedActionChannel queuedActionChannel)
+        {
+            QueuedActionManager.Instance.ExecuteAndPop(queuedActionChannel);
+        }
+
         private void RegisterData(WhenToStartQueuingAction when)
         {
             for (int i = 0; i < m_QueueActionData.Count; i++)

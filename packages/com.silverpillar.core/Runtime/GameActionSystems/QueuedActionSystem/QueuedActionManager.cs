@@ -9,10 +9,10 @@ namespace SilverPillar.Core
 {
     public class QueuedActionManager : SingletonComponent<QueuedActionManager>
     {
-        public enum BehaviourOnNoDataDefined
+        public enum BehaviourOnNoQueueActionDataDefined
         {
             ReturnError,
-            CreateTimerDataBasedOnDefault,
+            CreateQueueActionDataBasedOnDefault,
             DoNothingAndReturnMessage,
             DoNothing,
         }
@@ -270,10 +270,12 @@ namespace SilverPillar.Core
             }
         }
 
-        [SerializeField]
-        private BehaviourOnNoDataDefined m_BehaviourOnNoDataDefined = BehaviourOnNoDataDefined.ReturnError;
+        [Title("Queue Action Manager Settings")]
 
-        [OdinSerialize, ShowInInspector, ShowIf(nameof(m_BehaviourOnNoDataDefined), BehaviourOnNoDataDefined.CreateTimerDataBasedOnDefault)]
+        [SerializeField]
+        private BehaviourOnNoQueueActionDataDefined m_BehaviourOnNoQueueActionDataDefined = BehaviourOnNoQueueActionDataDefined.ReturnError;
+
+        [OdinSerialize, ShowInInspector, ShowIf(nameof(m_BehaviourOnNoQueueActionDataDefined), BehaviourOnNoQueueActionDataDefined.CreateQueueActionDataBasedOnDefault)]
         private QueueData m_DefaultQueueData = new();
 
         [OdinSerialize, ShowInInspector]
@@ -467,16 +469,16 @@ namespace SilverPillar.Core
                 return true;
             }
 
-            switch (m_BehaviourOnNoDataDefined)
+            switch (m_BehaviourOnNoQueueActionDataDefined)
             {
-                case BehaviourOnNoDataDefined.ReturnError:
-                    Debug.LogError($"{nameof(QueuedActionManager)} has no queue data defined for channel {queue.name}.");
+                case BehaviourOnNoQueueActionDataDefined.ReturnError:
+                    Debug.LogError($"{nameof(QueuedActionManager)} has no queue action data defined for queue {queue.name}.");
                     return false;
 
-                case BehaviourOnNoDataDefined.CreateTimerDataBasedOnDefault:
+                case BehaviourOnNoQueueActionDataDefined.CreateQueueActionDataBasedOnDefault:
                     if (m_DefaultQueueData == null)
                     {
-                        Debug.LogError($"{nameof(QueuedActionManager)} cannot create queue data because the default queue data is null.");
+                        Debug.LogError($"{nameof(QueuedActionManager)} cannot create queue action data because the default queue data is null.");
                         return false;
                     }
 
@@ -490,11 +492,11 @@ namespace SilverPillar.Core
 
                     return true;
 
-                case BehaviourOnNoDataDefined.DoNothingAndReturnMessage:
-                    Debug.Log($"{nameof(QueuedActionManager)} has no queue data defined for channel {queue.name}.");
+                case BehaviourOnNoQueueActionDataDefined.DoNothingAndReturnMessage:
+                    Debug.Log($"{nameof(QueuedActionManager)} has no queue action data defined for channel {queue.name}.");
                     return false;
 
-                case BehaviourOnNoDataDefined.DoNothing:
+                case BehaviourOnNoQueueActionDataDefined.DoNothing:
                     return false;
 
                 default:
@@ -504,21 +506,21 @@ namespace SilverPillar.Core
 
         private void HandleMissingQueueData(QueuedActionChannel queue)
         {
-            switch (m_BehaviourOnNoDataDefined)
+            switch (m_BehaviourOnNoQueueActionDataDefined)
             {
-                case BehaviourOnNoDataDefined.ReturnError:
+                case BehaviourOnNoQueueActionDataDefined.ReturnError:
                     Debug.LogError($"{nameof(QueuedActionManager)} has no queue data defined for channel {queue.name}.");
                     break;
 
-                case BehaviourOnNoDataDefined.CreateTimerDataBasedOnDefault:
+                case BehaviourOnNoQueueActionDataDefined.CreateQueueActionDataBasedOnDefault:
                     TryGetOrCreateQueueData(queue, out _);
                     break;
 
-                case BehaviourOnNoDataDefined.DoNothingAndReturnMessage:
+                case BehaviourOnNoQueueActionDataDefined.DoNothingAndReturnMessage:
                     Debug.Log($"{nameof(QueuedActionManager)} has no queue data defined for channel {queue.name}.");
                     break;
 
-                case BehaviourOnNoDataDefined.DoNothing:
+                case BehaviourOnNoQueueActionDataDefined.DoNothing:
                     break;
             }
         }

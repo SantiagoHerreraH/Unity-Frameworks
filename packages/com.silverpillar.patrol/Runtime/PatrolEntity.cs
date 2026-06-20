@@ -705,10 +705,5 @@ namespace SilverPillar.Patrol
             m_Rigidbody.velocity = velocity;
 #endif
         }
-
-        private void OnDisable()
-        {
-            Debug.Log("PatrolEntity Disabled");
-        }
     }
 }

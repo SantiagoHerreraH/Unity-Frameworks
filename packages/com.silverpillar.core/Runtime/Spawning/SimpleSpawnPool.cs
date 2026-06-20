@@ -111,8 +111,6 @@ namespace SilverPillar.Core
         [Title("Events")]
         [SerializeField]
         private UnityEvent<GameObject> m_OnSpawn;
-        [SerializeField]
-        private UnityEvent<GameObject> m_OnReuse;
 
         private List<GameObject> m_Instances = new();
         private int m_NextReuseIndex = 0;
@@ -157,6 +155,10 @@ namespace SilverPillar.Core
 
                         obj = m_Instances.Last();
 
+                        obj.transform.SetPositionAndRotation(position, rotation);
+                        obj.SetActive(true);
+
+
                         break;
 
                     case WhatToDoIfReachedMaxSpawnCount.ReuseExisting:
@@ -189,24 +191,20 @@ namespace SilverPillar.Core
                                 break;
                         }
 
-                        m_OnSpawn?.Invoke(obj);
-
-                        return obj;
+                        break;
 
                     case WhatToDoIfReachedMaxSpawnCount.Nothing:
                     default:
                         return null;
                 }
             }
-
-            if (obj != null)
+            else
             {
                 obj.transform.SetPositionAndRotation(position, rotation);
                 obj.SetActive(true);
-
-
-                m_OnReuse?.Invoke(obj);
             }
+
+            m_OnSpawn?.Invoke(obj);
 
             return obj;
         }
