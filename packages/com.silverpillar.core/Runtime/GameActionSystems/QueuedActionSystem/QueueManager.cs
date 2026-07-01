@@ -4,15 +4,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace SilverPillar.Core
 {
-    public class QueuedActionManager : SingletonComponent<QueuedActionManager>
+    public class QueueManager : SingletonComponent<QueueManager>
     {
-        public enum BehaviourOnNoQueueActionDataDefined
+        public enum BehaviourOnNoQueueDataDefined
         {
             ReturnError,
-            CreateQueueActionDataBasedOnDefault,
+            CreateQueueDataBasedOnDefault,
             DoNothingAndReturnMessage,
             DoNothing,
         }
@@ -32,6 +33,7 @@ namespace SilverPillar.Core
         [Serializable]
         public class QueueData
         {
+            [Title("Settings")]
             [SerializeField]
             private QueueOrder m_QueueOrder;
 
@@ -49,6 +51,15 @@ namespace SilverPillar.Core
 
             private int m_CurrentQueueIndex;
 
+            [Title("Events")]
+
+            [SerializeField]
+            private UnityEvent m_OnBeforeExecute;
+            [SerializeField]
+            private UnityEvent m_OnAfterExecute;
+
+
+            [Title("Debug")]
             [ShowInInspector, ReadOnly]
             private List<QueuedAction.Data> m_QueuedActions = new();
 
@@ -193,7 +204,9 @@ namespace SilverPillar.Core
                 ShiftQueueIfNeeded();
                 ++m_CurrentQueueIndex;
 
+                m_OnBeforeExecute?.Invoke();
                 queuedData.Execute();
+                m_OnAfterExecute?.Invoke();
 
                 if (shouldQueueAgain)
                 {
@@ -214,6 +227,30 @@ namespace SilverPillar.Core
 
                 }
                 
+            }
+
+            public void SubscribeOnBeforeExecute(UnityAction unityAction)
+            {
+                m_OnBeforeExecute ??= new();
+                m_OnBeforeExecute.AddListener(unityAction);
+            }
+
+            public void SubscribeOnAfterExecute(UnityAction unityAction)
+            {
+                m_OnAfterExecute ??= new();
+                m_OnAfterExecute.AddListener(unityAction);
+            }
+
+            public void UnsubscribeOnBeforeExecute(UnityAction unityAction)
+            {
+                m_OnBeforeExecute ??= new();
+                m_OnBeforeExecute.RemoveListener(unityAction);
+            }
+
+            public void UnsubscribeOnAfterExecute(UnityAction unityAction)
+            {
+                m_OnAfterExecute ??= new();
+                m_OnAfterExecute.RemoveListener(unityAction);
             }
 
             private void ShiftQueueIfNeeded()
@@ -270,19 +307,26 @@ namespace SilverPillar.Core
             }
         }
 
-        [Title("Queue Action Manager Settings")]
+        [Title("Queue Manager Settings")]
 
         [SerializeField]
-        private BehaviourOnNoQueueActionDataDefined m_BehaviourOnNoQueueActionDataDefined = BehaviourOnNoQueueActionDataDefined.ReturnError;
+        private BehaviourOnNoQueueDataDefined m_BehaviourOnNoQueueDataDefined = BehaviourOnNoQueueDataDefined.ReturnError;
 
-        [OdinSerialize, ShowInInspector, ShowIf(nameof(m_BehaviourOnNoQueueActionDataDefined), BehaviourOnNoQueueActionDataDefined.CreateQueueActionDataBasedOnDefault)]
+        [OdinSerialize, ShowInInspector, ShowIf(nameof(m_BehaviourOnNoQueueDataDefined), BehaviourOnNoQueueDataDefined.CreateQueueDataBasedOnDefault)]
         private QueueData m_DefaultQueueData = new();
 
         [OdinSerialize, ShowInInspector]
-        private Dictionary<QueuedActionChannel, QueueData> m_QueueChannels_To_Data = new();
+        private Dictionary<Queue, QueueData> m_Queues_To_Data = new();
 
         private List<QueueData> m_Data = new();
         private bool m_Initialized = false;
+
+
+        [Title("All Queue Events")]
+        [SerializeField]
+        private UnityEvent m_OnBeforeExecuteAndPop;
+        [SerializeField]
+        private UnityEvent m_OnAfterExecuteAndPop;
 
         protected override void OnAwake()
         {
@@ -296,9 +340,9 @@ namespace SilverPillar.Core
                 return;
             }
 
-            if (m_QueueChannels_To_Data == null)
+            if (m_Queues_To_Data == null)
             {
-                m_QueueChannels_To_Data = new Dictionary<QueuedActionChannel, QueueData>();
+                m_Queues_To_Data = new Dictionary<Queue, QueueData>();
             }
 
             if (m_Data == null)
@@ -308,7 +352,7 @@ namespace SilverPillar.Core
 
             m_Data.Clear();
 
-            foreach (var item in m_QueueChannels_To_Data)
+            foreach (var item in m_Queues_To_Data)
             {
                 if (item.Value != null && !m_Data.Contains(item.Value))
                 {
@@ -319,7 +363,7 @@ namespace SilverPillar.Core
             m_Initialized = true;
         }
 
-        public void AddQueuedAction(QueuedActionChannel queue, QueuedAction.Data data)
+        public void AddQueuedAction(Queue queue, QueuedAction.Data data)
         {
             if (!IsValid())
             {
@@ -328,13 +372,13 @@ namespace SilverPillar.Core
 
             if (queue == null)
             {
-                Debug.LogError($"{nameof(QueuedActionManager)} cannot add queued action because the queue channel is null.");
+                Debug.LogError($"{nameof(QueueManager)} cannot add queued action because the queue channel is null.");
                 return;
             }
 
             if (data == null)
             {
-                Debug.LogError($"{nameof(QueuedActionManager)} cannot add a null queued action data.");
+                Debug.LogError($"{nameof(QueueManager)} cannot add a null queued action data.");
                 return;
             }
 
@@ -346,7 +390,7 @@ namespace SilverPillar.Core
             queueData.AddQueuedActionData(data);
         }
 
-        public void RemoveQueuedAction(QueuedActionChannel queue, QueuedAction.Data data)
+        public void RemoveQueuedAction(Queue queue, QueuedAction.Data data)
         {
             if (!IsValid())
             {
@@ -363,7 +407,7 @@ namespace SilverPillar.Core
                 return;
             }
 
-            if (!m_QueueChannels_To_Data.TryGetValue(queue, out QueueData queueData))
+            if (!m_Queues_To_Data.TryGetValue(queue, out QueueData queueData))
             {
                 return;
             }
@@ -371,7 +415,7 @@ namespace SilverPillar.Core
             queueData?.RemoveQueuedActionData(data);
         }
 
-        public void ExecuteAndPop(QueuedActionChannel queue)
+        public void ExecuteAndPop(Queue queue)
         {
             if (!IsValid())
             {
@@ -380,20 +424,78 @@ namespace SilverPillar.Core
 
             if (queue == null)
             {
-                Debug.LogError($"{nameof(QueuedActionManager)} cannot execute queue because the queue channel is null.");
+                Debug.LogError($"{nameof(QueueManager)} cannot execute queue because the queue channel is null.");
                 return;
             }
 
-            if (!m_QueueChannels_To_Data.TryGetValue(queue, out QueueData queueData))
+            if (!m_Queues_To_Data.TryGetValue(queue, out QueueData queueData))
             {
                 HandleMissingQueueData(queue);
                 return;
             }
 
+            m_OnBeforeExecuteAndPop?.Invoke();
             queueData?.ExecuteAndPop();
+            m_OnAfterExecuteAndPop?.Invoke();
         }
 
-        public void RecalculateQueueOrderBasedOnCurrentPriority(QueuedActionChannel queue)
+        public void SubscribeOnBeforeExecuteAndPop(UnityAction unityAction)
+        {
+            m_OnBeforeExecuteAndPop ??= new();
+            m_OnBeforeExecuteAndPop.AddListener(unityAction);
+        }
+
+        public void SubscribeOnAfterExecuteAndPop(UnityAction unityAction)
+        {
+            m_OnAfterExecuteAndPop ??= new();
+            m_OnAfterExecuteAndPop.AddListener(unityAction);
+        }
+
+        public void UnsubscribeOnBeforeExecuteAndPop(UnityAction unityAction)
+        {
+            m_OnBeforeExecuteAndPop ??= new();
+            m_OnBeforeExecuteAndPop.RemoveListener(unityAction);
+        }
+
+        public void UnsubscribeOnAfterExecuteAndPop(UnityAction unityAction)
+        {
+            m_OnAfterExecuteAndPop ??= new();
+            m_OnAfterExecuteAndPop.RemoveListener(unityAction);
+        }
+
+        public void SubscribeOnBeforeExecuteQueue(Queue queue, UnityAction unityAction)
+        {
+            if (m_Queues_To_Data.TryGetValue(queue, out QueueData queueData))
+            {
+                queueData.SubscribeOnBeforeExecute(unityAction);
+            }
+        }
+
+        public void SubscribeOnAfterExecuteQueue(Queue queue, UnityAction unityAction)
+        {
+            if (m_Queues_To_Data.TryGetValue(queue, out QueueData queueData))
+            {
+                queueData.SubscribeOnAfterExecute(unityAction);
+            }
+        }
+
+        public void UnsubscribeOnBeforeExecuteQueue(Queue queue, UnityAction unityAction)
+        {
+            if (m_Queues_To_Data.TryGetValue(queue, out QueueData queueData))
+            {
+                queueData.UnsubscribeOnBeforeExecute(unityAction);
+            }
+        }
+
+        public void UnsubscribeOnAfterExecuteQueue(Queue queue, UnityAction unityAction)
+        {
+            if (m_Queues_To_Data.TryGetValue(queue, out QueueData queueData))
+            {
+                queueData.UnsubscribeOnAfterExecute(unityAction);
+            }
+        }
+
+        public void RecalculateQueueOrderBasedOnCurrentPriority(Queue queue)
         {
             if (!IsValid())
             {
@@ -402,11 +504,11 @@ namespace SilverPillar.Core
 
             if (queue == null)
             {
-                Debug.LogError($"{nameof(QueuedActionManager)} cannot recalculate queue because the queue channel is null.");
+                Debug.LogError($"{nameof(QueueManager)} cannot recalculate queue because the queue channel is null.");
                 return;
             }
 
-            if (!m_QueueChannels_To_Data.TryGetValue(queue, out QueueData queueData))
+            if (!m_Queues_To_Data.TryGetValue(queue, out QueueData queueData))
             {
                 HandleMissingQueueData(queue);
                 return;
@@ -415,7 +517,7 @@ namespace SilverPillar.Core
             queueData?.RecalculateQueueOrderBasedOnCurrentPriority();
         }
 
-        public void RecalculateQueueOrderBasedOnRecalculatingPriority(QueuedActionChannel queue)
+        public void RecalculateQueueOrderBasedOnRecalculatingPriority(Queue queue)
         {
             if (!IsValid())
             {
@@ -424,11 +526,11 @@ namespace SilverPillar.Core
 
             if (queue == null)
             {
-                Debug.LogError($"{nameof(QueuedActionManager)} cannot recalculate queue because the queue channel is null.");
+                Debug.LogError($"{nameof(QueueManager)} cannot recalculate queue because the queue channel is null.");
                 return;
             }
 
-            if (!m_QueueChannels_To_Data.TryGetValue(queue, out QueueData queueData))
+            if (!m_Queues_To_Data.TryGetValue(queue, out QueueData queueData))
             {
                 HandleMissingQueueData(queue);
                 return;
@@ -437,7 +539,7 @@ namespace SilverPillar.Core
             queueData?.RecalculateQueueOrderBasedOnRecalculatingPriority();
         }
 
-        public bool TryGetQueueData(QueuedActionChannel queue, out QueueData queueData)
+        public bool TryGetQueueData(Queue queue, out QueueData queueData)
         {
             queueData = null;
 
@@ -451,7 +553,7 @@ namespace SilverPillar.Core
                 return false;
             }
 
-            return m_QueueChannels_To_Data.TryGetValue(queue, out queueData);
+            return m_Queues_To_Data.TryGetValue(queue, out queueData);
         }
 
         protected override void OnShutdown()
@@ -460,30 +562,30 @@ namespace SilverPillar.Core
             m_Initialized = false;
         }
 
-        private bool TryGetOrCreateQueueData(QueuedActionChannel queue, out QueueData queueData)
+        private bool TryGetOrCreateQueueData(Queue queue, out QueueData queueData)
         {
             queueData = null;
 
-            if (m_QueueChannels_To_Data.TryGetValue(queue, out queueData))
+            if (m_Queues_To_Data.TryGetValue(queue, out queueData))
             {
                 return true;
             }
 
-            switch (m_BehaviourOnNoQueueActionDataDefined)
+            switch (m_BehaviourOnNoQueueDataDefined)
             {
-                case BehaviourOnNoQueueActionDataDefined.ReturnError:
-                    Debug.LogError($"{nameof(QueuedActionManager)} has no queue action data defined for queue {queue.name}.");
+                case BehaviourOnNoQueueDataDefined.ReturnError:
+                    Debug.LogError($"{nameof(QueueManager)} has no queue action data defined for queue {queue.name}.");
                     return false;
 
-                case BehaviourOnNoQueueActionDataDefined.CreateQueueActionDataBasedOnDefault:
+                case BehaviourOnNoQueueDataDefined.CreateQueueDataBasedOnDefault:
                     if (m_DefaultQueueData == null)
                     {
-                        Debug.LogError($"{nameof(QueuedActionManager)} cannot create queue action data because the default queue data is null.");
+                        Debug.LogError($"{nameof(QueueManager)} cannot create queue action data because the default queue data is null.");
                         return false;
                     }
 
                     queueData = new QueueData(m_DefaultQueueData);
-                    m_QueueChannels_To_Data.Add(queue, queueData);
+                    m_Queues_To_Data.Add(queue, queueData);
 
                     if (m_Data != null && !m_Data.Contains(queueData))
                     {
@@ -492,11 +594,11 @@ namespace SilverPillar.Core
 
                     return true;
 
-                case BehaviourOnNoQueueActionDataDefined.DoNothingAndReturnMessage:
-                    Debug.Log($"{nameof(QueuedActionManager)} has no queue action data defined for channel {queue.name}.");
+                case BehaviourOnNoQueueDataDefined.DoNothingAndReturnMessage:
+                    Debug.Log($"{nameof(QueueManager)} has no queue action data defined for channel {queue.name}.");
                     return false;
 
-                case BehaviourOnNoQueueActionDataDefined.DoNothing:
+                case BehaviourOnNoQueueDataDefined.DoNothing:
                     return false;
 
                 default:
@@ -504,32 +606,32 @@ namespace SilverPillar.Core
             }
         }
 
-        private void HandleMissingQueueData(QueuedActionChannel queue)
+        private void HandleMissingQueueData(Queue queue)
         {
-            switch (m_BehaviourOnNoQueueActionDataDefined)
+            switch (m_BehaviourOnNoQueueDataDefined)
             {
-                case BehaviourOnNoQueueActionDataDefined.ReturnError:
-                    Debug.LogError($"{nameof(QueuedActionManager)} has no queue data defined for channel {queue.name}.");
+                case BehaviourOnNoQueueDataDefined.ReturnError:
+                    Debug.LogError($"{nameof(QueueManager)} has no queue data defined for channel {queue.name}.");
                     break;
 
-                case BehaviourOnNoQueueActionDataDefined.CreateQueueActionDataBasedOnDefault:
+                case BehaviourOnNoQueueDataDefined.CreateQueueDataBasedOnDefault:
                     TryGetOrCreateQueueData(queue, out _);
                     break;
 
-                case BehaviourOnNoQueueActionDataDefined.DoNothingAndReturnMessage:
-                    Debug.Log($"{nameof(QueuedActionManager)} has no queue data defined for channel {queue.name}.");
+                case BehaviourOnNoQueueDataDefined.DoNothingAndReturnMessage:
+                    Debug.Log($"{nameof(QueueManager)} has no queue data defined for channel {queue.name}.");
                     break;
 
-                case BehaviourOnNoQueueActionDataDefined.DoNothing:
+                case BehaviourOnNoQueueDataDefined.DoNothing:
                     break;
             }
         }
 
         private bool IsValid()
         {
-            if (m_QueueChannels_To_Data == null)
+            if (m_Queues_To_Data == null)
             {
-                Debug.LogError($"{nameof(QueuedActionManager)} queue dictionary is null.");
+                Debug.LogError($"{nameof(QueueManager)} queue dictionary is null.");
                 return false;
             }
 

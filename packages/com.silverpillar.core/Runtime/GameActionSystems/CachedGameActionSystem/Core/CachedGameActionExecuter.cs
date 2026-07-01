@@ -204,21 +204,21 @@ namespace SilverPillar.Core
                 }
             }
         }
-        private bool Initialize()
+        private void Initialize()
         {
             if (m_Initialized)
-                return true;
+                return;
 
             if (m_ExecuteOnWho == SelfType.ThisGameObject || m_ChosenGameObject == null)
                 m_ChosenGameObject = gameObject;
 
             SortActionsByPriority();
 
-            m_Initialized = SetGameObject(m_ChosenGameObject);
+            SetGameObject(m_ChosenGameObject);
 
             if (m_UseIntervals)
             {
-                m_Initialized &= m_Interval.SetGameObject(m_ChosenGameObject);
+                m_Interval.SetGameObject(m_ChosenGameObject);
 
                 if (m_CallOnTimeZero)
                 {
@@ -226,7 +226,7 @@ namespace SilverPillar.Core
                 }
             }
 
-            return m_Initialized;
+            m_Initialized = true;
         }
 
         public bool SetGameObject(GameObject gameObj)
@@ -300,8 +300,7 @@ namespace SilverPillar.Core
         [Button, Title("Manual Execution")]
         public void Execute()
         {
-            if (!Initialize())
-                return;
+            Initialize();
 
             SortActionsByPriority();
 

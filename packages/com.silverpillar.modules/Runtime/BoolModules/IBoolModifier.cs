@@ -2,7 +2,6 @@ using SilverPillar.Core;
 using Sirenix.OdinInspector;
 using Sirenix.Serialization;
 using System;
-using UnityEditor.Toolbars;
 using UnityEngine;
 
 namespace SilverPillar.Modules

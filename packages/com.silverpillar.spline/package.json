@@ -1,0 +1,10 @@
+{
+  "name": "com.silverpillar.spline",
+  "displayName": "Silver Pillar Spline Systems",
+  "version": "1.0.0",
+  "unity": "2022.3",
+  "description": "Spline Systems for the SilverPillar framework.",
+  "author": {
+    "name": "Santiago Herrera Huerta"
+  }
+}

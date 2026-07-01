@@ -27,8 +27,8 @@ namespace SilverPillar.Core
         {
             [Title("Settings")]
             [SerializeField]
-            private QueuedActionChannel m_QueueChannel;
-            public QueuedActionChannel QueueChannel => m_QueueChannel;
+            private Queue m_Queue;
+            public Queue Queue => m_Queue;
 
             [SerializeField]
             private WhenToStartQueuingAction m_WhenToStartQueuingAction;
@@ -154,9 +154,9 @@ namespace SilverPillar.Core
             UnregisterData(WhenToStopQueuingAction.OnDestroy);
         }
 
-        public void ExecuteNextInQueue(QueuedActionChannel queuedActionChannel)
+        public void ExecuteNextInQueue(Queue queuedActionChannel)
         {
-            QueuedActionManager.Instance.ExecuteAndPop(queuedActionChannel);
+            QueueManager.Instance.ExecuteAndPop(queuedActionChannel);
         }
 
         private void RegisterData(WhenToStartQueuingAction when)
@@ -176,7 +176,7 @@ namespace SilverPillar.Core
                     continue;
                 }
 
-                if (data.QueueChannel == null)
+                if (data.Queue == null)
                 {
                     Debug.LogError($"{nameof(QueuedAction)} cannot register because the queue channel is null.", this);
                     continue;
@@ -184,13 +184,13 @@ namespace SilverPillar.Core
 
                 data.Initialize(gameObject);
 
-                if (QueuedActionManager.Instance == null)
+                if (QueueManager.Instance == null)
                 {
-                    Debug.LogError($"{nameof(QueuedActionManager)} instance was not found.", this);
+                    Debug.LogError($"{nameof(QueueManager)} instance was not found.", this);
                     continue;
                 }
 
-                QueuedActionManager.Instance.AddQueuedAction(data.QueueChannel, data);
+                QueueManager.Instance.AddQueuedAction(data.Queue, data);
             }
         }
 
@@ -210,18 +210,18 @@ namespace SilverPillar.Core
                     continue;
                 }
 
-                if (data.QueueChannel == null)
+                if (data.Queue == null)
                 {
                     Debug.LogError($"{nameof(QueuedAction)} cannot unregister because the queue channel is null.", this);
                     continue;
                 }
 
-                if (QueuedActionManager.Instance == null)
+                if (QueueManager.Instance == null)
                 {
                     continue;
                 }
 
-                QueuedActionManager.Instance.RemoveQueuedAction(data.QueueChannel, data);
+                QueueManager.Instance.RemoveQueuedAction(data.Queue, data);
             }
         }
     }

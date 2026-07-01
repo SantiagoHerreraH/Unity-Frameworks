@@ -14,10 +14,14 @@ namespace SilverPillar.Target
     [Serializable]
     public class InteractWithCurrentTarget_CachedGameAction : ICachedGameAction
     {
+        [SerializeField]
+        private SelfType m_FromWhoToGetTargetSystem;
+        [SerializeField, ShowIf(nameof(m_FromWhoToGetTargetSystem), SelfType.CustomGameObject)]
+        private TargetSystem? m_TargetSystem;
         [OdinSerialize, ShowInInspector]
         private List<IInteraction> m_Interactions = new();
 
-        private TargetSystem? m_TargetSystem;
+        private GameObject? m_Self;
 
         public InteractWithCurrentTarget_CachedGameAction() { }
 
@@ -25,6 +29,8 @@ namespace SilverPillar.Target
         {
             m_Interactions = other.m_Interactions.Select(i => i.Clone()).ToList();
             m_TargetSystem = other.m_TargetSystem;
+            m_Self = other.m_Self;
+            m_FromWhoToGetTargetSystem = other.m_FromWhoToGetTargetSystem;
         }
 
         public ICachedGameAction Clone()
@@ -44,19 +50,28 @@ namespace SilverPillar.Target
 
         public GameObject? GetGameObject()
         {
-            return m_TargetSystem != null ? m_TargetSystem.gameObject : null;
+            return m_Self;
         }
 
         public bool SetGameObject(GameObject gameObj)
         {
-            if (gameObj.TryGetComponent(out m_TargetSystem))
+            m_Self = gameObj;
+
+            if (m_FromWhoToGetTargetSystem == SelfType.ThisGameObject)
+            {
+                gameObj.TryGetComponent(out m_TargetSystem);
+            }
+
+            if (m_TargetSystem != null)
             {
                 foreach (var interaction in m_Interactions)
                 {
-                    interaction.SetSelf(gameObj);
+                    interaction.SetSelf(m_TargetSystem.gameObject);
                 }
-                return true;
+
+                return m_Self != null;
             }
+            
             return false;
         }
     }

@@ -275,9 +275,12 @@ namespace SilverPillar.Stats
 
             public float ModifyIncoming(StatController target, float modificationValue)
             {
-                foreach (var data in m_Data)
+                if (m_Data != null && m_Data.Count > 0)
                 {
-                    modificationValue = data.Data.ModifyIncomingValue(target, modificationValue);
+                    foreach (var data in m_Data)
+                    {
+                        modificationValue = data.Data.ModifyIncomingValue(target, modificationValue);
+                    }
                 }
 
                 return modificationValue;
@@ -295,6 +298,7 @@ namespace SilverPillar.Stats
         {
             if (!m_Initialized)
             {
+                m_Data ??= new();
                 m_Data.Clear();
 
                 foreach (var operation in m_StatModificationOperations)

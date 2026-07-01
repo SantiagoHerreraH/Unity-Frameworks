@@ -1,0 +1,17 @@
+{
+  "name": "SilverPillar.Integrations.Feel",
+  "rootNamespace": "SilverPillar.Integrations.Feel",
+  "references": [
+    "SilverPillar.Core",
+    "MoreMountains.Tools"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

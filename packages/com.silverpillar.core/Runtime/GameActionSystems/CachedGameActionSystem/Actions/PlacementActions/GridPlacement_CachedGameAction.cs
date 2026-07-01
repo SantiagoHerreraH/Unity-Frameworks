@@ -15,7 +15,7 @@ namespace SilverPillar.Core
         private GameObject m_GameObject;
 
         [Title("Grid Position")]
-        [SerializeField]
+        [SerializeField, Tooltip("If null will be Self")]
         private Transform m_AnchorPosition;
 
         [SerializeField, Range(0f, 1f), Tooltip("0 is left 1 is right.")]
@@ -138,10 +138,13 @@ namespace SilverPillar.Core
             GameObject gameObjectToPlace = GetGameObject();
 
             if (gameObjectToPlace == null)
+            {
+                Debug.LogError($"gameObjectToPlace is null in GridPlacement Cached Game Action");
                 return;
+            }
 
             if (m_AnchorPosition == null)
-                return;
+                m_AnchorPosition = m_CachedGameObject.transform;
 
             ValidateGridValues();
 
@@ -156,9 +159,6 @@ namespace SilverPillar.Core
 
         public GameObject GetGameObject()
         {
-            if (m_WhichGameObjectToPlace == SelfType.CustomGameObject)
-                return m_GameObject;
-
             return m_CachedGameObject;
         }
 
