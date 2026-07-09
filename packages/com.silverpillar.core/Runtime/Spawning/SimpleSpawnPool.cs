@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
+using static SilverPillar.Core.SimpleSpawnPool;
 
 namespace SilverPillar.Core
 {
@@ -26,7 +27,8 @@ namespace SilverPillar.Core
         {
             DontModifyRotation,
             AlignRotationToHitNormal,
-            CopyRotationFromHitObject
+            CopyRotationFromHitObject,
+            CopyRotationFromSelf
         }
 
 
@@ -35,7 +37,10 @@ namespace SilverPillar.Core
         {
             public bool ParentToHit;
             public HitPositioning RaycastPositioning;
+            public Vector3 PositionOffset;
             public HitRotation RaycastRotation;
+            [HideIf(nameof(RaycastRotation), HitRotation.DontModifyRotation)]
+            public Vector3 RotationOffset;
             [ShowIf(nameof(RaycastRotation), HitRotation.AlignRotationToHitNormal)]
             public AlignmentSettings RotationAlignmentSettings;
             
@@ -47,8 +52,11 @@ namespace SilverPillar.Core
             public bool ParentToHit;
 
             public HitPositioning HitPositioning;
+            public Vector3 PositionOffset;
 
             public HitRotation HitRotation;
+            [HideIf(nameof(HitRotation), HitRotation.DontModifyRotation)]
+            public Vector3 RotationOffset;
 
             [ShowIf(nameof(HitRotation), HitRotation.AlignRotationToHitNormal)]
             public AlignmentSettings RotationAlignmentSettings;
@@ -57,7 +65,7 @@ namespace SilverPillar.Core
         {
             Nothing,
             InstantiateMore,
-            ReuseExisting
+            ReuseExisting,
         }
 
         public enum ReusingProtocol
@@ -74,7 +82,7 @@ namespace SilverPillar.Core
         private int m_MaxSpawnCount = 10;
 
         [Title("Side Cases")]
-        [SerializeField] 
+        [SerializeField, Tooltip("If an instance is deactivated, it will use that. If not it will trigger this behavior.")] 
         private WhatToDoIfReachedMaxSpawnCount m_WhatToDoIfReachedMaxSpawnCount = WhatToDoIfReachedMaxSpawnCount.Nothing;
         [SerializeField, ShowIf(nameof(m_WhatToDoIfReachedMaxSpawnCount), WhatToDoIfReachedMaxSpawnCount.ReuseExisting)]
         private ReusingProtocol m_DeactivateBeforeActivatingAgain = ReusingProtocol.DeactivateAndActivate;
@@ -255,6 +263,10 @@ namespace SilverPillar.Core
                     rotation = hitTransform != null ? hitTransform.rotation : Quaternion.identity;
                     break;
 
+                case HitRotation.CopyRotationFromSelf:
+                    rotation = transform.rotation;
+                    break;
+
                 case HitRotation.AlignRotationToHitNormal:
                     rotation = GetRotationAlignedToNormal(
                         hit.normal,
@@ -262,6 +274,14 @@ namespace SilverPillar.Core
                     );
                     break;
             }
+
+            ApplySpawnOffsets(
+                ref position,
+                ref rotation,
+                raycastSpawningSettings.PositionOffset,
+                raycastSpawningSettings.RotationOffset,
+                raycastSpawningSettings.RaycastRotation != HitRotation.DontModifyRotation
+            );
 
             GameObject? obj = Spawn(position, rotation);
 
@@ -435,12 +455,25 @@ namespace SilverPillar.Core
 
                     break;
 
+                case HitRotation.CopyRotationFromSelf:
+                    rotation = transform.rotation;
+                    break;
+
                 default:
 
                     rotation = Quaternion.identity;
 
                     break;
             }
+
+
+            ApplySpawnOffsets(
+                ref position,
+                ref rotation,
+                settings.PositionOffset,
+                settings.RotationOffset,
+                settings.HitRotation != HitRotation.DontModifyRotation
+            );
 
             GameObject? obj = Spawn(
                 position,
@@ -479,5 +512,19 @@ namespace SilverPillar.Core
             m_Instances.Add(obj);
             return obj;
         }
+
+         private void ApplySpawnOffsets(
+         ref Vector3 position,
+         ref Quaternion rotation,
+         Vector3 positionOffset,
+         Vector3 rotationOffset,
+         bool applyRotationOffset)
+        {
+            if (applyRotationOffset)
+                rotation *= Quaternion.Euler(rotationOffset);
+
+            position += rotation * positionOffset;
+        }
     }
+
 }

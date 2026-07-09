@@ -20,24 +20,60 @@ namespace SilverPillar.Core
 
         [Header("Position")]
         [SerializeField]
-        private bool m_SetPosition;
+        private bool m_SetPositionX;
 
-        [SerializeField, ShowIf(nameof(m_SetPosition))]
-        private Vector3 m_Position;
+        [SerializeField, ShowIf(nameof(m_SetPositionX))]
+        private float m_PositionX;
+
+        [SerializeField]
+        private bool m_SetPositionY;
+
+        [SerializeField, ShowIf(nameof(m_SetPositionY))]
+        private float m_PositionY;
+
+        [SerializeField]
+        private bool m_SetPositionZ;
+
+        [SerializeField, ShowIf(nameof(m_SetPositionZ))]
+        private float m_PositionZ;
 
         [Header("Rotation")]
         [SerializeField]
-        private bool m_SetRotation;
+        private bool m_SetRotationX;
 
-        [SerializeField, ShowIf(nameof(m_SetRotation))]
-        private Vector3 m_Rotation;
+        [SerializeField, ShowIf(nameof(m_SetRotationX))]
+        private float m_RotationX;
+
+        [SerializeField]
+        private bool m_SetRotationY;
+
+        [SerializeField, ShowIf(nameof(m_SetRotationY))]
+        private float m_RotationY;
+
+        [SerializeField]
+        private bool m_SetRotationZ;
+
+        [SerializeField, ShowIf(nameof(m_SetRotationZ))]
+        private float m_RotationZ;
 
         [Header("Scale")]
         [SerializeField]
-        private bool m_SetScale;
+        private bool m_SetScaleX;
 
-        [SerializeField, ShowIf(nameof(m_SetScale))]
-        private Vector3 m_Scale = Vector3.one;
+        [SerializeField, ShowIf(nameof(m_SetScaleX))]
+        private float m_ScaleX;
+
+        [SerializeField]
+        private bool m_SetScaleY;
+
+        [SerializeField, ShowIf(nameof(m_SetScaleY))]
+        private float m_ScaleY;
+
+        [SerializeField]
+        private bool m_SetScaleZ;
+
+        [SerializeField, ShowIf(nameof(m_SetScaleZ))]
+        private float m_ScaleZ;
 
         private GameObject m_GameObject;
 
@@ -48,12 +84,28 @@ namespace SilverPillar.Core
                 m_SetTransformOnWho = m_SetTransformOnWho,
                 m_Transform = m_Transform,
                 m_Space = m_Space,
-                m_SetPosition = m_SetPosition,
-                m_Position = m_Position,
-                m_SetRotation = m_SetRotation,
-                m_Rotation = m_Rotation,
-                m_SetScale = m_SetScale,
-                m_Scale = m_Scale,
+
+                m_SetPositionX = m_SetPositionX,
+                m_PositionX = m_PositionX,
+                m_SetPositionY = m_SetPositionY,
+                m_PositionY = m_PositionY,
+                m_SetPositionZ = m_SetPositionZ,
+                m_PositionZ = m_PositionZ,
+
+                m_SetRotationX = m_SetRotationX,
+                m_RotationX = m_RotationX,
+                m_SetRotationY = m_SetRotationY,
+                m_RotationY = m_RotationY,
+                m_SetRotationZ = m_SetRotationZ,
+                m_RotationZ = m_RotationZ,
+
+                m_SetScaleX = m_SetScaleX,
+                m_ScaleX = m_ScaleX,
+                m_SetScaleY = m_SetScaleY,
+                m_ScaleY = m_ScaleY,
+                m_SetScaleZ = m_SetScaleZ,
+                m_ScaleZ = m_ScaleZ,
+
                 m_GameObject = m_GameObject
             };
         }
@@ -65,28 +117,9 @@ namespace SilverPillar.Core
             if (target == null)
                 return;
 
-            if (m_SetPosition)
-            {
-                if (m_Space == Space.World)
-                    target.position = m_Position;
-                else
-                    target.localPosition = m_Position;
-            }
-
-            if (m_SetRotation)
-            {
-                Quaternion rotation = Quaternion.Euler(m_Rotation);
-
-                if (m_Space == Space.World)
-                    target.rotation = rotation;
-                else
-                    target.localRotation = rotation;
-            }
-
-            if (m_SetScale)
-            {
-                target.localScale = m_Scale;
-            }
+            SetPositionIfNeeded(target);
+            SetRotationIfNeeded(target);
+            SetScaleIfNeeded(target);
         }
 
         public GameObject GetGameObject()
@@ -113,6 +146,75 @@ namespace SilverPillar.Core
                 default:
                     return null;
             }
+        }
+
+        private void SetPositionIfNeeded(Transform target)
+        {
+            if (!m_SetPositionX && !m_SetPositionY && !m_SetPositionZ)
+                return;
+
+            Vector3 position = m_Space == Space.World
+                ? target.position
+                : target.localPosition;
+
+            if (m_SetPositionX)
+                position.x = m_PositionX;
+
+            if (m_SetPositionY)
+                position.y = m_PositionY;
+
+            if (m_SetPositionZ)
+                position.z = m_PositionZ;
+
+            if (m_Space == Space.World)
+                target.position = position;
+            else
+                target.localPosition = position;
+        }
+
+        private void SetRotationIfNeeded(Transform target)
+        {
+            if (!m_SetRotationX && !m_SetRotationY && !m_SetRotationZ)
+                return;
+
+            Vector3 eulerRotation = m_Space == Space.World
+                ? target.rotation.eulerAngles
+                : target.localRotation.eulerAngles;
+
+            if (m_SetRotationX)
+                eulerRotation.x = m_RotationX;
+
+            if (m_SetRotationY)
+                eulerRotation.y = m_RotationY;
+
+            if (m_SetRotationZ)
+                eulerRotation.z = m_RotationZ;
+
+            Quaternion rotation = Quaternion.Euler(eulerRotation);
+
+            if (m_Space == Space.World)
+                target.rotation = rotation;
+            else
+                target.localRotation = rotation;
+        }
+
+        private void SetScaleIfNeeded(Transform target)
+        {
+            if (!m_SetScaleX && !m_SetScaleY && !m_SetScaleZ)
+                return;
+
+            Vector3 scale = target.localScale;
+
+            if (m_SetScaleX)
+                scale.x = m_ScaleX;
+
+            if (m_SetScaleY)
+                scale.y = m_ScaleY;
+
+            if (m_SetScaleZ)
+                scale.z = m_ScaleZ;
+
+            target.localScale = scale;
         }
     }
 }

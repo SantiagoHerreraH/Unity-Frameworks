@@ -10,7 +10,8 @@ namespace SilverPillar.Core
     {
         LoopInOrder,
         BoomerangInOrder,
-        Random
+        Random,
+        Clamp
     }
 
     [Serializable]
@@ -102,6 +103,9 @@ namespace SilverPillar.Core
                 case ChoosingOrder.BoomerangInOrder:
                     return GetNextBoomerang();
 
+                case ChoosingOrder.Clamp:
+                    return GetNextClamp();
+
                 case ChoosingOrder.LoopInOrder:
                 default:
                     return GetNextLoop();
@@ -114,6 +118,18 @@ namespace SilverPillar.Core
 
             ChoosingOption<TOption> selected = m_Data[m_CurrentIndex];
             m_CurrentIndex = (m_CurrentIndex + 1) % m_Data.Count;
+
+            return selected;
+        }
+
+        private ChoosingOption<TOption> GetNextClamp()
+        {
+            m_CurrentIndex = Mathf.Clamp(m_CurrentIndex, 0, m_Data.Count - 1);
+
+            ChoosingOption<TOption> selected = m_Data[m_CurrentIndex];
+            m_CurrentIndex = (m_CurrentIndex + 1);
+
+            m_CurrentIndex = Mathf.Clamp(m_CurrentIndex, 0, m_Data.Count - 1);
 
             return selected;
         }

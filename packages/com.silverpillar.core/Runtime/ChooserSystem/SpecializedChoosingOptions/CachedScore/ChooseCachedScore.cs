@@ -10,6 +10,8 @@ namespace SilverPillar.Core
     public class ChooseCachedScore : ICachedScore, IChoose
     {
         [SerializeField]
+        private bool m_AlwaysCallChooseWhenCalculatingScore = false;
+        [SerializeField]
         private HowToCalculateScore m_HowToCalculateScore = HowToCalculateScore.ChooseFirst;
         [OdinSerialize, ShowInInspector]
         private IChooseData<ICachedScore> m_Chooser;
@@ -56,6 +58,11 @@ namespace SilverPillar.Core
 
         public float CalculateScore()
         {
+            if (m_AlwaysCallChooseWhenCalculatingScore)
+            {
+                Choose();
+            }
+
             if (m_ChosenScores == null || m_ChosenScores.Count == 0)
             {
                 return 0;

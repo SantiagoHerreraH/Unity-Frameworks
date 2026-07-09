@@ -23,8 +23,15 @@ namespace SilverPillar.EventTools
         [SerializeField]
         private WhenToAutoCallEvent m_WhenToAutoCall = WhenToAutoCallEvent.DontAutoCall;
 
+        [OdinSerialize, ShowInInspector, Tooltip("If null will call 1 time. If 0 or negative will call infinite times.")]
+        private IntCachedScore m_NumberOfTimesToCall;
+
         [OdinSerialize, ShowInInspector, Tooltip("Will always clamp to 0.")]
         private ICachedScore m_TimeToTrigger;
+
+
+        [SerializeField]
+        private bool m_CallOnTimeZero;
 
         [SerializeField, ReadOnly]
         private float m_CurrentTime;
@@ -104,6 +111,7 @@ namespace SilverPillar.EventTools
                 return;
             }
 
+            m_NumberOfTimesToCall?.SetGameObject(gameObject);
             m_TimeToTrigger?.SetGameObject(gameObject);
 
             m_Initialized = true;
@@ -140,20 +148,53 @@ namespace SilverPillar.EventTools
 
         private IEnumerator ExecuteEventCoroutine()
         {
-            m_CurrentTime = 0f;
+            int numberOfTimesToCall = GetNumberOfTimesToCall();
 
-            float timeToTrigger = GetTimeToTrigger();
+            int currentCallCount = 0;
+            bool callInfiniteTimes = numberOfTimesToCall <= 0;
 
-            while (m_CurrentTime < timeToTrigger)
+            if (m_CallOnTimeZero)
             {
-                m_CurrentTime += Time.deltaTime;
-                yield return null;
+                m_Event?.Invoke();
             }
 
-            m_CurrentTime = 0f;
-            m_EventCoroutine = null;
+            while (callInfiniteTimes || currentCallCount < numberOfTimesToCall)
+            {
+                m_CurrentTime = 0f;
 
-            m_Event?.Invoke();
+                float timeToTrigger = GetTimeToTrigger();
+
+                while (m_CurrentTime < timeToTrigger)
+                {
+                    m_CurrentTime += Time.deltaTime;
+                    yield return null;
+                }
+
+                m_CurrentTime = 0f;
+
+                m_Event?.Invoke();
+
+                currentCallCount++;
+
+                // Prevents an infinite tight loop if:
+                // numberOfTimesToCall is negative and timeToTrigger is 0.
+                if (callInfiniteTimes && timeToTrigger <= Mathf.Epsilon)
+                {
+                    yield return null;
+                }
+            }
+
+            m_EventCoroutine = null;
+        }
+
+        private int GetNumberOfTimesToCall()
+        {
+            if (m_NumberOfTimesToCall == null)
+            {
+                return 1;
+            }
+
+            return m_NumberOfTimesToCall.CalculateScoreAsInt();
         }
 
         private float GetTimeToTrigger()

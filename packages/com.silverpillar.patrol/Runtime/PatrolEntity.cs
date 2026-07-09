@@ -22,6 +22,41 @@ namespace SilverPillar.Patrol
             SearchPatrolRootsThatMeetConditions
         }
 
+        public enum TransformParamsToChange
+        {
+            Position,
+            Rotation,
+            Both
+        }
+
+        public enum WhereToStart
+        {
+            DontModifyTransform,
+            SetTransformToAwakeTransformParams,
+            SetTransformToClosestPatrolPoint,
+            SetTransformToFirstPatrolPoint
+        }
+
+        public enum WhenToSetTransform
+        {
+            OnAwake,
+            OnStart,
+            OnEnable
+        }
+
+
+        [Title("Where To Start")]
+        [SerializeField]
+        private WhereToStart m_WhereToStart;
+        [SerializeField, HideIf(nameof(m_WhereToStart), WhereToStart.DontModifyTransform)]
+        private WhenToSetTransform m_WhenToSetTransform;
+        [SerializeField, HideIf(nameof(m_WhereToStart), WhereToStart.DontModifyTransform)]
+        private TransformParamsToChange m_TransformParamsToChange;
+
+        private Vector3 m_AwakePosition;
+        private Quaternion m_AwakeRotation;
+        private bool m_HasCachedAwakeTransformParams;
+
         [Title("Patrol Points")]
 
         [SerializeField]
@@ -113,6 +148,8 @@ namespace SilverPillar.Patrol
 
         private void Awake()
         {
+            CacheAwakeTransformParams();
+
             if (m_PatrolMovementType == PatrolMovementType.RigidbodyVelocity ||
                 m_PatrolRotationType == PatrolRotationType.RigidbodyAngularVelocity)
             {
@@ -124,11 +161,19 @@ namespace SilverPillar.Patrol
 
             SetCachedObjects();
 
+            TrySetStartingTransform(WhenToSetTransform.OnAwake);
+        }
+
+        private void OnEnable()
+        {
+            TrySetStartingTransform(WhenToSetTransform.OnEnable);
         }
 
         private void Start()
         {
             RebuildPatrolPaths();
+
+            TrySetStartingTransform(WhenToSetTransform.OnStart);
         }
 
         private void Update()
@@ -191,7 +236,181 @@ namespace SilverPillar.Patrol
 
             SetStartingPatrolPoint();
         }
+        private void CacheAwakeTransformParams()
+        {
+            m_AwakePosition = transform.position;
+            m_AwakeRotation = transform.rotation;
+            m_HasCachedAwakeTransformParams = true;
+        }
 
+        private void TrySetStartingTransform(WhenToSetTransform whenToSetTransform)
+        {
+            if (m_WhereToStart == WhereToStart.DontModifyTransform)
+                return;
+
+            if (m_WhenToSetTransform != whenToSetTransform)
+                return;
+
+            SetStartingTransform();
+        }
+
+        private void SetStartingTransform()
+        {
+            switch (m_WhereToStart)
+            {
+                case WhereToStart.SetTransformToAwakeTransformParams:
+                    SetTransformToAwakeTransformParams();
+                    break;
+
+                case WhereToStart.SetTransformToClosestPatrolPoint:
+                    SetTransformToClosestPatrolPoint();
+                    break;
+
+                case WhereToStart.SetTransformToFirstPatrolPoint:
+                    SetTransformToFirstPatrolPoint();
+                    break;
+
+                case WhereToStart.DontModifyTransform:
+                default:
+                    break;
+            }
+        }
+
+        private void SetTransformToAwakeTransformParams()
+        {
+            if (!m_HasCachedAwakeTransformParams)
+                CacheAwakeTransformParams();
+
+            ApplyTransformParams(m_AwakePosition, m_AwakeRotation);
+        }
+
+        private void SetTransformToFirstPatrolPoint()
+        {
+            if (!TryGetFirstPatrolPoint(out Transform patrolPoint, out int pathIndex, out int pointIndex))
+                return;
+
+            m_CurrentPathIndex = pathIndex;
+            m_CurrentPointIndex = pointIndex;
+
+            ApplyTransformParams(patrolPoint.position, patrolPoint.rotation);
+        }
+
+        private void SetTransformToClosestPatrolPoint()
+        {
+            if (!TryGetClosestPatrolPoint(out Transform patrolPoint, out int pathIndex, out int pointIndex))
+                return;
+
+            m_CurrentPathIndex = pathIndex;
+            m_CurrentPointIndex = pointIndex;
+
+            ApplyTransformParams(patrolPoint.position, patrolPoint.rotation);
+        }
+
+        private bool TryGetFirstPatrolPoint(out Transform patrolPoint, out int pathIndex, out int pointIndex)
+        {
+            EnsurePatrolPathsAreAvailable();
+
+            patrolPoint = null;
+            pathIndex = -1;
+            pointIndex = -1;
+
+            for (int i = 0; i < m_PatrolPaths.Count; i++)
+            {
+                List<Transform> path = m_PatrolPaths[i];
+
+                if (path == null || path.Count == 0)
+                    continue;
+
+                for (int j = 0; j < path.Count; j++)
+                {
+                    if (path[j] == null)
+                        continue;
+
+                    patrolPoint = path[j];
+                    pathIndex = i;
+                    pointIndex = j;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryGetClosestPatrolPoint(out Transform patrolPoint, out int pathIndex, out int pointIndex)
+        {
+            EnsurePatrolPathsAreAvailable();
+
+            patrolPoint = null;
+            pathIndex = -1;
+            pointIndex = -1;
+
+            float closestSqrDistance = float.MaxValue;
+            Vector3 currentPosition = transform.position;
+
+            for (int i = 0; i < m_PatrolPaths.Count; i++)
+            {
+                List<Transform> path = m_PatrolPaths[i];
+
+                if (path == null || path.Count == 0)
+                    continue;
+
+                for (int j = 0; j < path.Count; j++)
+                {
+                    Transform currentPatrolPoint = path[j];
+
+                    if (currentPatrolPoint == null)
+                        continue;
+
+                    float sqrDistance = (currentPatrolPoint.position - currentPosition).sqrMagnitude;
+
+                    if (sqrDistance >= closestSqrDistance)
+                        continue;
+
+                    closestSqrDistance = sqrDistance;
+                    patrolPoint = currentPatrolPoint;
+                    pathIndex = i;
+                    pointIndex = j;
+                }
+            }
+
+            return patrolPoint != null;
+        }
+
+        private void EnsurePatrolPathsAreAvailable()
+        {
+            if (HasAnyValidPatrolPath())
+                return;
+
+            RebuildPatrolPaths();
+        }
+
+        private void ApplyTransformParams(Vector3 targetPosition, Quaternion targetRotation)
+        {
+            bool changePosition =
+                m_TransformParamsToChange == TransformParamsToChange.Position ||
+                m_TransformParamsToChange == TransformParamsToChange.Both;
+
+            bool changeRotation =
+                m_TransformParamsToChange == TransformParamsToChange.Rotation ||
+                m_TransformParamsToChange == TransformParamsToChange.Both;
+
+            if (changePosition)
+                transform.position = targetPosition;
+
+            if (changeRotation)
+                transform.rotation = targetRotation;
+
+            if (m_Rigidbody == null)
+                return;
+
+            if (changePosition)
+                m_Rigidbody.position = targetPosition;
+
+            if (changeRotation)
+                m_Rigidbody.rotation = targetRotation;
+
+            StopRigidbodyMovementIfNeeded();
+        }
         private void SetStartingPatrolPoint()
         {
             switch (m_OnWhichPatrolPointToStartPatrol)
