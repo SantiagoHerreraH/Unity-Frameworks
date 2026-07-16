@@ -5,7 +5,7 @@ namespace SilverPillar.Core
 {
     public interface IUndoCommand
     {
-        public bool SetGameObject(GameObject gameoObject);
+        public bool SetGameObject(GameObject gameObject);
         public GameObject GetGameObject();
 
         public void Execute();
