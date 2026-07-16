@@ -1,0 +1,10 @@
+{
+  "name": "com.silverpillar.lookuptree",
+  "displayName": "Silver Pillar Look Up Tree System",
+  "version": "1.0.0",
+  "unity": "2022.3",
+  "description": "Look Up Tree System for the SilverPillar framework.",
+  "author": {
+    "name": "Santiago Herrera Huerta"
+  }
+}

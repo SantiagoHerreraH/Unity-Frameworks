@@ -106,6 +106,16 @@ namespace SilverPillar.Patrol
         [SerializeField]
         private PatrolMovementType m_PatrolMovementType;
 
+        public enum MovementMultiplierType
+        {
+            DontMultiplyMovement,
+            MultiplyMovementByAverageLocalScale,
+            MultiplyMovementByAverageWorldScale
+        }
+        [SerializeField]
+        [Tooltip("Multiplies movement speed by the average absolute world scale of the entity.")]
+        private MovementMultiplierType m_MovementMultiplierType;
+
         [OdinSerialize, ShowInInspector]
         private ICachedScore m_MovementSpeed; 
         
@@ -166,13 +176,12 @@ namespace SilverPillar.Patrol
 
         private void OnEnable()
         {
+            RebuildPatrolPaths();
             TrySetStartingTransform(WhenToSetTransform.OnEnable);
         }
 
         private void Start()
         {
-            RebuildPatrolPaths();
-
             TrySetStartingTransform(WhenToSetTransform.OnStart);
         }
 
@@ -893,7 +902,47 @@ namespace SilverPillar.Patrol
             if (m_MovementSpeed == null)
                 return 0f;
 
-            return Mathf.Max(0f, m_MovementSpeed.CalculateScore());
+            float movementSpeed = Mathf.Max(0f, m_MovementSpeed.CalculateScore());
+
+            switch (m_MovementMultiplierType)
+            {
+                case MovementMultiplierType.DontMultiplyMovement:
+                    break;
+                case MovementMultiplierType.MultiplyMovementByAverageLocalScale:
+                    movementSpeed *= GetAverageLocalScale();
+                    break;
+                case MovementMultiplierType.MultiplyMovementByAverageWorldScale:
+                    movementSpeed *= GetAverageWorldScale();
+                    break;
+                default:
+                    break;
+            }
+
+            return movementSpeed;
+        }
+
+        private float GetAverageWorldScale()
+        {
+            Vector3 worldScale = transform.lossyScale;
+
+            float averageScale =
+                (Mathf.Abs(worldScale.x) +
+                 Mathf.Abs(worldScale.y) +
+                 Mathf.Abs(worldScale.z)) / 3f;
+
+            return averageScale;
+        }
+
+        private float GetAverageLocalScale()
+        {
+            Vector3 localScale = transform.localScale;
+
+            float averageScale =
+                (Mathf.Abs(localScale.x) +
+                 Mathf.Abs(localScale.y) +
+                 Mathf.Abs(localScale.z)) / 3f;
+
+            return averageScale;
         }
 
         private float GetRotationSpeed()

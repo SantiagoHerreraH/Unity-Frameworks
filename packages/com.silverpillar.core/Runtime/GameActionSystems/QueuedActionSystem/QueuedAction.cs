@@ -7,21 +7,21 @@ using UnityEngine.Events;
 
 namespace SilverPillar.Core
 {
+    public enum WhenToStartQueuingAction
+    {
+        OnAwake,
+        OnStart,
+        OnEnable
+    }
+
+    public enum WhenToStopQueuingAction
+    {
+        OnDisable,
+        OnDestroy
+    }
+
     public class QueuedAction : SerializedMonoBehaviour
     {
-        public enum WhenToStartQueuingAction
-        {
-            OnAwake,
-            OnStart,
-            OnEnable
-        }
-
-        public enum WhenToStopQueuingAction
-        {
-            OnDisable,
-            OnDestroy
-        }
-
         [Serializable]
         public class Data
         {
