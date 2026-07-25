@@ -19,9 +19,28 @@ namespace SilverPillar.Core
             SmoothMovement
         }
 
+        public enum WhatToMove
+        {
+            MoveCamera,
+            MoveCameraParent,
+            MoveCameraGrandParent
+        }
+
+        private enum WhenToCall
+        {
+            LateUpdate,
+            OnBeforeRender
+        }
+
         [Title("Camera Target")]
         [SerializeField]
         private CameraType m_CameraType;
+
+        [SerializeField]
+        private WhatToMove m_WhatToMove;
+
+        [SerializeField]
+        private WhenToCall m_WhenToCall;
 
         [SerializeField, ShowIf(nameof(m_CameraType), CameraType.CustomCamera)]
         private Camera m_ChosenCamera;
@@ -57,37 +76,105 @@ namespace SilverPillar.Core
         private float m_SmoothSpeed = 5f;
 
         private Camera m_ResolvedCamera;
+        private Transform m_ResolvedTransformToMove;
         private Transform m_ResolvedDistanceTarget;
+
+        private bool m_HasLoggedInvalidHierarchy;
 
         private void OnEnable()
         {
             InitializeReferences();
+
+            if (m_WhenToCall == WhenToCall.OnBeforeRender)
+            {
+                Application.onBeforeRender += ApplyCameraOffset;
+            }
+
+        }
+
+        private void OnDisable()
+        {
+            if (m_WhenToCall == WhenToCall.OnBeforeRender)
+            {
+                Application.onBeforeRender -= ApplyCameraOffset;
+            }
         }
 
         private void LateUpdate()
         {
-            RefreshDynamicReferences();
+            if (m_WhenToCall == WhenToCall.LateUpdate)
+            {
+                ApplyCameraOffset();
+            }
+        }
 
-            if (m_ResolvedCamera == null || m_ResolvedDistanceTarget == null)
+        /*
+         * A high order makes this callback execute after callbacks with
+         * lower before-render orders.
+         */
+        [BeforeRenderOrder(int.MaxValue)]
+        private void ApplyCameraOffset()
+        {
+            RefreshDynamicReferences();
+            ApplyDistanceLimit();
+        }
+
+        private void ApplyDistanceLimit()
+        {
+            if (m_ResolvedCamera == null ||
+                m_ResolvedTransformToMove == null ||
+                m_ResolvedDistanceTarget == null)
+            {
                 return;
+            }
 
             Transform cameraTransform = m_ResolvedCamera.transform;
 
-            // The camera cannot measure its distance from itself.
-            if (cameraTransform == m_ResolvedDistanceTarget)
-                return;
+            /*
+             * If the target is inside the subtree being moved, moving that
+             * subtree moves the camera and target together.
+             *
+             * Their relative distance therefore cannot be changed.
+             */
+            if (m_ResolvedDistanceTarget == m_ResolvedTransformToMove ||
+                m_ResolvedDistanceTarget.IsChildOf(m_ResolvedTransformToMove))
+            {
+                if (!m_HasLoggedInvalidHierarchy)
+                {
+                    Debug.LogError(
+                        $"[{nameof(CameraDistanceLimiter)}] " +
+                        $"The target '{m_ResolvedDistanceTarget.name}' is inside " +
+                        $"the hierarchy of the transform being moved " +
+                        $"'{m_ResolvedTransformToMove.name}'. The camera-target " +
+                        $"distance cannot change because both objects move together.",
+                        this);
 
+                    m_HasLoggedInvalidHierarchy = true;
+                }
+
+                return;
+            }
+
+            m_HasLoggedInvalidHierarchy = false;
+
+            /*
+             * Always measure from the actual camera.
+             *
+             * Do not measure from m_ResolvedTransformToMove because its
+             * position is not necessarily the camera position.
+             */
             Vector3 cameraOffset =
-                cameraTransform.position - m_ResolvedDistanceTarget.position;
+                cameraTransform.position -
+                m_ResolvedDistanceTarget.position;
 
             float currentDistance = cameraOffset.magnitude;
 
             float minimumDistance = m_LimitMin
-                ? Mathf.Max(0f, m_MinDistance)
+                ? m_MinDistance
                 : 0f;
 
             float maximumDistance = m_LimitMax
-                ? Mathf.Max(0f, m_MaxDistance)
+                ? m_MaxDistance
                 : float.PositiveInfinity;
 
             if (m_LimitMin && m_LimitMax)
@@ -97,13 +184,12 @@ namespace SilverPillar.Core
                     maximumDistance);
             }
 
-            float targetDistance = Mathf.Clamp(
+            float limitedDistance = Mathf.Clamp(
                 currentDistance,
                 minimumDistance,
                 maximumDistance);
 
-            // The camera is already inside the valid range.
-            if (Mathf.Approximately(currentDistance, targetDistance))
+            if (Mathf.Approximately(currentDistance, limitedDistance))
                 return;
 
             Vector3 direction;
@@ -114,31 +200,52 @@ namespace SilverPillar.Core
             }
             else
             {
-                // When the camera and target overlap, move the camera
-                // backwards relative to its current orientation.
                 direction = -cameraTransform.forward;
             }
 
-            Vector3 targetPosition =
+            /*
+             * This is the desired world position of the camera,
+             * regardless of which ancestor will be moved.
+             */
+            Vector3 targetCameraPosition =
                 m_ResolvedDistanceTarget.position +
-                direction * targetDistance;
+                direction * limitedDistance;
+
+            Vector3 desiredCameraPosition;
 
             switch (m_MovementType)
             {
                 case MovementType.Instant:
-                    cameraTransform.position = targetPosition;
+                    desiredCameraPosition = targetCameraPosition;
                     break;
 
                 case MovementType.SmoothMovement:
-                    float interpolation =
-                        1f - Mathf.Exp(-m_SmoothSpeed * Time.deltaTime);
+                    {
+                        float interpolation =
+                            1f - Mathf.Exp(
+                                -m_SmoothSpeed * Time.unscaledDeltaTime);
 
-                    cameraTransform.position = Vector3.Lerp(
-                        cameraTransform.position,
-                        targetPosition,
-                        interpolation);
-                    break;
+                        desiredCameraPosition = Vector3.Lerp(
+                            cameraTransform.position,
+                            targetCameraPosition,
+                            interpolation);
+
+                        break;
+                    }
+
+                default:
+                    return;
             }
+
+            /*
+             * Calculate how much the camera must move in world space.
+             * Apply that displacement to the selected ancestor.
+             */
+            Vector3 worldCorrection =
+                desiredCameraPosition -
+                cameraTransform.position;
+
+            m_ResolvedTransformToMove.position += worldCorrection;
         }
 
         private void InitializeReferences()
@@ -146,44 +253,62 @@ namespace SilverPillar.Core
             m_ResolvedCamera = ResolveCamera();
             m_ResolvedDistanceTarget = ResolveDistanceTarget();
 
-            if (m_ResolvedCamera == null)
-            {
-                Debug.LogError(
-                    $"[{nameof(CameraDistanceLimiter)}] No camera could be resolved on " +
-                    $"GameObject '{gameObject.name}'.",
-                    this);
-            }
-
-            if (m_ResolvedDistanceTarget == null)
-            {
-                Debug.LogError(
-                    $"[{nameof(CameraDistanceLimiter)}] No distance target could be resolved on " +
-                    $"GameObject '{gameObject.name}'.",
-                    this);
-            }
-
-            if (m_ResolvedCamera != null &&
-                m_ResolvedCamera.transform == m_ResolvedDistanceTarget)
-            {
-                Debug.LogError(
-                    $"[{nameof(CameraDistanceLimiter)}] The camera and distance target " +
-                    $"cannot reference the same Transform on GameObject '{gameObject.name}'.",
-                    this);
-            }
+            ResolveTransformToMove();
+            ValidateReferences();
         }
 
         private void RefreshDynamicReferences()
         {
-            // Camera.main can change while loading scenes or switching cameras.
-            if (m_CameraType == CameraType.MainCamera &&
-                (m_ResolvedCamera == null || !m_ResolvedCamera.isActiveAndEnabled))
+            Camera previousCamera = m_ResolvedCamera;
+
+            switch (m_CameraType)
             {
-                m_ResolvedCamera = Camera.main;
+                case CameraType.MainCamera:
+                    if (m_ResolvedCamera == null ||
+                        !m_ResolvedCamera.isActiveAndEnabled)
+                    {
+                        m_ResolvedCamera = Camera.main;
+                    }
+
+                    break;
+
+                case CameraType.CurrentCamera:
+                    /*
+                     * Camera.current is only reliably populated while
+                     * Unity is processing a camera-render callback.
+                     */
+                    if (Camera.current != null)
+                    {
+                        m_ResolvedCamera = Camera.current;
+                    }
+
+                    break;
+
+                case CameraType.CameraOnThisGameObject:
+                    if (m_ResolvedCamera == null)
+                    {
+                        m_ResolvedCamera = GetComponent<Camera>();
+                    }
+
+                    break;
+
+                case CameraType.CustomCamera:
+                    m_ResolvedCamera = m_ChosenCamera;
+                    break;
+            }
+
+            if (m_ResolvedCamera != previousCamera)
+            {
+                ResolveTransformToMove();
             }
 
             if (m_DistanceFrom == SelfType.ThisGameObject)
             {
                 m_ResolvedDistanceTarget = transform;
+            }
+            else
+            {
+                m_ResolvedDistanceTarget = m_TargetTransform;
             }
         }
 
@@ -208,6 +333,36 @@ namespace SilverPillar.Core
             }
         }
 
+        private void ResolveTransformToMove()
+        {
+            m_ResolvedTransformToMove = null;
+
+            if (m_ResolvedCamera == null)
+                return;
+
+            Transform cameraTransform = m_ResolvedCamera.transform;
+
+            switch (m_WhatToMove)
+            {
+                case WhatToMove.MoveCamera:
+                    m_ResolvedTransformToMove = cameraTransform;
+                    break;
+
+                case WhatToMove.MoveCameraParent:
+                    m_ResolvedTransformToMove =
+                        cameraTransform.parent;
+                    break;
+
+                case WhatToMove.MoveCameraGrandParent:
+                    m_ResolvedTransformToMove =
+                        cameraTransform.parent != null
+                            ? cameraTransform.parent.parent
+                            : null;
+
+                    break;
+            }
+        }
+
         private Transform ResolveDistanceTarget()
         {
             switch (m_DistanceFrom)
@@ -223,6 +378,36 @@ namespace SilverPillar.Core
             }
         }
 
+        private void ValidateReferences()
+        {
+            if (m_ResolvedCamera == null)
+            {
+                Debug.LogError(
+                    $"[{nameof(CameraDistanceLimiter)}] " +
+                    $"No camera could be resolved on '{gameObject.name}'.",
+                    this);
+
+                return;
+            }
+
+            if (m_ResolvedTransformToMove == null)
+            {
+                Debug.LogError(
+                    $"[{nameof(CameraDistanceLimiter)}] " +
+                    $"The camera '{m_ResolvedCamera.name}' does not have the " +
+                    $"parent hierarchy required by '{m_WhatToMove}'.",
+                    this);
+            }
+
+            if (m_ResolvedDistanceTarget == null)
+            {
+                Debug.LogError(
+                    $"[{nameof(CameraDistanceLimiter)}] " +
+                    $"No distance target could be resolved on '{gameObject.name}'.",
+                    this);
+            }
+        }
+
 #if UNITY_EDITOR
         private void OnValidate()
         {
@@ -230,7 +415,9 @@ namespace SilverPillar.Core
             m_MaxDistance = Mathf.Max(0f, m_MaxDistance);
             m_SmoothSpeed = Mathf.Max(0f, m_SmoothSpeed);
 
-            if (m_LimitMin && m_LimitMax && m_MaxDistance < m_MinDistance)
+            if (m_LimitMin &&
+                m_LimitMax &&
+                m_MaxDistance < m_MinDistance)
             {
                 m_MaxDistance = m_MinDistance;
             }
