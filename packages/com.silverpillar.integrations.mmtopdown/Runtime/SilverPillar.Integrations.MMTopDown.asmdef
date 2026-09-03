@@ -1,0 +1,23 @@
+{
+  "name": "SilverPillar.Integrations.MMTopDown",
+  "rootNamespace": "SilverPillar.Integrations.MMTopDown",
+  "references": [
+    "SilverPillar.Core",
+    "MoreMountains.TopDownEngine",
+    "MoreMountains.Tools",
+    "MoreMountains.Feedbacks",
+    "MoreMountains.InventoryEngine",
+    "Unity.InputSystem"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [
+  ],
+  "versionDefines": [
+  ],
+  "noEngineReferences": false
+}

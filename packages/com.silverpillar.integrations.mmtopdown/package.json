@@ -1,0 +1,10 @@
+{
+  "name": "com.silverpillar.integrations.mmtopdown",
+  "displayName": "Silver Pillar More Mountains Top Down Engine Integrations",
+  "version": "1.0.0",
+  "unity": "2022.3",
+  "description": "Integrate More Mountains Top Down engine with the rest of the framework systems",
+  "author": {
+    "name": "Santiago Herrera Huerta"
+  }
+}
