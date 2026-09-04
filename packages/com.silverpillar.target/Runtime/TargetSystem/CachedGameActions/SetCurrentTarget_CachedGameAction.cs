@@ -6,7 +6,7 @@ using UnityEngine;
 namespace SilverPillar.Target
 {
     [Serializable]
-    public class ChangeCurrentTarget_CachedGameAction : ICachedGameAction
+    public class SetCurrentTarget_CachedGameAction : ICachedGameAction
     {
         [SerializeField]
         private SelfType m_WhichTargetSystemToUse;
@@ -17,12 +17,12 @@ namespace SilverPillar.Target
 
         private GameObject m_Self;
 
-        public ChangeCurrentTarget_CachedGameAction()
+        public SetCurrentTarget_CachedGameAction()
         {
 
         }
 
-        public ChangeCurrentTarget_CachedGameAction(ChangeCurrentTarget_CachedGameAction other)
+        public SetCurrentTarget_CachedGameAction(SetCurrentTarget_CachedGameAction other)
         {
             m_WhichTargetSystemToUse = other.m_WhichTargetSystemToUse;
             m_Target = other.m_Target;
@@ -32,7 +32,7 @@ namespace SilverPillar.Target
 
         public ICachedGameAction Clone()
         {
-            return new ChangeCurrentTarget_CachedGameAction(this);
+            return new SetCurrentTarget_CachedGameAction(this);
         }
 
         public void Execute()

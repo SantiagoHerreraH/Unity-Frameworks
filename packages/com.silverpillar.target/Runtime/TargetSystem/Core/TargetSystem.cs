@@ -116,13 +116,13 @@ namespace SilverPillar.Target
 
         [FoldoutGroup("Events")]
         [SerializeField]
-        private bool m_CallOnOnNewCurrentTargetOnStart = true;
+        private bool m_CallOnNewCurrentTargetOnStart = true;
         [FoldoutGroup("Events")]
         [SerializeField]
         private UnityEvent<GameObject> m_OnNewCurrentTarget = new();
         [FoldoutGroup("Events")]
         [SerializeField]
-        private bool m_CallOnOnNullTargetOnStart = true;
+        private bool m_CallOnNullTargetOnStart = true;
         [FoldoutGroup("Events")]
         [SerializeField]
         private UnityEvent m_OnNullCurrentTarget = new();
@@ -170,11 +170,11 @@ namespace SilverPillar.Target
 
         private void Start()
         {
-            if (m_CallOnOnNewCurrentTargetOnStart && m_CurrentTarget != null)
+            if (m_CallOnNewCurrentTargetOnStart && m_CurrentTarget != null)
             {
                 m_OnNewCurrentTarget?.Invoke(m_CurrentTarget);
             }
-            else if (m_CallOnOnNullTargetOnStart && m_CurrentTarget == null)
+            else if (m_CallOnNullTargetOnStart && m_CurrentTarget == null)
             {
                 m_OnNullCurrentTarget?.Invoke();
             }

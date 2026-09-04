@@ -18,7 +18,7 @@ namespace SilverPillar.State
         private StateTag m_StateOnEnable = null;
 
         [FoldoutGroup("Data")]
-        [OdinSerialize, ShowInInspector]
+        [OdinSerialize, ShowInInspector, DictionaryDrawerSettings(DisplayMode = DictionaryDisplayOptions.CollapsedFoldout, KeyLabel = "State Tag", ValueLabel = "State Data")]
         private Dictionary<StateTag, State> m_States = new();
 
         [FoldoutGroup("Events")]
