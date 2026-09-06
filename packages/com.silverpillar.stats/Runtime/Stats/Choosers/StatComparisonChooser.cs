@@ -107,48 +107,53 @@ namespace SilverPillar.Stats
         [SerializeField]
         private ProtocolWhenCallingIsFulfilled m_ProtocolWhenCallingIsFulfilled;
 
-        private List<ICachedCondition> m_Chosen;
+        private DataFromChoosing<ICachedCondition> m_DataFromChoosing;
         private bool m_Initialized;
 
-        public List<ICachedCondition> ChooseData()
+        public List<ICachedCondition> AllData()
+        {
+            throw new NotImplementedException();
+        }
+
+        public DataFromChoosing<ICachedCondition> ChooseData()
         {
             Initialize();
 
-            m_Chosen ??= new();
+            m_DataFromChoosing.Clear();
 
             if (m_NumberOfStatComparisonConditionsToChoose == null)
             {
                 Debug.LogError($"{nameof(StatComparisonChooser)} has no number assigned.", m_Self);
-                return m_Chosen;
+                return m_DataFromChoosing;
             }
 
             if (m_StatController == null)
             {
                 Debug.LogError($"{nameof(StatComparisonChooser)} has no StatController.", m_Self);
-                return m_Chosen;
+                return m_DataFromChoosing;
             }
 
             if (m_LeftStatTypes == null || m_LeftStatTypes.Count == 0)
-                return m_Chosen;
+                return m_DataFromChoosing;
 
             if (m_RightStatTypes == null || m_RightStatTypes.Count == 0)
-                return m_Chosen;
+                return m_DataFromChoosing;
 
             int amount = Mathf.Max(0, m_NumberOfStatComparisonConditionsToChoose.CalculateScoreAsInt());
 
-            while (m_Chosen.Count < amount)
+            while (m_DataFromChoosing.ChosenData.Count < amount)
             {
                 StatComparison_CachedCondition condition = new StatComparison_CachedCondition();
                 condition.SetGameObject(m_StatController.gameObject);
-                m_Chosen.Add(condition);
+                m_DataFromChoosing.ChosenData.Add(condition);
             }
 
-            while (m_Chosen.Count > amount)
+            while (m_DataFromChoosing.ChosenData.Count > amount)
             {
-                m_Chosen.RemoveAt(m_Chosen.Count - 1);
+                m_DataFromChoosing.ChosenData.RemoveAt(m_DataFromChoosing.ChosenData.Count - 1);
             }
 
-            for (int i = 0; i < m_Chosen.Count; i++)
+            for (int i = 0; i < m_DataFromChoosing.ChosenData.Count; i++)
             {
                 StatType leftStatType = m_LeftStatTypes.ChooseNext();
                 StatType rightStatType = m_RightStatTypes.ChooseNext();
@@ -165,12 +170,12 @@ namespace SilverPillar.Stats
                     rightStatType = m_RightStatTypes.ChooseNext();
                 }
 
-                StatComparison_CachedCondition condition = m_Chosen[i] as StatComparison_CachedCondition;
+                StatComparison_CachedCondition condition = m_DataFromChoosing.ChosenData[i] as StatComparison_CachedCondition;
 
                 if (condition == null)
                 {
                     condition = new StatComparison_CachedCondition();
-                    m_Chosen[i] = condition;
+                    m_DataFromChoosing.ChosenData[i] = condition;
                 }
 
                 condition.StatType = leftStatType;
@@ -182,12 +187,22 @@ namespace SilverPillar.Stats
                 condition.SetGameObject(m_StatController.gameObject);
             }
 
-            return m_Chosen;
+            return m_DataFromChoosing;
+        }
+
+        public List<ICachedCondition> GetChosenData()
+        {
+            throw new NotImplementedException();
+        }
+
+        public List<ICachedCondition> GetNotChosenData()
+        {
+            throw new NotImplementedException();
         }
 
         public bool IsFulfilled()
         {
-            if (m_Chosen == null || m_Chosen.Count == 0)
+            if (m_DataFromChoosing.ChosenData.Count == 0)
             {
                 switch (m_ProtocolWhenCallingIsFulfilled)
                 {
@@ -203,10 +218,10 @@ namespace SilverPillar.Stats
                 }
             }
 
-            if (m_Chosen == null || m_Chosen.Count == 0)
+            if (m_DataFromChoosing.ChosenData.Count == 0)
                 return false;
 
-            return CachedConditions.IsFulfilled(m_ConditionType, m_Chosen);
+            return CachedConditions.IsFulfilled(m_ConditionType, m_DataFromChoosing.ChosenData);
         }
 
         public bool SetGameObject(GameObject gameObj)
@@ -263,15 +278,12 @@ namespace SilverPillar.Stats
             clone.m_ConditionType = m_ConditionType;
             clone.m_ProtocolWhenCallingIsFulfilled = m_ProtocolWhenCallingIsFulfilled;
 
-            if (m_Chosen != null)
-            {
-                clone.m_Chosen = new();
+            clone.m_DataFromChoosing = new();
 
-                foreach (var condition in m_Chosen)
-                {
-                    if (condition != null)
-                        clone.m_Chosen.Add(condition.Clone());
-                }
+            foreach (var condition in m_DataFromChoosing.ChosenData)
+            {
+                if (condition != null)
+                    clone.m_DataFromChoosing.ChosenData.Add(condition.Clone());
             }
 
             clone.m_Initialized = false;

@@ -50,6 +50,10 @@ namespace SilverPillar.Integrations.MMTopDown
         /// whether this object is being carried this frame or not
         [SerializeField, Tooltip("whether this object is being carried this frame or not"), MMReadOnly()]
         private bool m_Carried = false;
+        public bool IsBeingCarried
+        {
+            get { return m_Carried; }
+        }
 
 
         [Header("Throw")]

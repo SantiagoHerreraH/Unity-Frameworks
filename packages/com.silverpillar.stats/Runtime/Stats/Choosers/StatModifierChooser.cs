@@ -162,31 +162,35 @@ namespace SilverPillar.Stats
         [SerializeField]
         private IncomingModificationDataChooser m_OperationModificationsOnTargetStat;
 
-        private List<IInteraction> m_ChosenInteractions;
+        private DataFromChoosing<IInteraction> m_DataFromChoosing;
         private List<IStatModifier> m_Modifiers;
 
-        public List<IInteraction> ChooseData()
+        public List<IInteraction> AllData()
         {
-            m_ChosenInteractions ??= new();
+            throw new NotImplementedException();
+        }
+
+        public DataFromChoosing<IInteraction> ChooseData()
+        {
             m_Modifiers ??= new();
 
             if (m_NumberOfStatModifiersToChoose == null)
             {
                 Debug.LogError($"{nameof(StatModifierChooser)} has no number assigned.", m_Self);
-                return m_ChosenInteractions;
+                return m_DataFromChoosing;
             }
 
             if (m_Controller == null)
             {
                 Debug.LogError($"{nameof(StatModifierChooser)} has no StatController.", m_Self);
-                return m_ChosenInteractions;
+                return m_DataFromChoosing;
             }
 
-            if (m_ChosenInteractions.Count < 1)
+            if (m_DataFromChoosing.ChosenData.Count < 1)
             {
                 StatModify_Interaction interaction = new StatModify_Interaction();
                 interaction.SetSelf(m_Controller.gameObject);
-                m_ChosenInteractions.Add(interaction);
+                m_DataFromChoosing.ChosenData.Add(interaction);
             }
 
             int amount = Mathf.Max(1, m_NumberOfStatModifiersToChoose.CalculateScoreAsInt());
@@ -233,7 +237,7 @@ namespace SilverPillar.Stats
 
             }
 
-            StatModify_Interaction statModifyInteraction = m_ChosenInteractions[0] as StatModify_Interaction;
+            StatModify_Interaction statModifyInteraction = m_DataFromChoosing.ChosenData[0] as StatModify_Interaction;
 
             if (statModifyInteraction != null)
             {
@@ -244,7 +248,17 @@ namespace SilverPillar.Stats
                 );
             }
 
-            return m_ChosenInteractions;
+            return m_DataFromChoosing;
+        }
+
+        public List<IInteraction> GetChosenData()
+        {
+            throw new NotImplementedException();
+        }
+
+        public List<IInteraction> GetNotChosenData()
+        {
+            throw new NotImplementedException();
         }
 
         public IInteraction Clone()
@@ -275,15 +289,12 @@ namespace SilverPillar.Stats
             clone.m_TargetStatTypes = m_TargetStatTypes != null ? m_TargetStatTypes.Clone() : null;
             clone.m_OperationModificationsOnTargetStat = m_OperationModificationsOnTargetStat;
 
-            if (m_ChosenInteractions != null)
-            {
-                clone.m_ChosenInteractions = new();
+            clone.m_DataFromChoosing = new();
 
-                foreach (IInteraction interaction in m_ChosenInteractions)
-                {
-                    if (interaction != null)
-                        clone.m_ChosenInteractions.Add(interaction.Clone());
-                }
+            foreach (IInteraction interaction in m_DataFromChoosing.ChosenData)
+            {
+                if (interaction != null)
+                    clone.m_DataFromChoosing.ChosenData.Add(interaction.Clone());
             }
 
             if (m_Modifiers != null)
@@ -314,10 +325,7 @@ namespace SilverPillar.Stats
         {
             ChooseData();
 
-            if (m_ChosenInteractions == null)
-                return;
-
-            foreach (IInteraction interaction in m_ChosenInteractions)
+            foreach (IInteraction interaction in m_DataFromChoosing.ChosenData)
             {
                 interaction?.Interact(target);
             }
@@ -354,12 +362,12 @@ namespace SilverPillar.Stats
             if (m_OperationModificationsOnTargetStat != null)
                 allGood &= m_OperationModificationsOnTargetStat.SetGameObject(self);
 
-            m_ChosenInteractions ??= new();
+            m_DataFromChoosing.ChosenData ??= new();
 
-            for (int i = 0; i < m_ChosenInteractions.Count; i++)
+            for (int i = 0; i < m_DataFromChoosing.ChosenData.Count; i++)
             {
-                if (m_ChosenInteractions[i] != null)
-                    allGood &= m_ChosenInteractions[i].SetSelf(self);
+                if (m_DataFromChoosing.ChosenData[i] != null)
+                    allGood &= m_DataFromChoosing.ChosenData[i].SetSelf(self);
             }
 
             m_Modifiers ??= new();

@@ -33,24 +33,57 @@ namespace SilverPillar.Core
         private int m_CurrentIndex;
         private int m_BoomerangDirection = 1;
 
-        public List<TOption> ChooseData()
+        DataFromChoosing<TOption> m_DataFromChoosing;
+
+        List<TOption> m_RawData;
+        public List<TOption> AllData()
         {
-            List<TOption> generated = new();
+            m_RawData ??= new();
+            m_RawData.Clear();
+            for (int i = 0; i < m_Data.Count; i++)
+            {
+                m_RawData.Add(m_Data[i].Value);
+            }
+
+            return m_RawData;
+        }
+
+        DataFromChoosing<TOption> IChooseData<TOption>.ChooseData()
+        {
+            m_DataFromChoosing.Clear();
 
             if (m_Data == null || m_Data.Count == 0)
             {
-                return generated;
+                return m_DataFromChoosing;
             }
 
             int amountToReturn = Mathf.Clamp(GetIntScore(m_NumberOfInstancesToReturn, 1), 1, m_Data.Count);
 
-            for (int i = 0; i < amountToReturn; i++)
+            for (int i = 0; i < m_Data.Count; i++)
             {
                 ChoosingOption<TOption> selected = GetNext();
-                generated.Add(selected.Value);
+                if (i < amountToReturn)
+                {
+                    m_DataFromChoosing.AddChosen(selected.Value);
+                }
+                else
+                {
+
+                    m_DataFromChoosing.AddNotChosen(selected.Value);
+                }
             }
 
-            return generated;
+            return m_DataFromChoosing;
+        }
+
+        public List<TOption> GetChosenData()
+        {
+            return m_DataFromChoosing.ChosenData;
+        }
+
+        public List<TOption> GetNotChosenData()
+        {
+            return m_DataFromChoosing.NotChosenData;
         }
 
         public bool SetGameObject(GameObject gameObj)
@@ -175,5 +208,7 @@ namespace SilverPillar.Core
         {
             score?.SetGameObject(gameObj);
         }
+
+       
     }
 }

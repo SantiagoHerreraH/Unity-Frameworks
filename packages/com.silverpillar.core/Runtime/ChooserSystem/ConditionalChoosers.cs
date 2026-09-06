@@ -31,32 +31,56 @@ namespace SilverPillar.Core
         private List<ConditionAndData<TOption>> m_Data;
 
         private GameObject m_GameObject;
+        private DataFromChoosing<TOption> m_DataFromChoosing;
 
-        public List<TOption> ChooseData()
+        public DataFromChoosing<TOption> ChooseData()
         {
-            List<TOption> generated = new();
+            m_DataFromChoosing.Clear();
 
             if (m_Data == null || m_Data.Count == 0)
             {
-                return generated;
+                return m_DataFromChoosing;
             }
 
             switch (m_ConditionType)
             {
                 case ChooserConditionType.ChooseFirst:
-                    ChooseFirst(generated);
+                    ChooseFirst(m_DataFromChoosing);
                     break;
 
                 case ChooserConditionType.ChooseAny:
-                    ChooseAny(generated);
+                    ChooseAny(m_DataFromChoosing);
                     break;
 
                 case ChooserConditionType.ChooseUntilMeetMaxNumber:
-                    ChooseUntilMax(generated);
+                    ChooseUntilMax(m_DataFromChoosing);
                     break;
             }
 
-            return generated;
+            return m_DataFromChoosing;
+        }
+
+        List<TOption> m_RawData;
+        public List<TOption> AllData()
+        {
+            m_RawData ??= new();
+            m_RawData.Clear();
+            for (int i = 0; i < m_Data.Count; i++)
+            {
+                m_RawData.AddRange(m_Data[i].Data.AllData());
+            }
+
+            return m_RawData;
+        }
+
+        public List<TOption> GetChosenData()
+        {
+            return m_DataFromChoosing.ChosenData;
+        }
+
+        public List<TOption> GetNotChosenData()
+        {
+            return m_DataFromChoosing.NotChosenData;
         }
 
         public bool SetGameObject(GameObject gameObj)
@@ -108,38 +132,51 @@ namespace SilverPillar.Core
             return clone;
         }
 
-        private void ChooseFirst(List<TOption> chosen)
+        private void ChooseFirst(DataFromChoosing<TOption> chosen)
+        {
+            bool alreadyChosen = false;
+            for (int i = 0; i < m_Data.Count; i++)
+            {
+                if (!alreadyChosen && IsFulfilled(m_Data[i].Condition))
+                {
+                    chosen.Append(m_Data[i].Data.ChooseData());
+                    alreadyChosen = true;
+                }
+                else
+                {
+                    chosen.AppendNotChosen(m_Data[i].Data.AllData());
+                }
+            }
+        }
+
+        private void ChooseAny(DataFromChoosing<TOption> chosen)
         {
             for (int i = 0; i < m_Data.Count; i++)
             {
                 if (IsFulfilled(m_Data[i].Condition))
                 {
-                    chosen.AddRange(m_Data[i].Data.ChooseData());
-                    return;
+                    chosen.Append(m_Data[i].Data.ChooseData());
                 }
-            }
-        }
-
-        private void ChooseAny(List<TOption> chosen)
-        {
-            for (int i = 0; i < m_Data.Count; i++)
-            {
-                if (IsFulfilled(m_Data[i].Condition))
+                else
                 {
-                    chosen.AddRange(m_Data[i].Data.ChooseData());
+                    chosen.AppendNotChosen(m_Data[i].Data.AllData());
                 }
             }
         }
 
-        private void ChooseUntilMax(List<TOption> chosen)
+        private void ChooseUntilMax(DataFromChoosing<TOption> chosen)
         {
             int max = Mathf.Clamp(GetIntScore(m_MaxNumberOfInstancesToReturn, m_Data.Count), 0, m_Data.Count);
 
-            for (int i = 0; i < m_Data.Count && chosen.Count < max; i++)
+            for (int i = 0; i < m_Data.Count ; i++)
             {
-                if (IsFulfilled(m_Data[i].Condition))
+                if (IsFulfilled(m_Data[i].Condition) && chosen.ChosenData.Count < max)
                 {
-                    chosen.AddRange(m_Data[i].Data.ChooseData());
+                    chosen.Append(m_Data[i].Data.ChooseData());
+                }
+                else
+                {
+                    chosen.AppendNotChosen(m_Data[i].Data.AllData());
                 }
             }
         }

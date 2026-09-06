@@ -17,7 +17,6 @@ namespace SilverPillar.Core
 
         public enum ChosenActionsProtocolOnChoose
         {
-            CloneActionsAndAddThemToChosen,
             CloneActionsAndSetThemToChosen,
             SetActionsToChosenWithoutCloning
         }
@@ -35,7 +34,7 @@ namespace SilverPillar.Core
         [OdinSerialize, ShowInInspector]
         private IChooseData<ICachedGameAction> m_Chooser;
         public IChooseData<ICachedGameAction> Chooser => m_Chooser;
-        private List<ICachedGameAction> m_ChosenActions;
+        private DataFromChoosing<ICachedGameAction> m_DataFromChoosing;
         private GameObject m_Self;
         private bool m_InitializedCorrectly = false;
 
@@ -44,18 +43,8 @@ namespace SilverPillar.Core
         {
             m_Chooser = other.Chooser.Clone();
 
-            if (other.m_ChosenActions != null)
-            {
-                if (m_ChosenActions == null)
-                {
-                    m_ChosenActions = new();
-                }
-
-                for (int i = 0; i < other.m_ChosenActions.Count; i++)
-                {
-                    m_ChosenActions.Add(other.m_ChosenActions[i].Clone());
-                }
-            }
+            m_DataFromChoosing.Clear();
+            m_DataFromChoosing.Append(other.m_DataFromChoosing);
 
             if (other.m_ActionsToAlwaysExecute != null)
             {
@@ -76,34 +65,27 @@ namespace SilverPillar.Core
 
         public void Choose()
         {
-            var chosenActions = m_Chooser.ChooseData();
+            var choosingData = m_Chooser.ChooseData();
 
             switch (m_ChosenActionsProtocolOnChoose)
             {
-                case ChosenActionsProtocolOnChoose.CloneActionsAndAddThemToChosen:
-
-
-                    m_ChosenActions ??= new();
-
-                    for (int i = 0; i < chosenActions.Count; ++i)
-                    {
-                        m_ChosenActions.Add(chosenActions[i].Clone());
-                    }
-
-                    break;
                 case ChosenActionsProtocolOnChoose.CloneActionsAndSetThemToChosen:
 
-                    m_ChosenActions ??= new();
-                    m_ChosenActions.Clear();
+                    m_DataFromChoosing.Clear();
 
-                    for (int i = 0; i < chosenActions.Count; ++i)
+                    for (int i = 0; i < choosingData.ChosenData.Count; ++i)
                     {
-                        m_ChosenActions.Add(chosenActions[i].Clone());
+                        m_DataFromChoosing.AddChosen(choosingData.ChosenData[i].Clone());
+                    }
+
+                    for (int i = 0; i < choosingData.NotChosenData.Count; ++i)
+                    {
+                        m_DataFromChoosing.AddNotChosen(choosingData.NotChosenData[i].Clone());
                     }
 
                     break;
                 case ChosenActionsProtocolOnChoose.SetActionsToChosenWithoutCloning:
-                    m_ChosenActions = chosenActions;
+                    m_DataFromChoosing = choosingData;
                     break;
                 default:
                     break;
@@ -134,14 +116,9 @@ namespace SilverPillar.Core
 
         private void ExecuteChosen()
         {
-            if (m_ChosenActions == null || m_ChosenActions.Count == 0)
+            for (int i = 0; i < m_DataFromChoosing.ChosenData.Count; i++)
             {
-                return;
-            }
-
-            for (int i = 0; i < m_ChosenActions.Count; i++)
-            {
-                m_ChosenActions[i]?.Execute();
+                m_DataFromChoosing.ChosenData[i]?.Execute();
             }
         }
 
@@ -171,12 +148,9 @@ namespace SilverPillar.Core
 
             m_InitializedCorrectly &= m_Chooser == null ? false : m_Chooser.SetGameObject(gameObj);
 
-            if (m_ChosenActions != null)
+            for (int i = 0; i < m_DataFromChoosing.ChosenData.Count; i++)
             {
-                for (int i = 0; i < m_ChosenActions.Count; i++)
-                {
-                    m_InitializedCorrectly &= m_ChosenActions[i] == null ? false : m_ChosenActions[i].SetGameObject(gameObj);
-                }
+                m_InitializedCorrectly &= m_DataFromChoosing.ChosenData[i] == null ? false : m_DataFromChoosing.ChosenData[i].SetGameObject(gameObj);
             }
 
             return m_InitializedCorrectly;

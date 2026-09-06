@@ -6,7 +6,7 @@ using UnityEngine;
 namespace SilverPillar.Target
 {
     [Serializable]
-    public class Target_GameObject : IGameObject
+    public class Target_GameObjectCalculator : IGameObjectCalculator
     {
         [Title("Data")]
         [SerializeField]
@@ -30,9 +30,9 @@ namespace SilverPillar.Target
         }
 
 
-        public IGameObject Clone()
+        public IGameObjectCalculator Clone()
         {
-            return new Target_GameObject
+            return new Target_GameObjectCalculator
             {
                 m_WhereToGetTargetSystemFrom = m_WhereToGetTargetSystemFrom,
                 m_TargetSystem = m_TargetSystem,

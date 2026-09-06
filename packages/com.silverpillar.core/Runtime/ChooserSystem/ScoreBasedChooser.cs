@@ -39,19 +39,16 @@ namespace SilverPillar.Core
 
         private GameObject m_GameObject;
 
-        List<TOption> m_Chosen = new();
-        public List<TOption> ChooseData()
-        {
-            if (m_Chosen == null)
-            {
-                m_Chosen = new();
-            }
+        DataFromChoosing<TOption> m_DataFromChoosing;
 
-            m_Chosen.Clear();
+        public DataFromChoosing<TOption> ChooseData()
+        {
+
+            m_DataFromChoosing.Clear();
 
             if (m_Data == null || m_Data.Count == 0)
             {
-                return m_Chosen;
+                return m_DataFromChoosing;
             }
 
             int max = Mathf.Clamp(GetIntScore(m_MaxNumberOfInstancesToChoose, m_Data.Count), 0, m_Data.Count);
@@ -71,14 +68,43 @@ namespace SilverPillar.Core
                 return scoreA.CompareTo(scoreB);
             });
 
-            for (int i = 0; i < sortedTypes.Count && m_Chosen.Count < max; i++)
+            for (int i = 0; i < sortedTypes.Count; i++)
             {
-                m_Chosen.Add(sortedTypes[i].Data.Value);
+                if (m_DataFromChoosing.ChosenData.Count < max)
+                {
+                    m_DataFromChoosing.AddChosen(sortedTypes[i].Data.Value);
+                }
+                else
+                {
+                    m_DataFromChoosing.AddNotChosen(sortedTypes[i].Data.Value);
+                }
             }
 
-            return m_Chosen;
+            return m_DataFromChoosing;
         }
 
+        public List<TOption> GetChosenData()
+        {
+            return m_DataFromChoosing.ChosenData;
+        }
+
+        public List<TOption> GetNotChosenData()
+        {
+            return m_DataFromChoosing.NotChosenData;
+        }
+
+        List<TOption> m_RawData;
+        public List<TOption> AllData()
+        {
+            m_RawData ??= new();
+            m_RawData.Clear();
+            for (int i = 0; i < m_Data.Count; i++)
+            {
+                m_RawData.Add(m_Data[i].Data.Value);
+            }
+
+            return m_RawData;
+        }
         public bool SetGameObject(GameObject gameObj)
         {
             m_GameObject = gameObj;

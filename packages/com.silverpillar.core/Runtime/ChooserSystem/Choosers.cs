@@ -1,5 +1,6 @@
 using Sirenix.OdinInspector;
 using Sirenix.Serialization;
+using Sirenix.Utilities;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -11,8 +12,9 @@ namespace SilverPillar.Core
     {
         [OdinSerialize, ShowInInspector]
         private List<IChooseData<TOption>> m_Choosers;
-        private List<TOption> m_Chosen;
+        private DataFromChoosing<TOption> m_DataFromChoosing;
         private GameObject m_Self;
+        private List<TOption> m_AllData;
 
         public Choosers() { }
 
@@ -33,16 +35,36 @@ namespace SilverPillar.Core
                 }
             }
         }
-        public List<TOption> ChooseData()
+        public DataFromChoosing<TOption> ChooseData()
         {
-            if (m_Chosen == null) m_Chosen = new();
-            m_Chosen.Clear();
+            m_DataFromChoosing.Clear();
 
             for (int i = 0; i < m_Choosers.Count; i++)
             {
-                m_Chosen.AddRange(m_Choosers[i].ChooseData());
+                m_DataFromChoosing.Append(m_Choosers[i].ChooseData());
             }
-            return m_Chosen;
+            return m_DataFromChoosing;
+        }
+        public List<TOption> AllData()
+        {
+            m_AllData ??= new();
+            m_AllData.Clear();
+
+            for (int i = 0; i < m_Choosers.Count; i++)
+            {
+                m_AllData.AddRange(m_Choosers[i].AllData());
+            }
+
+            return m_AllData;
+        }
+        public List<TOption> GetChosenData()
+        {
+            return m_DataFromChoosing.ChosenData;
+        }
+
+        public List<TOption> GetNotChosenData()
+        {
+            return m_DataFromChoosing.NotChosenData;
         }
 
         public IChooseData<TOption> Clone()

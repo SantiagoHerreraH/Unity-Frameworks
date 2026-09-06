@@ -60,7 +60,7 @@ namespace SilverPillar.Core
 
         public void Choose()
         {
-            m_ChosenInteractions = m_Chooser.ChooseData();
+            m_ChosenInteractions = m_Chooser.ChooseData().ChosenData;
         }
 
         public IInteraction Clone()

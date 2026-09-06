@@ -48,7 +48,7 @@ namespace SilverPillar.Core
         {
             if (m_InitializedCorrectly)
             {
-                m_ChosenConditions = m_Chooser.ChooseData();
+                m_ChosenConditions = m_Chooser.ChooseData().ChosenData;
             }
         }
 

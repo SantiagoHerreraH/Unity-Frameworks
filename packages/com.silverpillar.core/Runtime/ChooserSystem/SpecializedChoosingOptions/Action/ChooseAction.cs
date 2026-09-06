@@ -24,7 +24,7 @@ namespace SilverPillar.Core
         [OdinSerialize, ShowInInspector]
         private IChooseData<IAction> m_Chooser;
         public IChooseData<IAction> Chooser => m_Chooser;
-        private List<IAction> m_ChosenActions;
+        private DataFromChoosing<IAction> m_DataFromChoosing;
         private GameObject m_Self;
         private bool m_InitializedCorrectly = false;
 
@@ -33,12 +33,17 @@ namespace SilverPillar.Core
         {
             m_Chooser = other.Chooser.Clone();
 
-            if (m_ChosenActions != null)
+            m_DataFromChoosing.Clear();
+
+            for (int i = 0; i < other.m_DataFromChoosing.ChosenData.Count; i++)
             {
-                for (int i = 0; i < other.m_ChosenActions.Count; i++)
-                {
-                    m_ChosenActions.Add(other.m_ChosenActions[i].Clone());
-                }
+                m_DataFromChoosing.AddChosen(other.m_DataFromChoosing.ChosenData[i].Clone());
+            }
+
+            for (int i = 0; i < other.m_DataFromChoosing.NotChosenData.Count; i++)
+            {
+                m_DataFromChoosing.AddNotChosen(other.m_DataFromChoosing.ChosenData[i].Clone());
+
             }
 
             if (other.ActionsToAlwaysChoose != null)
@@ -54,7 +59,7 @@ namespace SilverPillar.Core
         {
             if (m_InitializedCorrectly)
             {
-                m_ChosenActions = m_Chooser.ChooseData();
+                m_DataFromChoosing = m_Chooser.ChooseData();
             }
         }
 
@@ -127,12 +132,9 @@ namespace SilverPillar.Core
 
         private void StartChosenActions()
         {
-            if (m_ChosenActions != null)
+            for (int i = 0; i < m_DataFromChoosing.ChosenData.Count; i++)
             {
-                for (int i = 0; i < m_ChosenActions.Count; i++)
-                {
-                    m_ChosenActions[i]?.StartAction();
-                }
+                m_DataFromChoosing.ChosenData[i]?.StartAction();
             }
         }
 
@@ -149,12 +151,9 @@ namespace SilverPillar.Core
 
         private void UpdateChosenActions()
         {
-            if (m_ChosenActions != null)
+            for (int i = 0; i < m_DataFromChoosing.ChosenData.Count; i++)
             {
-                for (int i = 0; i < m_ChosenActions.Count; i++)
-                {
-                    m_ChosenActions[i]?.UpdateAction();
-                }
+                m_DataFromChoosing.ChosenData[i]?.UpdateAction();
             }
         }
 
@@ -171,12 +170,9 @@ namespace SilverPillar.Core
 
         private void EndChosenActions()
         {
-            if (m_ChosenActions != null)
+            for (int i = 0; i < m_DataFromChoosing.ChosenData.Count; i++)
             {
-                for (int i = 0; i < m_ChosenActions.Count; i++)
-                {
-                    m_ChosenActions[i]?.EndAction();
-                }
+                m_DataFromChoosing.ChosenData[i]?.EndAction();
             }
         }
 
@@ -204,12 +200,9 @@ namespace SilverPillar.Core
 
             m_InitializedCorrectly &= m_Chooser == null ? false : m_Chooser.SetGameObject(gameObj);
 
-            if (m_ChosenActions != null)
+            for (int i = 0; i < m_DataFromChoosing.ChosenData.Count; i++)
             {
-                for (int i = 0; i < m_ChosenActions.Count; i++)
-                {
-                    m_InitializedCorrectly &= m_ChosenActions[i] == null ? false : m_ChosenActions[i].SetGameObject(gameObj);
-                }
+                m_InitializedCorrectly &= m_DataFromChoosing.ChosenData[i] == null ? false : m_DataFromChoosing.ChosenData[i].SetGameObject(gameObj);
             }
             if (ActionsToAlwaysChoose != null)
             {

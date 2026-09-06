@@ -40,7 +40,7 @@ namespace SilverPillar.Core
 
         public void Choose()
         {
-            m_ChosenScores = m_Chooser.ChooseData();
+            m_ChosenScores = m_Chooser.ChooseData().ChosenData;
 
             if (m_Scores == null)
             {

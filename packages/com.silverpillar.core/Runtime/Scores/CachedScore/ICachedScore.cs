@@ -1,3 +1,5 @@
+using Sirenix.OdinInspector;
+using Sirenix.Serialization;
 using System;
 using UnityEngine;
 
@@ -10,6 +12,57 @@ namespace SilverPillar.Core
         public GameObject? GetGameObject();
         public bool SetGameObject(GameObject self);
         public float CalculateScore();
+    }
+
+    public struct CachedScoreData
+    {
+        [OdinSerialize, ShowInInspector]
+        private ICachedScore m_Score;
+        [SerializeField]
+        private SelfType m_WhereToGetScoreGameObjectFrom;
+        [SerializeField, ShowIf(nameof(m_WhereToGetScoreGameObjectFrom))]
+        private GameObject m_ScoreGameObject;
+
+        public bool IsValid()
+        {
+            return m_Score != null && m_ScoreGameObject != null;
+        }
+
+        public CachedScoreData CloneData()
+        {
+            return new CachedScoreData { 
+                m_Score = m_Score.Clone(), 
+                m_ScoreGameObject = m_ScoreGameObject,
+                m_WhereToGetScoreGameObjectFrom = m_WhereToGetScoreGameObjectFrom};
+        }
+
+        public ICachedScore Clone()
+        {
+            return m_Score.Clone();
+        }
+        public GameObject? GetGameObject()
+        {
+            return m_Score.GetGameObject();
+        }
+        public bool SetGameObject(GameObject self)
+        {
+            switch (m_WhereToGetScoreGameObjectFrom)
+            {
+                case SelfType.ThisGameObject:
+                    m_ScoreGameObject = self;
+                    return m_Score.SetGameObject(self);
+                case SelfType.CustomGameObject:
+                    return m_Score.SetGameObject(m_ScoreGameObject);
+                default:
+                    break;
+            }
+
+            return m_Score.SetGameObject(self);
+        }
+        public float CalculateScore()
+        {
+            return m_Score.CalculateScore();
+        }
     }
 
     [Serializable]

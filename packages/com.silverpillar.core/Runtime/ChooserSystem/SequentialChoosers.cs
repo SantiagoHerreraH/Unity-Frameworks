@@ -20,35 +20,61 @@ namespace SilverPillar.Core
         [OdinSerialize, ShowInInspector]
         private List<IChooseData<TOption>> m_Data;
 
-        private List<TOption> m_Chosen = new();
         private GameObject m_GameObject;
 
         private int m_CurrentIndex;
         private int m_BoomerangDirection = 1;
 
-        public List<TOption> ChooseData()
+        DataFromChoosing<TOption> m_DataFromChoosing;
+
+        List<TOption> m_RawData;
+        public List<TOption> AllData()
         {
-            if (m_Chosen == null)
+            m_RawData ??= new();
+            m_RawData.Clear();
+            for (int i = 0; i < m_Data.Count; i++)
             {
-                m_Chosen = new();
+                m_RawData.AddRange(m_Data[i].AllData());
             }
 
-            m_Chosen.Clear();
+            return m_RawData;
+        }
+
+        DataFromChoosing<TOption> IChooseData<TOption>.ChooseData()
+        {
+            m_DataFromChoosing.Clear();
 
             if (m_Data == null || m_Data.Count == 0)
             {
-                return m_Chosen;
+                return m_DataFromChoosing;
             }
 
             int amountToReturn = Mathf.Clamp(GetIntScore(m_NumberOfChoosersToChooseFrom, 1), 1, m_Data.Count);
 
-            for (int i = 0; i < amountToReturn; i++)
+            for (int i = 0; i < m_Data.Count; i++)
             {
-                IChooseData<TOption> selected = GetNext();
-                m_Chosen.AddRange(selected.ChooseData());
+                if (i < amountToReturn)
+                {
+                    m_DataFromChoosing.Append(GetNext().ChooseData());
+                }
+                else
+                {
+
+                    m_DataFromChoosing.AppendNotChosen(GetNext().AllData());
+                }
             }
 
-            return m_Chosen;
+            return m_DataFromChoosing;
+        }
+
+        public List<TOption> GetChosenData()
+        {
+            return m_DataFromChoosing.ChosenData;
+        }
+
+        public List<TOption> GetNotChosenData()
+        {
+            return m_DataFromChoosing.NotChosenData;
         }
 
         public bool SetGameObject(GameObject gameObj)

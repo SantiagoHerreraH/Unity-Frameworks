@@ -1,6 +1,7 @@
 
 using Sirenix.OdinInspector;
 using Sirenix.Serialization;
+using Sirenix.Utilities;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -39,20 +40,29 @@ namespace SilverPillar.Core
 
         private GameObject m_GameObject;
 
-        List<TOption> m_Chosen = new();
+        DataFromChoosing<TOption> m_DataFromChoosing = new ();
 
-        public List<TOption> ChooseData()
+        List<TOption> m_RawData;
+        public List<TOption> AllData()
         {
-            if (m_Chosen == null)
+            m_RawData ??= new();
+            m_RawData.Clear();
+            for (int i = 0; i < m_Data.Count; i++)
             {
-                m_Chosen = new();
+                m_RawData.AddRange(m_Data[i].Data.AllData());
             }
 
-            m_Chosen.Clear();
+            return m_RawData;
+        }
+
+        public DataFromChoosing<TOption> ChooseData()
+        {
+
+            m_DataFromChoosing.Clear();
 
             if (m_Data == null || m_Data.Count == 0)
             {
-                return m_Chosen;
+                return m_DataFromChoosing;
             }
 
 
@@ -73,12 +83,29 @@ namespace SilverPillar.Core
                 return scoreA.CompareTo(scoreB);
             });
 
-            for (int i = 0; i < sortedTypes.Count && m_Chosen.Count < max; i++)
+            for (int i = 0; i < sortedTypes.Count; i++)
             {
-                m_Chosen.AddRange(sortedTypes[i].Data.ChooseData());
+                if (m_DataFromChoosing.ChosenData.Count < max)
+                {
+                    m_DataFromChoosing.Append(sortedTypes[i].Data.ChooseData());
+                }
+                else
+                {
+                    m_DataFromChoosing.AppendNotChosen(sortedTypes[i].Data.AllData());
+                }
             }
 
-            return m_Chosen;
+            return m_DataFromChoosing;
+        }
+
+        public List<TOption> GetChosenData()
+        {
+            return m_DataFromChoosing.ChosenData;
+        }
+
+        public List<TOption> GetNotChosenData()
+        {
+            return m_DataFromChoosing.NotChosenData;
         }
 
         public bool SetGameObject(GameObject gameObj)

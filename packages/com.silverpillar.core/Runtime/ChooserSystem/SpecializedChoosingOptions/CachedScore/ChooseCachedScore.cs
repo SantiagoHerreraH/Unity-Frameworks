@@ -16,7 +16,7 @@ namespace SilverPillar.Core
         [OdinSerialize, ShowInInspector]
         private IChooseData<ICachedScore> m_Chooser;
         public IChooseData<ICachedScore> Chooser => m_Chooser;
-        private List<ICachedScore> m_ChosenScores;
+        private DataFromChoosing<ICachedScore> m_DataFromChoosing;
         private List<float> m_Scores;
         private GameObject m_Self;
         private bool m_InitializedCorrectly = false;
@@ -26,29 +26,29 @@ namespace SilverPillar.Core
         {
             m_Chooser = other.Chooser.Clone();
 
-            if (other.m_ChosenScores != null)
-            {
-                if (m_ChosenScores == null)
-                {
-                    m_ChosenScores = new();
-                }
+            m_DataFromChoosing.Clear();
 
-                for (int i = 0; i < other.m_ChosenScores.Count; i++)
-                {
-                    m_ChosenScores.Add(other.m_ChosenScores[i].Clone());
-                }
+            for (int i = 0; i < other.m_DataFromChoosing.ChosenData.Count; i++)
+            {
+                m_DataFromChoosing.AddChosen(other.m_DataFromChoosing.ChosenData[i].Clone());
+            }
+
+            for (int i = 0; i < other.m_DataFromChoosing.NotChosenData.Count; i++)
+            {
+                m_DataFromChoosing.AddNotChosen(other.m_DataFromChoosing.ChosenData[i].Clone());
+
             }
         }
 
         public void Choose()
         {
-            m_ChosenScores = m_Chooser.ChooseData();
+            m_DataFromChoosing = m_Chooser.ChooseData();
 
             if (m_Scores == null)
             {
                 m_Scores = new();
             }
-            m_Scores.Capacity = m_Scores.Capacity < m_ChosenScores.Count ? m_ChosenScores.Count : m_Scores.Capacity;
+            m_Scores.Capacity = m_Scores.Capacity < m_DataFromChoosing.ChosenData.Count ? m_DataFromChoosing.ChosenData.Count : m_Scores.Capacity;
         }
 
         public ICachedScore Clone()
@@ -63,18 +63,18 @@ namespace SilverPillar.Core
                 Choose();
             }
 
-            if (m_ChosenScores == null || m_ChosenScores.Count == 0)
+            if (m_DataFromChoosing.ChosenData.Count == 0)
             {
                 return 0;
             }
 
             m_Scores.Clear();
 
-            for (int i = 0; i < m_ChosenScores.Count; i++)
+            for (int i = 0; i < m_DataFromChoosing.ChosenData.Count; i++)
             {
-                if (m_ChosenScores[i] != null)
+                if (m_DataFromChoosing.ChosenData[i] != null)
                 {
-                    m_Scores.Add(m_ChosenScores[i].CalculateScore());
+                    m_Scores.Add(m_DataFromChoosing.ChosenData[i].CalculateScore());
                 }
             }
 
@@ -94,12 +94,9 @@ namespace SilverPillar.Core
 
             m_InitializedCorrectly &= m_Chooser == null ? false : m_Chooser.SetGameObject(gameObj);
 
-            if (m_ChosenScores != null)
+            for (int i = 0; i < m_DataFromChoosing.ChosenData.Count; i++)
             {
-                for (int i = 0; i < m_ChosenScores.Count; i++)
-                {
-                    m_InitializedCorrectly &= m_ChosenScores[i] == null ? false : m_ChosenScores[i].SetGameObject(gameObj);
-                }
+                m_InitializedCorrectly &= m_DataFromChoosing.ChosenData[i] == null ? false : m_DataFromChoosing.ChosenData[i].SetGameObject(gameObj);
             }
 
             return m_InitializedCorrectly;

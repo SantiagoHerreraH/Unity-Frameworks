@@ -37,33 +37,57 @@ namespace SilverPillar.Core
         [OdinSerialize, ShowInInspector]
         private List<ConditionAndData<TOption>> m_Data;
 
+        private DataFromChoosing<TOption> m_DataFromChoosing;
         private GameObject m_GameObject;
 
-        public List<TOption> ChooseData()
-        {
-            List<TOption> generated = new();
+        List<TOption> m_RawData;
 
+        public DataFromChoosing<TOption> ChooseData()
+        {
+            m_DataFromChoosing.Clear();
             if (m_Data == null || m_Data.Count == 0)
             {
-                return generated;
+                return m_DataFromChoosing;
             }
 
             switch (m_ConditionType)
             {
                 case ChooserConditionType.ChooseFirst:
-                    ChooseFirst(generated);
+                    ChooseFirst(m_DataFromChoosing);
                     break;
 
                 case ChooserConditionType.ChooseAny:
-                    ChooseAny(generated);
+                    ChooseAny(m_DataFromChoosing);
                     break;
 
                 case ChooserConditionType.ChooseUntilMeetMaxNumber:
-                    ChooseUntilMax(generated);
+                    ChooseUntilMax(m_DataFromChoosing);
                     break;
             }
 
-            return generated;
+            return m_DataFromChoosing;
+        }
+
+        public List<TOption> AllData()
+        {
+            m_RawData ??= new();
+            m_RawData.Clear();
+            for (int i = 0; i < m_Data.Count; i++)
+            {
+                m_RawData.Add(m_Data[i].Data.Value);
+            }
+
+            return m_RawData;
+        }
+
+        public List<TOption> GetChosenData()
+        {
+            return m_DataFromChoosing.ChosenData;
+        }
+
+        public List<TOption> GetNotChosenData()
+        {
+            return m_DataFromChoosing.NotChosenData;
         }
 
         public bool SetGameObject(GameObject gameObj)
@@ -115,38 +139,51 @@ namespace SilverPillar.Core
             return clone;
         }
 
-        private void ChooseFirst(List<TOption> chosen)
+        private void ChooseFirst(DataFromChoosing<TOption> chosen)
+        {
+            bool alreadyChose = false;
+            for (int i = 0; i < m_Data.Count; i++)
+            {
+                if (!alreadyChose && IsFulfilled(m_Data[i].Condition))
+                {
+                    chosen.AddChosen(m_Data[i].Data.Value);
+                    alreadyChose = true;
+                }
+                else
+                {
+                    chosen.AddNotChosen(m_Data[i].Data.Value);
+                }
+            }
+        }
+
+        private void ChooseAny(DataFromChoosing<TOption> chosen)
         {
             for (int i = 0; i < m_Data.Count; i++)
             {
                 if (IsFulfilled(m_Data[i].Condition))
                 {
-                    chosen.Add(m_Data[i].Data.Value);
-                    return;
+                    chosen.AddChosen(m_Data[i].Data.Value);
                 }
-            }
-        }
-
-        private void ChooseAny(List<TOption> chosen)
-        {
-            for (int i = 0; i < m_Data.Count; i++)
-            {
-                if (IsFulfilled(m_Data[i].Condition))
+                else
                 {
-                    chosen.Add(m_Data[i].Data.Value);
+                    chosen.AddNotChosen(m_Data[i].Data.Value);
                 }
             }
         }
 
-        private void ChooseUntilMax(List<TOption> chosen)
+        private void ChooseUntilMax(DataFromChoosing<TOption> chosen)
         {
             int max = Mathf.Clamp(GetIntScore(m_MaxNumberOfInstancesToReturn, m_Data.Count), 0, m_Data.Count);
 
-            for (int i = 0; i < m_Data.Count && chosen.Count < max; i++)
+            for (int i = 0; i < m_Data.Count; i++)
             {
-                if (IsFulfilled(m_Data[i].Condition))
+                if (IsFulfilled(m_Data[i].Condition) && chosen.ChosenData.Count < max)
                 {
-                    chosen.Add(m_Data[i].Data.Value);
+                    chosen.AddChosen(m_Data[i].Data.Value);
+                }
+                else
+                {
+                    chosen.AddNotChosen(m_Data[i].Data.Value);
                 }
             }
         }
@@ -165,5 +202,6 @@ namespace SilverPillar.Core
 
             return score.CalculateScoreAsInt();
         }
+
     }
 }
