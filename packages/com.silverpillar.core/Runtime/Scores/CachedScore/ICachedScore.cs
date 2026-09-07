@@ -20,7 +20,7 @@ namespace SilverPillar.Core
         private ICachedScore m_Score;
         [SerializeField]
         private SelfType m_WhereToGetScoreGameObjectFrom;
-        [SerializeField, ShowIf(nameof(m_WhereToGetScoreGameObjectFrom))]
+        [SerializeField, ShowIf(nameof(m_WhereToGetScoreGameObjectFrom), SelfType.CustomGameObject)]
         private GameObject m_ScoreGameObject;
 
         public bool IsValid()

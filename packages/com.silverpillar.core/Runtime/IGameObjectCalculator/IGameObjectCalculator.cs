@@ -20,7 +20,7 @@ namespace SilverPillar.Core
         private IGameObjectCalculator m_GameObjectCalculator;
         [SerializeField]
         private SelfType m_WhereToGetCalculatorGameObjectInputFrom;
-        [SerializeField, ShowIf(nameof(m_WhereToGetCalculatorGameObjectInputFrom))]
+        [SerializeField, ShowIf(nameof(m_WhereToGetCalculatorGameObjectInputFrom), SelfType.CustomGameObject)]
         private GameObject m_InputGameObject;
 
         public bool IsValid()

@@ -1,22 +1,23 @@
-using UnityEngine;
-using SilverPillar.Core;
-using System;
-using Sirenix.OdinInspector;
 using MoreMountains.TopDownEngine;
+using SilverPillar.Core;
+using Sirenix.OdinInspector;
 using Sirenix.Serialization;
+using System;
+using UnityEngine;
+using UnityEngine.Events;
 
 namespace SilverPillar.Integrations.MMTopDown
 {
+    public enum TopDownControllerMovementType
+    {
+        SetMovement,
+        AddForce,
+        MovePosition
+    }
+
     [Serializable]
     public class MoveTowardsTarget_CachedGameAction : ICachedGameAction
     {
-        public enum MovementType
-        {
-            SetMovement,
-            AddForce,
-            MovePosition
-        }
-
         [Title("Controller")]
         [SerializeField]
         private SelfType m_WhereToGetControllerFrom;
@@ -27,7 +28,7 @@ namespace SilverPillar.Integrations.MMTopDown
 
         [Title("Movement")]
         [SerializeField]
-        private MovementType m_MovementType;
+        private TopDownControllerMovementType m_MovementType;
 
         [OdinSerialize, ShowInInspector]
         private CachedScoreData m_Speed;
@@ -40,7 +41,25 @@ namespace SilverPillar.Integrations.MMTopDown
         [OdinSerialize, ShowInInspector]
         private CachedScoreData m_DistanceFromTarget;
 
+
+        [Title("Events")]
+        [Tooltip(
+            "How close the controller must be to the calculated target position " +
+            "to be considered as having reached the destination.")]
+        [SerializeField, Min(0)]
+        private float m_ReachedTargetDistance = 0.05f;
+
+        [SerializeField]
+        private UnityEvent m_OnReachedTargetDestination;
+
+        [SerializeField]
+        private UnityEvent m_OnNoLongerReachedTargetDestination;
+
+
         private GameObject m_Self;
+
+        // Runtime state used so events only fire when the reached state changes.
+        private bool m_HasReachedTargetDestination;
 
 
         public ICachedGameAction Clone()
@@ -56,7 +75,16 @@ namespace SilverPillar.Integrations.MMTopDown
                 m_Target = m_Target.CloneData(),
                 m_DistanceFromTarget = m_DistanceFromTarget.CloneData(),
 
-                m_Self = m_Self
+                m_ReachedTargetDistance = m_ReachedTargetDistance,
+
+                // Preserve inspector-configured listeners.
+                m_OnReachedTargetDestination = m_OnReachedTargetDestination,
+                m_OnNoLongerReachedTargetDestination = m_OnNoLongerReachedTargetDestination,
+
+                m_Self = m_Self,
+
+                // Runtime state starts fresh.
+                m_HasReachedTargetDestination = false
             };
         }
 
@@ -65,80 +93,249 @@ namespace SilverPillar.Integrations.MMTopDown
         {
             if (m_Controller == null ||
                 !m_Target.IsValid() ||
-                !m_Speed.IsValid())
+                !m_Speed.IsValid() ||
+                !m_DistanceFromTarget.IsValid())
             {
+                SetReachedTargetDestination(false);
+                StopMovement();
+
                 return;
             }
 
-            GameObject targetGameObject = m_Target.CalculateGameObject();
+
+            GameObject targetGameObject =
+                m_Target.CalculateGameObject();
 
             if (targetGameObject == null)
             {
+                SetReachedTargetDestination(false);
+                StopMovement();
+
                 return;
             }
 
-            Vector3 controllerPosition = m_Controller.transform.position;
-            Vector3 targetPosition = targetGameObject.transform.position;
 
-            Vector3 directionToTarget = targetPosition - controllerPosition;
-            targetPosition -= directionToTarget.normalized * m_DistanceFromTarget.CalculateScore();
+            Vector3 controllerPosition =
+                m_Controller.transform.position;
 
-            directionToTarget = targetPosition - controllerPosition;
+            Vector3 targetPosition =
+                targetGameObject.transform.position;
+
+
+            float distanceFromTarget =
+                Mathf.Max(
+                    0f,
+                    m_DistanceFromTarget.CalculateScore());
+
+
+            // ---------------------------------------------------------
+            // Calculate desired position.
+            //
+            // Stay distanceFromTarget units away from the target,
+            // along the current target -> controller direction.
+            // ---------------------------------------------------------
+
+            Vector3 targetToController =
+                controllerPosition -
+                targetPosition;
+
+
+            if (targetToController.sqrMagnitude > Mathf.Epsilon)
+            {
+                targetPosition +=
+                    targetToController.normalized *
+                    distanceFromTarget;
+            }
+
+
+            // ---------------------------------------------------------
+            // Check whether we're already there.
+            // ---------------------------------------------------------
+
+            if (HasReachedTargetDestination(
+                    controllerPosition,
+                    targetPosition))
+            {
+                SetReachedTargetDestination(true);
+                StopMovement();
+
+                return;
+            }
+
+
+            // We were reached previously, but the target moved far
+            // enough away that the desired destination changed.
+            SetReachedTargetDestination(false);
+
+
+            Vector3 directionToTarget =
+                targetPosition -
+                controllerPosition;
+
 
             if (directionToTarget.sqrMagnitude <= Mathf.Epsilon)
             {
-                // Important in case SetMovement was previously non-zero.
-                if (m_MovementType == MovementType.SetMovement)
-                {
-                    m_Controller.SetMovement(Vector3.zero);
-                }
+                SetReachedTargetDestination(true);
+                StopMovement();
 
                 return;
             }
 
-            float speed = Mathf.Max(0f, m_Speed.CalculateScore());
 
-            Vector3 movement = directionToTarget.normalized * speed;
+            float speed =
+                Mathf.Max(
+                    0f,
+                    m_Speed.CalculateScore());
+
+
+            Vector3 movement =
+                directionToTarget.normalized *
+                speed;
+
 
             switch (m_MovementType)
             {
-                case MovementType.SetMovement:
+                case TopDownControllerMovementType.SetMovement:
+
                     SetMovement(movement);
+
                     break;
 
-                case MovementType.AddForce:
+
+                case TopDownControllerMovementType.AddForce:
+
                     AddForce(movement);
+
                     break;
 
-                case MovementType.MovePosition:
-                    MovePosition(targetPosition, speed);
+
+                case TopDownControllerMovementType.MovePosition:
+
+                    MovePosition(
+                        targetPosition,
+                        speed);
+
                     break;
+            }
+
+
+            // ---------------------------------------------------------
+            // Check again after movement.
+            //
+            // Particularly useful for MovePosition, which may have
+            // reached the destination during this Execute().
+            // ---------------------------------------------------------
+
+            controllerPosition =
+                m_Controller.transform.position;
+
+
+            if (HasReachedTargetDestination(
+                    controllerPosition,
+                    targetPosition))
+            {
+                SetReachedTargetDestination(true);
+                StopMovement();
             }
         }
 
 
+        // =============================================================
+        // Reached-state handling
+        // =============================================================
+
+        private bool HasReachedTargetDestination(
+            Vector3 controllerPosition,
+            Vector3 targetPosition)
+        {
+            float reachedDistance =
+                Mathf.Max(
+                    0f,
+                    m_ReachedTargetDistance);
+
+            return
+                (targetPosition - controllerPosition).sqrMagnitude
+                <= reachedDistance * reachedDistance;
+        }
+
+
+        /// <summary>
+        /// Changes the reached state and invokes an event only when
+        /// that state actually changes.
+        /// </summary>
+        private void SetReachedTargetDestination(bool reached)
+        {
+            if (m_HasReachedTargetDestination == reached)
+            {
+                return;
+            }
+
+
+            m_HasReachedTargetDestination =
+                reached;
+
+
+            if (reached)
+            {
+                m_OnReachedTargetDestination?.Invoke();
+            }
+            else
+            {
+                m_OnNoLongerReachedTargetDestination?.Invoke();
+            }
+        }
+
+
+        private void StopMovement()
+        {
+            // SetMovement persists until another movement is supplied,
+            // so explicitly clear it when movement should stop.
+            if (m_Controller != null &&
+                m_MovementType ==
+                TopDownControllerMovementType.SetMovement)
+            {
+                m_Controller.SetMovement(
+                    Vector3.zero);
+            }
+        }
+
+
+        // =============================================================
+        // Movement
+        // =============================================================
+
         private void SetMovement(Vector3 movement)
         {
-            m_Controller.SetMovement(movement);
+            m_Controller.SetMovement(
+                movement);
         }
 
 
         private void AddForce(Vector3 movement)
         {
-            m_Controller.AddForce(movement);
+            m_Controller.AddForce(
+                movement);
         }
 
 
-        private void MovePosition(Vector3 targetPosition, float speed)
+        private void MovePosition(
+            Vector3 targetPosition,
+            float speed)
         {
-            Vector3 newPosition = Vector3.MoveTowards(
-                m_Controller.transform.position,
-                targetPosition,
-                speed * Time.deltaTime);
+            Vector3 newPosition =
+                Vector3.MoveTowards(
+                    m_Controller.transform.position,
+                    targetPosition,
+                    speed * Time.deltaTime);
 
-            m_Controller.MovePosition(newPosition);
+            m_Controller.MovePosition(
+                newPosition);
         }
 
+
+        // =============================================================
+        // ICachedGameAction
+        // =============================================================
 
         public GameObject GetGameObject()
         {
@@ -151,12 +348,19 @@ namespace SilverPillar.Integrations.MMTopDown
             if (gameObj == null)
             {
                 Debug.LogError(
-                    $"gameObj is NULL in {nameof(MoveTowardsTarget_CachedGameAction)}");
+                    $"gameObj is NULL in " +
+                    $"{nameof(MoveTowardsTarget_CachedGameAction)}");
 
                 return false;
             }
 
+
             m_Self = gameObj;
+
+            // Initialization isn't a gameplay state transition, so
+            // reset without invoking either event.
+            m_HasReachedTargetDestination = false;
+
 
             bool allGood = true;
 
@@ -168,13 +372,15 @@ namespace SilverPillar.Integrations.MMTopDown
             if (!m_Target.IsValid())
             {
                 Debug.LogError(
-                    $"{nameof(m_Target)} is not valid in {nameof(MoveTowardsTarget_CachedGameAction)}");
+                    $"{nameof(m_Target)} is not valid in " +
+                    $"{nameof(MoveTowardsTarget_CachedGameAction)}");
 
                 allGood = false;
             }
             else
             {
-                allGood &= m_Target.SetGameObject(gameObj);
+                allGood &=
+                    m_Target.SetGameObject(gameObj);
             }
 
 
@@ -185,29 +391,34 @@ namespace SilverPillar.Integrations.MMTopDown
             if (!m_Speed.IsValid())
             {
                 Debug.LogError(
-                    $"{nameof(m_Speed)} is NULL in {nameof(MoveTowardsTarget_CachedGameAction)}");
+                    $"{nameof(m_Speed)} is not valid in " +
+                    $"{nameof(MoveTowardsTarget_CachedGameAction)}");
 
                 allGood = false;
             }
             else
             {
-                allGood &= m_Speed.SetGameObject(gameObj);
+                allGood &=
+                    m_Speed.SetGameObject(gameObj);
             }
 
+
             // ---------------------------------------------------------
-            // Speed
+            // Distance From Target
             // ---------------------------------------------------------
 
             if (!m_DistanceFromTarget.IsValid())
             {
                 Debug.LogError(
-                    $"{nameof(m_DistanceFromTarget)} is NULL in {nameof(MoveTowardsTarget_CachedGameAction)}");
+                    $"{nameof(m_DistanceFromTarget)} is not valid in " +
+                    $"{nameof(MoveTowardsTarget_CachedGameAction)}");
 
                 allGood = false;
             }
             else
             {
-                allGood &= m_DistanceFromTarget.SetGameObject(gameObj);
+                allGood &=
+                    m_DistanceFromTarget.SetGameObject(gameObj);
             }
 
 
@@ -218,18 +429,23 @@ namespace SilverPillar.Integrations.MMTopDown
             switch (m_WhereToGetControllerFrom)
             {
                 case SelfType.ThisGameObject:
-                    if (!m_Self.TryGetComponent(out m_Controller))
+
+                    if (!m_Self.TryGetComponent(
+                            out m_Controller))
                     {
                         Debug.LogError(
-                            $"{m_Self.name} doesn't contain a {nameof(TopDownController)} " +
-                            $"required by {nameof(MoveTowardsTarget_CachedGameAction)}");
+                            $"{m_Self.name} doesn't contain a " +
+                            $"{nameof(TopDownController)} required by " +
+                            $"{nameof(MoveTowardsTarget_CachedGameAction)}");
 
                         allGood = false;
                     }
 
                     break;
 
+
                 case SelfType.CustomGameObject:
+
                     if (m_Controller == null)
                     {
                         Debug.LogError(

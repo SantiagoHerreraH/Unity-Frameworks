@@ -1,5 +1,6 @@
 using Sirenix.OdinInspector;
 using Sirenix.Serialization;
+using System;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -7,6 +8,7 @@ namespace SilverPillar.Core
 {
     public class ValueChooser<T> : SerializedMonoBehaviour, IChoose
     {
+        [Serializable]
         public class ValueEvent : UnityEvent<T> { }
 
         [Title("Settings")]
@@ -96,7 +98,7 @@ namespace SilverPillar.Core
 
             void InvokeChosen()
             {
-                if (chosen == null)
+                if (chosen == null || m_OnValueChosen == null)
                     return;
 
                 foreach (var value in chosen)
@@ -105,7 +107,7 @@ namespace SilverPillar.Core
 
             void InvokeNotChosen()
             {
-                if (notChosen == null)
+                if (notChosen == null || m_OnValueNotChosen == null)
                     return;
 
                 foreach (var value in notChosen)
@@ -114,6 +116,11 @@ namespace SilverPillar.Core
 
             void InvokeAll()
             {
+                if (m_OnChosenCalled == null)
+                {
+                    return;
+                }
+
                 if (chosen != null)
                 {
                     foreach (var value in chosen)

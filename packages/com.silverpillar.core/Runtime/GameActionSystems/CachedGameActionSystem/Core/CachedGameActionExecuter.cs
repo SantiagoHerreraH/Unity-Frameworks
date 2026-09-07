@@ -229,7 +229,7 @@ namespace SilverPillar.Core
             m_Initialized = true;
         }
 
-        public bool SetGameObject(GameObject gameObj)
+        public void SetGameObject(GameObject gameObj)
         {
             m_ChosenGameObject = gameObj;
 
@@ -243,7 +243,11 @@ namespace SilverPillar.Core
                     allGood = false;
             }
 
-            return allGood;
+            if (!allGood)
+            {
+                string gameObjName = gameObj != null ? gameObj.name : "NULL";
+                Debug.LogError($"Problem setting {gameObjName} Gameobject in {nameof(CachedGameActionExecuter)} component found in {gameObject.name} game object.");
+            }
         }
 
         public GameObject GetGameObject()
