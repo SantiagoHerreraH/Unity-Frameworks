@@ -1,32 +1,32 @@
 using SilverPillar.Core;
+using Sirenix.OdinInspector;
 using System;
 using UnityEngine;
 
 namespace SilverPillar.State
 {
+
     [Serializable]
-    public class ChangeState_Action : IAction
+    public class ChangeState_CachedGameAction : ICachedGameAction
     {
         [SerializeField]
         private StateTag m_TargetStateTag;
-
         [SerializeField]
-        private bool m_NullStateOnEndState = true;
-
+        private SelfType m_StateMachineToChangeState;
+        [SerializeField, ShowIf(nameof(m_StateMachineToChangeState), SelfType.CustomGameObject)]
         private StateMachine m_CachedStateMachine;
 
-        public ChangeState_Action() { }
+        public ChangeState_CachedGameAction() { }
 
-        public ChangeState_Action(ChangeState_Action other)
+        public ChangeState_CachedGameAction(ChangeState_CachedGameAction other)
         {
             this.m_TargetStateTag = other.m_TargetStateTag;
-            this.m_NullStateOnEndState = other.m_NullStateOnEndState;
             this.m_CachedStateMachine = other.m_CachedStateMachine;
         }
 
         public bool SetGameObject(GameObject gameObj)
         {
-            if (gameObj != null)
+            if (gameObj != null && m_StateMachineToChangeState == SelfType.ThisGameObject)
             {
                 return gameObj.TryGetComponent(out m_CachedStateMachine);
             }
@@ -38,30 +38,16 @@ namespace SilverPillar.State
             return m_CachedStateMachine != null ? m_CachedStateMachine.gameObject : null;
         }
 
-        public IAction Clone()
-        {
-            return new ChangeState_Action(this);
-        }
-
-        public void StartAction()
+        public void Execute()
         {
             if (m_CachedStateMachine != null && m_TargetStateTag != null)
             {
                 m_CachedStateMachine.ChangeState(m_TargetStateTag);
             }
         }
-
-        public void UpdateAction()
+        public ICachedGameAction Clone()
         {
-
-        }
-
-        public void EndAction()
-        {
-            if (m_NullStateOnEndState && m_CachedStateMachine != null && m_TargetStateTag != null)
-            {
-                m_CachedStateMachine.NullCurrentState();
-            }
+            return new ChangeState_CachedGameAction(this);
         }
     }
 }

@@ -201,11 +201,14 @@ namespace SilverPillar.Integrations.MMTopDown
         {
             base.Initialization();
 
-            m_GameInputManager = _character.LinkedInputManager as GameInputManager;
-
-            if (m_GameInputManager == null)
+            if (_character.CharacterType == Character.CharacterTypes.Player)
             {
-                Debug.LogError($"{nameof(CharacterGrabCarryAndThrow)} component in {gameObject.name} needs the input manager to be of class {nameof(GameInputManager)}");
+                m_GameInputManager = InputManager.Instance as GameInputManager;
+
+                if (m_GameInputManager == null)
+                {
+                    Debug.LogError($"{nameof(CharacterGrabCarryAndThrow)} component in {gameObject.name} needs the input manager to be of class {nameof(GameInputManager)}");
+                }
             }
 
             if (m_CarryParent == null)

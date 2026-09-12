@@ -8,7 +8,7 @@ using Sirenix.Serialization;
 namespace SilverPillar.Integrations.MMTopDown
 {
     [Serializable]
-    public class TeleportTowardsTarget_CachedGameAction : ICachedGameAction
+    public class TeleportTowardsTarget_ContactInteraction : IContactInteraction
     {
         [Title("Controller")]
         [SerializeField]
@@ -28,10 +28,16 @@ namespace SilverPillar.Integrations.MMTopDown
 
         private GameObject m_Self;
 
+        // World-space vector from the contacted GameObject origin to the
+        // average contact point captured when this interaction starts.
+        private Vector3 m_ContactVector;
 
-        public ICachedGameAction Clone()
+        private bool m_IsInitialized;
+
+
+        public IContactInteraction Clone()
         {
-            return new TeleportTowardsTarget_CachedGameAction
+            return new TeleportTowardsTarget_ContactInteraction
             {
                 m_WhereToGetControllerFrom = m_WhereToGetControllerFrom,
                 m_Controller = m_Controller,
@@ -39,14 +45,16 @@ namespace SilverPillar.Integrations.MMTopDown
                 m_Target = m_Target.CloneData(),
                 m_DistanceFromTarget = m_DistanceFromTarget.CloneData(),
 
-                m_Self = m_Self
+                m_ContactVector = Vector3.zero,
+                m_IsInitialized = false
             };
         }
 
 
-        public void Execute()
+        public void Update()
         {
-            if (m_Controller == null ||
+            if (!m_IsInitialized ||
+                m_Controller == null ||
                 !m_Target.IsValid() ||
                 !m_DistanceFromTarget.IsValid())
             {
@@ -61,7 +69,9 @@ namespace SilverPillar.Integrations.MMTopDown
             }
 
             Vector3 controllerPosition = m_Controller.transform.position;
-            Vector3 targetPosition = targetGameObject.transform.position;
+            Vector3 targetPosition =
+                targetGameObject.transform.position +
+                m_ContactVector;
 
             Vector3 directionToTarget = targetPosition - controllerPosition;
 
@@ -89,60 +99,53 @@ namespace SilverPillar.Integrations.MMTopDown
         }
 
 
-        public GameObject GetGameObject()
+        public void Start(
+            GameObject self,
+            ContactData otherData)
         {
-            return m_Self;
-        }
+            m_Self = self;
+            m_ContactVector = CalculateContactVector(otherData);
+            m_IsInitialized = false;
 
-
-        public bool SetGameObject(GameObject gameObj)
-        {
-            if (gameObj == null)
+            if (m_Self == null)
             {
                 Debug.LogError(
-                    $"gameObj is NULL in {nameof(TeleportTowardsTarget_CachedGameAction)}");
+                    $"self is NULL in {nameof(TeleportTowardsTarget_ContactInteraction)}");
 
-                return false;
+                return;
             }
 
-            m_Self = gameObj;
-
             bool allGood = true;
-
 
             // ---------------------------------------------------------
             // Target
             // ---------------------------------------------------------
 
-
-            allGood &= m_Target.SetGameObject(gameObj);
+            allGood &= m_Target.SetGameObject(m_Self);
 
             if (!m_Target.IsValid())
             {
                 Debug.LogError(
                     $"{nameof(m_Target)} is not valid in " +
-                    $"{nameof(TeleportTowardsTarget_CachedGameAction)}");
+                    $"{nameof(TeleportTowardsTarget_ContactInteraction)}");
 
                 allGood = false;
             }
-
 
             // ---------------------------------------------------------
             // Distance From Target
             // ---------------------------------------------------------
 
-
-            allGood &= m_DistanceFromTarget.SetGameObject(gameObj);
+            allGood &= m_DistanceFromTarget.SetGameObject(m_Self);
 
             if (!m_DistanceFromTarget.IsValid())
             {
                 Debug.LogError(
                     $"{nameof(m_DistanceFromTarget)} is not valid in " +
-                    $"{nameof(TeleportTowardsTarget_CachedGameAction)}");
+                    $"{nameof(TeleportTowardsTarget_ContactInteraction)}");
 
                 allGood = false;
             }
-
 
             // ---------------------------------------------------------
             // Controller
@@ -151,11 +154,13 @@ namespace SilverPillar.Integrations.MMTopDown
             switch (m_WhereToGetControllerFrom)
             {
                 case SelfType.ThisGameObject:
+
                     if (!m_Self.TryGetComponent(out m_Controller))
                     {
                         Debug.LogError(
-                            $"{m_Self.name} doesn't contain a {nameof(TopDownController)} " +
-                            $"required by {nameof(TeleportTowardsTarget_CachedGameAction)}");
+                            $"{m_Self.name} doesn't contain a " +
+                            $"{nameof(TopDownController)} required by " +
+                            $"{nameof(TeleportTowardsTarget_ContactInteraction)}");
 
                         allGood = false;
                     }
@@ -163,11 +168,12 @@ namespace SilverPillar.Integrations.MMTopDown
                     break;
 
                 case SelfType.CustomGameObject:
+
                     if (m_Controller == null)
                     {
                         Debug.LogError(
                             $"{nameof(m_Controller)} is NULL in " +
-                            $"{nameof(TeleportTowardsTarget_CachedGameAction)}");
+                            $"{nameof(TeleportTowardsTarget_ContactInteraction)}");
 
                         allGood = false;
                     }
@@ -175,8 +181,28 @@ namespace SilverPillar.Integrations.MMTopDown
                     break;
             }
 
+            m_IsInitialized = allGood;
+        }
 
-            return allGood;
+
+        public void End()
+        {
+            m_IsInitialized = false;
+        }
+
+
+        private static Vector3 CalculateContactVector(ContactData contactData)
+        {
+            if (contactData.GameObject == null ||
+                contactData.WorldContactPoints == null ||
+                contactData.WorldContactPoints.Count == 0)
+            {
+                return Vector3.zero;
+            }
+
+            return
+                contactData.GetAverageWorldContactPoint().Position -
+                contactData.GameObject.transform.position;
         }
     }
 }

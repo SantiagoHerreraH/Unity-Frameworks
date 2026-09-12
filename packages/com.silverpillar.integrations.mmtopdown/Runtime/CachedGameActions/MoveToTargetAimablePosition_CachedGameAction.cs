@@ -9,7 +9,7 @@ using UnityEngine.Events;
 namespace SilverPillar.Integrations.MMTopDown
 {
     [Serializable]
-    public class MoveToTargetAimablePosition_Action : ICachedGameAction
+    public class MoveToTargetAimablePosition_CachedGameAction : ICachedGameAction
     {
         [Title("Controller")]
         [SerializeField]
@@ -101,7 +101,7 @@ namespace SilverPillar.Integrations.MMTopDown
 
         public ICachedGameAction Clone()
         {
-            return new MoveToTargetAimablePosition_Action
+            return new MoveToTargetAimablePosition_CachedGameAction
             {
                 m_WhereToGetControllerFrom =
                     m_WhereToGetControllerFrom,
@@ -695,7 +695,7 @@ namespace SilverPillar.Integrations.MMTopDown
             {
                 Debug.LogError(
                     $"gameObj is NULL in " +
-                    $"{nameof(MoveToTargetAimablePosition_Action)}");
+                    $"{nameof(MoveToTargetAimablePosition_CachedGameAction)}");
 
                 return false;
             }
@@ -730,20 +730,18 @@ namespace SilverPillar.Integrations.MMTopDown
             // Target
             // ---------------------------------------------------------
 
+            allGood &=
+                m_Target.SetGameObject(
+                    gameObj);
+
             if (!m_Target.IsValid())
             {
                 Debug.LogError(
                     $"{nameof(m_Target)} is not valid in " +
-                    $"{nameof(MoveToTargetAimablePosition_Action)}");
+                    $"{nameof(MoveToTargetAimablePosition_CachedGameAction)}");
 
                 allGood =
                     false;
-            }
-            else
-            {
-                allGood &=
-                    m_Target.SetGameObject(
-                        gameObj);
             }
 
 
@@ -751,20 +749,19 @@ namespace SilverPillar.Integrations.MMTopDown
             // Distance From Target
             // ---------------------------------------------------------
 
+
+            allGood &=
+                m_DistanceFromTarget.SetGameObject(
+                    gameObj);
+
             if (!m_DistanceFromTarget.IsValid())
             {
                 Debug.LogError(
                     $"{nameof(m_DistanceFromTarget)} is not valid in " +
-                    $"{nameof(MoveToTargetAimablePosition_Action)}");
+                    $"{nameof(MoveToTargetAimablePosition_CachedGameAction)}");
 
                 allGood =
                     false;
-            }
-            else
-            {
-                allGood &=
-                    m_DistanceFromTarget.SetGameObject(
-                        gameObj);
             }
 
 
@@ -772,20 +769,19 @@ namespace SilverPillar.Integrations.MMTopDown
             // Speed
             // ---------------------------------------------------------
 
+
+            allGood &=
+                m_Speed.SetGameObject(
+                    gameObj);
+
             if (!m_Speed.IsValid())
             {
                 Debug.LogError(
                     $"{nameof(m_Speed)} is not valid in " +
-                    $"{nameof(MoveToTargetAimablePosition_Action)}");
+                    $"{nameof(MoveToTargetAimablePosition_CachedGameAction)}");
 
                 allGood =
                     false;
-            }
-            else
-            {
-                allGood &=
-                    m_Speed.SetGameObject(
-                        gameObj);
             }
 
 
@@ -803,7 +799,7 @@ namespace SilverPillar.Integrations.MMTopDown
                         Debug.LogError(
                             $"{m_Self.name} doesn't contain a " +
                             $"{nameof(TopDownController)} required by " +
-                            $"{nameof(MoveToTargetAimablePosition_Action)}");
+                            $"{nameof(MoveToTargetAimablePosition_CachedGameAction)}");
 
                         allGood =
                             false;
@@ -818,7 +814,7 @@ namespace SilverPillar.Integrations.MMTopDown
                     {
                         Debug.LogError(
                             $"{nameof(m_Controller)} is NULL in " +
-                            $"{nameof(MoveToTargetAimablePosition_Action)}");
+                            $"{nameof(MoveToTargetAimablePosition_CachedGameAction)}");
 
                         allGood =
                             false;

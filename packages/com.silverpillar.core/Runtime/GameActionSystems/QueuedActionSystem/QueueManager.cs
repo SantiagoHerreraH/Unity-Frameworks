@@ -16,7 +16,7 @@ namespace SilverPillar.Core
         [OdinSerialize, ShowInInspector, ShowIf(nameof(m_BehaviourOnNoQueueDataDefined), BehaviourOnNoQueueDataDefined.CreateQueueDataBasedOnDefault)]
         private QueueData m_DefaultQueueData = new();
 
-        [OdinSerialize, ShowInInspector]
+        [OdinSerialize, ShowInInspector, DictionaryDrawerSettings(DisplayMode = DictionaryDisplayOptions.ExpandedFoldout, KeyLabel = "Queue", ValueLabel = "Queue Data")]
         private Dictionary<Queue, QueueData> m_Queues_To_Data = new();
 
         private List<QueueData> m_Data = new();
@@ -116,7 +116,7 @@ namespace SilverPillar.Core
             queueData?.RemoveQueuedActionData(data);
         }
 
-        public void ExecuteAndPop(Queue queue)
+        public void ExecuteAndPop(Queue queue, GameObject notifier)
         {
             if (!IsValid())
             {
@@ -136,7 +136,7 @@ namespace SilverPillar.Core
             }
 
             m_OnBeforeExecuteAndPop?.Invoke();
-            queueData?.ExecuteAndPop();
+            queueData?.ExecuteAndPop(notifier);
             m_OnAfterExecuteAndPop?.Invoke();
         }
 

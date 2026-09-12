@@ -55,7 +55,6 @@ namespace SilverPillar.Core
         [SerializeField]
         private UnityEvent m_OnAfterExecute;
 
-
         [Title("Debug")]
         [ShowInInspector, ReadOnly]
         private List<QueuedAction.Data> m_QueuedActions = new();
@@ -163,7 +162,7 @@ namespace SilverPillar.Core
             m_QueuedActions.Sort(CompareRecalculatedQueuedActions);
         }
 
-        public void ExecuteAndPop()
+        public void ExecuteAndPop(GameObject notifier)
         {
             if (m_QueuedActions == null || m_QueuedActions.Count == 0)
             {
@@ -207,7 +206,7 @@ namespace SilverPillar.Core
             ++m_CurrentQueueIndex;
 
             m_OnBeforeExecute?.Invoke();
-            queuedData.Execute();
+            queuedData.Execute(notifier);
             m_OnAfterExecute?.Invoke();
 
             if (shouldQueueAgain)

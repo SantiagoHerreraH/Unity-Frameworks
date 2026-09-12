@@ -20,9 +20,9 @@ namespace SilverPillar.Core
             RigidbodyAddForce
         }
 
-        private bool UsesMovementMagnitude => m_HowToMove != HowToMove.TransformMoveInstantly;
+        private bool m_UsesMovementMagnitude => m_HowToMove != HowToMove.TransformMoveInstantly;
 
-        private bool UsesRigidbodyMovement =>
+        private bool m_UsesRigidbodyMovement =>
             m_HowToMove == HowToMove.RigidbodySetForce ||
             m_HowToMove == HowToMove.RigidbodyAddForce;
 
@@ -41,7 +41,7 @@ namespace SilverPillar.Core
 
         [OdinSerialize, ShowInInspector]
         [LabelText("$" + nameof(GetMovementMagnitudeLabel))]
-        [ShowIf(nameof(UsesMovementMagnitude))]
+        [ShowIf(nameof(m_UsesMovementMagnitude))]
         private ICachedScore m_MovementMagnitude;
 
         private Rigidbody m_Rigidbody;
@@ -100,7 +100,7 @@ namespace SilverPillar.Core
             m_LastTargetPosition = targetPosition;
             m_HasTargetPosition = true;
 
-            if (UsesRigidbodyMovement)
+            if (m_UsesRigidbodyMovement)
             {
                 return;
             }
@@ -110,7 +110,7 @@ namespace SilverPillar.Core
 
         private void FixedUpdate()
         {
-            if (!UsesRigidbodyMovement)
+            if (!m_UsesRigidbodyMovement)
             {
                 return;
             }
@@ -133,7 +133,7 @@ namespace SilverPillar.Core
         private void CacheReferences()
         {
             m_Rigidbody = GetComponent<Rigidbody>();
-            if (m_Rigidbody == null)
+            if (m_Rigidbody == null && m_UsesRigidbodyMovement)
             {
                 Debug.LogError("Rigidbody is null in" + nameof(MoveToMouse) + "component in gameobject" + gameObject.name + ". Add a rigidbody to said gameobject.");
             }

@@ -5,11 +5,6 @@ using UnityEngine;
 
 namespace SilverPillar.Target
 {
-    public enum CopyType
-    {
-        SelfToCustom,
-        CustomToSelf
-    }
 
     [Serializable]
     public class CopyCurrentTarget_CachedGameAction : ICachedGameAction

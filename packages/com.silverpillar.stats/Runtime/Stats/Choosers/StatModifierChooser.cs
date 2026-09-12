@@ -362,8 +362,6 @@ namespace SilverPillar.Stats
             if (m_OperationModificationsOnTargetStat != null)
                 allGood &= m_OperationModificationsOnTargetStat.SetGameObject(self);
 
-            m_DataFromChoosing.ChosenData ??= new();
-
             for (int i = 0; i < m_DataFromChoosing.ChosenData.Count; i++)
             {
                 if (m_DataFromChoosing.ChosenData[i] != null)

@@ -104,5 +104,14 @@ namespace SilverPillar.Integrations.MMTopDown
                 _damageOnTouch.IgnoreGameObject(Owner.gameObject);
             }
         }
+
+        /// <summary>
+		/// On disable we set our flag to false
+		/// </summary>
+		protected override void OnDisable()
+        {
+            _attackInProgress = false;
+            DisableDamageArea();
+        }
     }
 }

@@ -2,16 +2,23 @@ using MoreMountains.Tools;
 using MoreMountains.TopDownEngine;
 using System.Collections.Generic;
 using UnityEngine;
+using SilverPillar.Core;
 
 namespace SilverPillar.Integrations.MMTopDown
 {
     public class EnhancedDamageOnTouch : DamageOnTouch
     {
-
-
         [Header("Knockback Settings")]
         public ForceApplier ForceApplier;
         private Rigidbody _colliderRigidbody;
+
+        [Header("Debug")]
+        [SerializeField]
+        private bool m_PrintOnHitDamageable;
+        [SerializeField]
+        private bool m_PrintOnHitNonDamageable;
+        [SerializeField]
+        private Color m_PrintColor = Color.coral;
 
         /// <summary>
 		/// When colliding, we apply the appropriate damage
@@ -41,12 +48,68 @@ namespace SilverPillar.Integrations.MMTopDown
             else // if what we're colliding with can't be damaged
             {
                 OnCollideWithNonDamageable();
-                HitNonDamageableEvent?.Invoke(collider);
+                HitNonDamageableEvent?.Invoke(collider); 
+                if (m_PrintOnHitNonDamageable)
+                {
+                    Debug.Log($"{nameof(EnhancedDamageOnTouch)} hit {collider.gameObject}: NON DAMAGEABLE".Color(m_PrintColor));
+                }
             }
 
             OnAnyCollision(collider);
             HitAnythingEvent?.Invoke(collider);
             HitAnythingFeedback?.PlayFeedbacks(transform.position);
+        }
+
+        /// <summary>
+		/// Describes what happens when colliding with a damageable object
+		/// </summary>
+		/// <param name="health">Health.</param>
+		protected override void OnCollideWithDamageable(Health health)
+        {
+            _collidingHealth = health;
+
+            if (health.CanTakeDamageThisFrame())
+            {
+                // if what we're colliding with is a TopDownController, we apply a knockback force
+                _colliderTopDownController = health.gameObject.MMGetComponentNoAlloc<TopDownController>();
+                if (_colliderTopDownController == null)
+                {
+                    _colliderTopDownController = health.gameObject.GetComponentInParent<TopDownController>();
+                }
+
+                HitDamageableFeedback?.PlayFeedbacks(this.transform.position);
+                HitDamageableEvent?.Invoke(_colliderHealth);
+                if (m_PrintOnHitDamageable)
+                {
+                    Debug.Log($"{nameof(EnhancedDamageOnTouch)} hit {health.gameObject}: DAMAGEABLE".Color(m_PrintColor));
+                }
+
+                // we apply the damage to the thing we've collided with
+                float randomDamage =
+                    UnityEngine.Random.Range(MinDamageCaused, Mathf.Max(MaxDamageCaused, MinDamageCaused));
+
+                ApplyKnockback(randomDamage, TypedDamages);
+
+                DetermineDamageDirection();
+
+                if (RepeatDamageOverTime)
+                {
+                    _colliderHealth.DamageOverTime(randomDamage, gameObject, InvincibilityDuration,
+                        InvincibilityDuration, _damageDirection, TypedDamages, AmountOfRepeats, DurationBetweenRepeats,
+                        DamageOverTimeInterruptible, RepeatedDamageType);
+                }
+                else
+                {
+                    _colliderHealth.Damage(randomDamage, gameObject, InvincibilityDuration, InvincibilityDuration,
+                        _damageDirection, TypedDamages);
+                }
+            }
+
+            // we apply self damage
+            if (DamageTakenEveryTime + DamageTakenDamageable > 0 && !_colliderHealth.PreventTakeSelfDamage)
+            {
+                SelfDamage(DamageTakenEveryTime + DamageTakenDamageable);
+            }
         }
 
         /// <summary>

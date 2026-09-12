@@ -45,13 +45,27 @@ namespace SilverPillar.Core
             [SerializeField, Tooltip("Negative is infinite. Zero means execute once and do not requeue.")]
             private int m_NumberOfTimesToQueueAgainAfterExecution;
 
+
+            private enum WhoToForwardAsGameObject
+            {
+                Self,
+                Notifier,
+                Custom
+            }
             [Title("Execution")]
+            [SerializeField, Tooltip("Who to forward as input game object in game action and on game action event.")]
+            private WhoToForwardAsGameObject m_WhoToForwardAsGameObject;
+            [OdinSerialize, ShowIf(nameof(m_WhoToForwardAsGameObject), WhoToForwardAsGameObject.Custom)]
+            private GameObjectCalculatorData m_Custom;
+            private GameObject m_CustomGameObj;
+
             [OdinSerialize, ShowInInspector]
             private ICachedGameAction m_GameAction;
 
             [SerializeField]
             private UnityEvent<GameObject> m_OnGameAction;
 
+            [ReadOnly, SerializeField]
             private GameObject m_Self;
             private int m_RemainingTimesToQueueAgainAfterExecution;
             private int m_CurrentQueueIndex = 0;
@@ -61,19 +75,49 @@ namespace SilverPillar.Core
                 m_Self = gameObj;
                 m_RemainingTimesToQueueAgainAfterExecution = m_NumberOfTimesToQueueAgainAfterExecution;
 
-                m_GameAction?.SetGameObject(gameObj);
-                m_Priority?.SetGameObject(gameObj);
+
+                if (m_WhoToForwardAsGameObject == WhoToForwardAsGameObject.Custom)
+                {
+                    m_Custom.SetGameObject(gameObj);
+
+                    m_CustomGameObj = m_Custom.CalculateGameObject();
+                    m_GameAction?.SetGameObject(m_CustomGameObj);
+                    m_Priority?.SetGameObject(m_CustomGameObj);
+                }
+                else if (m_WhoToForwardAsGameObject == WhoToForwardAsGameObject.Self)
+                {
+
+                    m_GameAction?.SetGameObject(gameObj);
+                    m_Priority?.SetGameObject(gameObj);
+                }
             }
 
-            public void Execute()
+            public void Execute(GameObject notifier)
             {
                 if (m_Self == null)
                 {
                     return;
                 }
 
-                m_GameAction?.Execute();
-                m_OnGameAction?.Invoke(m_Self);
+                switch (m_WhoToForwardAsGameObject)
+                {
+                    case WhoToForwardAsGameObject.Self:
+                        m_GameAction?.Execute();
+                        m_OnGameAction?.Invoke(m_Self);
+                        break;
+                    case WhoToForwardAsGameObject.Notifier:
+                        m_GameAction?.SetGameObject(notifier);
+                        m_GameAction?.Execute();
+                        m_OnGameAction?.Invoke(notifier);
+                        break;
+                    case WhoToForwardAsGameObject.Custom:
+                        m_GameAction?.Execute();
+                        m_OnGameAction?.Invoke(m_CustomGameObj);
+                        break;
+                    default:
+                        break;
+                }
+
             }
 
             public void SetCurrentQueueIndex(int currentQueueIndex)
@@ -156,7 +200,7 @@ namespace SilverPillar.Core
 
         public void ExecuteNextInQueue(Queue queuedActionChannel)
         {
-            QueueManager.Instance.ExecuteAndPop(queuedActionChannel);
+            QueueManager.Instance.ExecuteAndPop(queuedActionChannel, gameObject);
         }
 
         private void RegisterData(WhenToStartQueuingAction when)
