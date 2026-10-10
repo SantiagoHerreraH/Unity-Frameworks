@@ -686,7 +686,6 @@ namespace SilverPillar.Core
         private List<IContactInteraction>
             m_Interactions;
 
-
         [Title("Register and Unregister")]
 
         [SerializeField,

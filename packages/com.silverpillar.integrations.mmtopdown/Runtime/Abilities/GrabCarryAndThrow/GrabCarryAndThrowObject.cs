@@ -3,7 +3,6 @@ using MoreMountains.TopDownEngine;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
-using static SilverPillar.Integrations.MMTopDown.CharacterGrabCarryAndThrow;
 
 namespace SilverPillar.Integrations.MMTopDown
 {
@@ -92,21 +91,35 @@ namespace SilverPillar.Integrations.MMTopDown
         private float m_EscapeRecoilMultiplier = 1f;
         public float EscapeRecoilMultiplier { get { return m_EscapeRecoilMultiplier; } }
 
+        private enum DeactivationProtocol
+        {
+            EscapeAndUnparentOnEnable,
+            EscapeButDontUnparentOnEnable,
+            DontEscape
+        }
+
+        [Header("Side Cases")]
+
+        [SerializeField, Tooltip("What happens if the gameobject is disabled while being carried. " +
+            "It can't be unparented on disabled because unity locks the gameobject's hierarchy on disable." +
+            "The collision layer will always be reset on disable and the local scale will be reset when unparented.")]
+        private DeactivationProtocol m_DeactivationProtocol;
+
         [Header("Events")]
 
         /// a UnityEvent triggered when the object gets grabbed
         [SerializeField, Tooltip("a UnityEvent triggered when the object gets grabbed")]
-        private UnityEvent m_OnGrabbed;
+        private UnityEvent<GameObject> m_OnGrabbed;
 
         /// a UnityEvent triggered when the object gets thrown
         [SerializeField, Tooltip("a UnityEvent triggered when the object gets thrown")]
-        private UnityEvent m_OnRelease;
+        private UnityEvent<GameObject> m_OnRelease;
 
         [SerializeField, Tooltip("a UnityEvent triggered when the object is resisting")]
-        private UnityEvent m_OnResisting;
+        private UnityEvent<GameObject> m_OnResisting;
 
         [SerializeField, Tooltip("a UnityEvent triggered when the object escapes")]
-        private UnityEvent m_OnEscaped;
+        private UnityEvent<GameObject> m_OnEscaped;
 
         private TopDownController m_TopDownController = null;
         private Rigidbody m_Rigidbody;
@@ -121,6 +134,9 @@ namespace SilverPillar.Integrations.MMTopDown
         private bool m_TopDownControllerWasEnabled;
         private CharacterGrabCarryAndThrow m_Carrier;
         private Coroutine m_ResistCoroutine;
+        private Coroutine m_ThrowCoroutine;
+        private Coroutine m_EscapeCoroutine;
+        private bool m_UnparentOnEnable = false;
 
         /// <summary>
         /// On Awake we initialize our object.
@@ -128,6 +144,16 @@ namespace SilverPillar.Integrations.MMTopDown
         protected virtual void Awake()
         {
             Initialization();
+        }
+
+        private void OnEnable()
+        {
+            if (m_UnparentOnEnable)
+            {
+                transform.SetParent(null);
+                transform.localScale = m_OriginalScale;
+                m_UnparentOnEnable = false;
+            }
         }
 
         /// <summary>
@@ -208,8 +234,6 @@ namespace SilverPillar.Integrations.MMTopDown
                 m_TopDownController.enabled = false;
             }
 
-            m_OnGrabbed?.Invoke();
-
             m_Carried = true;
 
             if (m_CanResistAndEscape)
@@ -221,7 +245,9 @@ namespace SilverPillar.Integrations.MMTopDown
                 m_ResistCoroutine = StartCoroutine(Resist());
             }
 
-            return true;
+            m_OnGrabbed?.Invoke(m_Carrier.gameObject);
+
+            return m_Carried; //if the object escapes on grabbed invoke then you no longer carry this
         }
 
         /// <summary>
@@ -234,7 +260,12 @@ namespace SilverPillar.Integrations.MMTopDown
         /// <param name="forceMagnitude">Multiplier applied to the throw force.</param>
         public virtual void Release()
         {
-            StartCoroutine(ThrowResetCollisions());
+            if (m_ResistCoroutine != null)
+            {
+                StopCoroutine(m_ResistCoroutine);
+            }
+
+            m_ThrowCoroutine = StartCoroutine(ThrowResetCollisions());
 
             switch (m_CarryMethod)
             {
@@ -264,7 +295,7 @@ namespace SilverPillar.Integrations.MMTopDown
                 m_Rigidbody.isKinematic = m_WasKinematic;
             }
 
-            m_OnRelease?.Invoke();
+            m_OnRelease?.Invoke(m_Carrier.gameObject);
 
             m_Carried = false;
             m_ResistCoroutine = null;
@@ -279,9 +310,9 @@ namespace SilverPillar.Integrations.MMTopDown
                 return;
             }
 
-            StartCoroutine(EscapeResetCollisions());
+            m_EscapeCoroutine = StartCoroutine(EscapeResetCollisions());
 
-            EscapeImplementation();
+            EscapeImplementation(false);
         }
 
         private void EscapeImmediately()
@@ -293,17 +324,25 @@ namespace SilverPillar.Integrations.MMTopDown
             }
 
             gameObject.layer = m_OriginalLayer;
-            transform.localScale = m_OriginalScale;
 
-            EscapeImplementation();
+            EscapeImplementation(true);
 
             if (m_ResistCoroutine != null)
             {
                 StopCoroutine(m_ResistCoroutine);
             }
+            if (m_EscapeCoroutine != null)
+            {
+                StopCoroutine(m_EscapeCoroutine);
+            }
+            if (m_ThrowCoroutine != null)
+            {
+                StopCoroutine(m_ThrowCoroutine);
+            }
         }
 
-        private void EscapeImplementation()
+
+        private void EscapeImplementation(bool calledOnDisable)
         {
             m_Carrier.RecoverGripStrength();
 
@@ -311,7 +350,26 @@ namespace SilverPillar.Integrations.MMTopDown
             {
                 case CarryMethods.Parent:
 
-                    transform.SetParent(null);
+                    if (calledOnDisable)
+                    {
+                        switch (m_DeactivationProtocol)
+                        {
+                            case DeactivationProtocol.EscapeAndUnparentOnEnable:
+                                m_UnparentOnEnable = true;
+                                break;
+                            case DeactivationProtocol.EscapeButDontUnparentOnEnable:
+                                break;
+                            case DeactivationProtocol.DontEscape:
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        transform.SetParent(null);
+                        transform.localScale = m_OriginalScale;
+                    }
 
                     break;
 
@@ -337,7 +395,7 @@ namespace SilverPillar.Integrations.MMTopDown
 
             m_Carried = false;
 
-            m_OnEscaped?.Invoke();
+            m_OnEscaped?.Invoke(m_Carrier.gameObject);
 
             m_Carrier.Escape();
             m_Carrier = null;
@@ -350,7 +408,18 @@ namespace SilverPillar.Integrations.MMTopDown
 
         private void OnDisable()
         {
-            EscapeImmediately();
+            switch (m_DeactivationProtocol)
+            {
+                case DeactivationProtocol.EscapeAndUnparentOnEnable:
+                case DeactivationProtocol.EscapeButDontUnparentOnEnable:
+                    EscapeImmediately();
+                    break;
+                case DeactivationProtocol.DontEscape:
+                    break;
+                default:
+                    break;
+            }
+
         }
 
         /// <summary>
@@ -379,7 +448,7 @@ namespace SilverPillar.Integrations.MMTopDown
                 yield return m_ResistWaitForSeconds;
 
                 m_Carrier.ResistGripStrength(m_ResistAmountPerSecond);
-                m_OnResisting?.Invoke();
+                m_OnResisting?.Invoke(m_Carrier.gameObject);
             }
 
             Escape();

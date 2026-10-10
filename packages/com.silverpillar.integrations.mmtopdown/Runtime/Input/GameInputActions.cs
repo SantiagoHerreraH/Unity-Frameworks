@@ -246,6 +246,15 @@ namespace MoreMountains.TopDownEngine
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Super"",
+                    ""type"": ""Button"",
+                    ""id"": ""7396060c-7a5a-4eb2-b067-3ed5fa11909d"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -589,6 +598,17 @@ namespace MoreMountains.TopDownEngine
                     ""action"": ""Grab"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""29056b5c-1663-4553-9419-d78c3e56a611"",
+                    ""path"": ""<Keyboard>/shift"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard"",
+                    ""action"": ""Super"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -642,6 +662,7 @@ namespace MoreMountains.TopDownEngine
             m_PlayerControls_CameraRotation = m_PlayerControls.FindAction("CameraRotation", throwIfNotFound: true);
             m_PlayerControls_Throw = m_PlayerControls.FindAction("Throw", throwIfNotFound: true);
             m_PlayerControls_Grab = m_PlayerControls.FindAction("Grab", throwIfNotFound: true);
+            m_PlayerControls_Super = m_PlayerControls.FindAction("Super", throwIfNotFound: true);
         }
 
         ~@GameInputActions()
@@ -739,6 +760,7 @@ namespace MoreMountains.TopDownEngine
         private readonly InputAction m_PlayerControls_CameraRotation;
         private readonly InputAction m_PlayerControls_Throw;
         private readonly InputAction m_PlayerControls_Grab;
+        private readonly InputAction m_PlayerControls_Super;
         /// <summary>
         /// Provides access to input actions defined in input action map "PlayerControls".
         /// </summary>
@@ -819,6 +841,10 @@ namespace MoreMountains.TopDownEngine
             /// </summary>
             public InputAction @Grab => m_Wrapper.m_PlayerControls_Grab;
             /// <summary>
+            /// Provides access to the underlying input action "PlayerControls/Super".
+            /// </summary>
+            public InputAction @Super => m_Wrapper.m_PlayerControls_Super;
+            /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
             public InputActionMap Get() { return m_Wrapper.m_PlayerControls; }
@@ -895,6 +921,9 @@ namespace MoreMountains.TopDownEngine
                 @Grab.started += instance.OnGrab;
                 @Grab.performed += instance.OnGrab;
                 @Grab.canceled += instance.OnGrab;
+                @Super.started += instance.OnSuper;
+                @Super.performed += instance.OnSuper;
+                @Super.canceled += instance.OnSuper;
             }
 
             /// <summary>
@@ -957,6 +986,9 @@ namespace MoreMountains.TopDownEngine
                 @Grab.started -= instance.OnGrab;
                 @Grab.performed -= instance.OnGrab;
                 @Grab.canceled -= instance.OnGrab;
+                @Super.started -= instance.OnSuper;
+                @Super.performed -= instance.OnSuper;
+                @Super.canceled -= instance.OnSuper;
             }
 
             /// <summary>
@@ -1142,6 +1174,13 @@ namespace MoreMountains.TopDownEngine
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnGrab(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Super" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnSuper(InputAction.CallbackContext context);
         }
     }
 }

@@ -9,33 +9,39 @@ namespace SilverPillar.Core
 #nullable enable
 
     [Serializable]
-    public class InteractionOnSelf_CachedGameAction : ICachedGameAction
+    public class Interaction_CachedGameAction : ICachedGameAction
     {
         [SerializeField]
         private SelfType m_WhoIsSelf;
         [SerializeField, ShowIf(nameof(m_WhoIsSelf), SelfType.CustomGameObject)]
         private GameObject? m_CustomSelf;
+        [SerializeField]
+        private SelfType m_InteractionTarget;
+        [SerializeField, ShowIf(nameof(m_InteractionTarget), SelfType.CustomGameObject)]
+        private GameObject? m_Target;
         [OdinSerialize, ShowInInspector]
-        private List<IInteraction> m_InteractionsOnSelf = new();
+        private List<IInteraction> m_Interactions = new();
 
 
         private GameObject? m_Self;
 
-        public InteractionOnSelf_CachedGameAction() { }
-        public InteractionOnSelf_CachedGameAction(InteractionOnSelf_CachedGameAction other)
+        public Interaction_CachedGameAction() { }
+        public Interaction_CachedGameAction(Interaction_CachedGameAction other)
         {
+            m_InteractionTarget = other.m_InteractionTarget;
+            m_Target = other.m_Target;
+            m_Self = other.m_Self;
             m_WhoIsSelf = other.m_WhoIsSelf;
             m_CustomSelf = other.m_CustomSelf;
-            m_Self = other.m_Self;
 
-            if (other.m_InteractionsOnSelf != null)
+            if (other.m_Interactions != null)
             {
-                m_InteractionsOnSelf ??= new();
-                foreach (var item in other.m_InteractionsOnSelf)
+                m_Interactions ??= new();
+                foreach (var item in other.m_Interactions)
                 {
                     if (item != null)
                     {
-                        m_InteractionsOnSelf.Add(item.Clone());
+                        m_Interactions.Add(item.Clone());
                     }
                 }
             }
@@ -44,31 +50,57 @@ namespace SilverPillar.Core
 
         public bool SetGameObject(GameObject gameObj)
         {
-            if (m_CustomSelf != null) return false;
-            m_CustomSelf = gameObj;
-
-            foreach (var interaction in m_InteractionsOnSelf)
+            m_Self = gameObj;
+            if (m_WhoIsSelf == SelfType.CustomGameObject)
             {
-                interaction.SetSelf(gameObj);
+                if (m_CustomSelf == null)
+                {
+                    Debug.LogError($"{nameof(m_CustomSelf)} is null in {nameof(Interaction_CachedGameAction)}");
+                    return false;
+                }
             }
-            return true;
+            else
+            {
+                m_CustomSelf = gameObj;
+            }
+
+            if (m_InteractionTarget == SelfType.CustomGameObject)
+            {
+                if (m_Target == null)
+                {
+                    Debug.LogError($"{nameof(m_CustomSelf)} is null in {nameof(Interaction_CachedGameAction)}");
+                    return false;
+                }
+            }
+            else
+            {
+                m_Target = gameObj;
+            }
+
+            bool allGood = true;
+
+            foreach (var interaction in m_Interactions)
+            {
+                allGood &= interaction.SetSelf(m_CustomSelf);
+            }
+            return allGood;
         }
 
-        public GameObject? GetGameObject() => m_CustomSelf;
+        public GameObject? GetGameObject() => m_Self;
 
         public void Execute()
         {
-            if (m_CustomSelf == null) return;
+            if (m_Target == null) return;
 
-            foreach (var interaction in m_InteractionsOnSelf)
+            foreach (var interaction in m_Interactions)
             {
-                interaction.Interact(m_CustomSelf);
+                interaction.Interact(m_Target);
             }
         }
 
         public ICachedGameAction Clone()
         {
-            return new InteractionOnSelf_CachedGameAction(this);
+            return new Interaction_CachedGameAction(this);
         }
     }
 }

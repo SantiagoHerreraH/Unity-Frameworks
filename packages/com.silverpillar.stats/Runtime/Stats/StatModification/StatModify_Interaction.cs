@@ -12,7 +12,7 @@ namespace SilverPillar.Stats
     {
         public enum WhichStatModifiersToUse
         {
-            FromStatController,
+            FromSelfStatController,
             FromCustom
         }
 
@@ -51,7 +51,7 @@ namespace SilverPillar.Stats
 
             switch (m_WhichStatModifiersToUse)
             {
-                case WhichStatModifiersToUse.FromStatController:
+                case WhichStatModifiersToUse.FromSelfStatController:
 
                     m_SelfController.ModifyTarget(targetController);
 
@@ -75,7 +75,12 @@ namespace SilverPillar.Stats
 
         public bool SetSelf(GameObject self)
         {
-            return self.TryGetComponent(out m_SelfController);
+            if (!self.TryGetComponent(out m_SelfController))
+            {
+                Debug.LogError($"Self has no {nameof(StatController)} in {nameof(StatModify_Interaction)}. Self always needs {nameof(StatController)}");
+                return false;
+            }
+            return true;
         }
 
 #nullable enable

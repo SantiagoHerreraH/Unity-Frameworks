@@ -80,8 +80,8 @@ namespace SilverPillar.Stats
         [SerializeField]
         public StatValue MaxLimitStat;
 
-        //make a variable to change astats based on inputs -> also take into account the stat modification changer
 
+        public Action<float, float> OnCurrentDefaultRatioChange;  //new value
         public Action<float, float> OnCurrentStatChange;  //past value, new value
         public Action<float, float> OnDefaultStatChange;  //past value, new value
         public Action<float, float> OnMinLimitStatChange; //past value, new value
@@ -97,6 +97,9 @@ namespace SilverPillar.Stats
                     pastValue = CurrentStat.Value;
                     CurrentStat.Set(Mathf.Clamp(value, MinLimitStat.Value, MaxLimitStat.Value));
                     OnCurrentStatChange.Invoke(pastValue, CurrentStat.Value);
+                    OnCurrentDefaultRatioChange.Invoke(
+                        pastValue           / DefaultStat.Value,
+                        CurrentStat.Value   / DefaultStat.Value);
 
                     break;
                 case StatVariable.Default:
@@ -104,6 +107,9 @@ namespace SilverPillar.Stats
                     pastValue = DefaultStat.Value;
                     DefaultStat.Set(Mathf.Clamp(value, MinLimitStat.Value, MaxLimitStat.Value));
                     OnDefaultStatChange.Invoke(pastValue, DefaultStat.Value);
+                    OnCurrentDefaultRatioChange.Invoke(
+                        CurrentStat.Value / pastValue,
+                        CurrentStat.Value / DefaultStat.Value);
 
                     break;
                 case StatVariable.MaxLimit:
@@ -159,6 +165,9 @@ namespace SilverPillar.Stats
                     CurrentStat.Modify(statOperation, value);
                     CurrentStat.Set(Mathf.Clamp(CurrentStat.Value, MinLimitStat.Value, MaxLimitStat.Value));
                     OnCurrentStatChange.Invoke(pastValue, CurrentStat.Value);
+                    OnCurrentDefaultRatioChange.Invoke(
+                        pastValue / DefaultStat.Value,
+                        CurrentStat.Value / DefaultStat.Value);
 
                     break;
                 case StatVariable.Default:
@@ -167,6 +176,9 @@ namespace SilverPillar.Stats
                     DefaultStat.Modify(statOperation, value);
                     DefaultStat.Set(Mathf.Clamp(DefaultStat.Value, MinLimitStat.Value, MaxLimitStat.Value));
                     OnDefaultStatChange.Invoke(pastValue, DefaultStat.Value);
+                    OnCurrentDefaultRatioChange.Invoke(
+                        CurrentStat.Value / pastValue,
+                        CurrentStat.Value / DefaultStat.Value);
 
                     break;
                 case StatVariable.MaxLimit:

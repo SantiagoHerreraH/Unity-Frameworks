@@ -1,7 +1,5 @@
-using MoreMountains.Feedbacks;
 using MoreMountains.Tools;
 using MoreMountains.TopDownEngine;
-using SilverPillar.Core;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -57,6 +55,13 @@ namespace SilverPillar.Integrations.MMTopDown
                                                       "this Character's throw to be, and how much recoil it should get.";
         }
 
+
+        [Header("Input")]
+        [SerializeField]
+        private bool m_HandleGrabInput = true;
+        [SerializeField]
+        private bool m_HandleThrowInput = true;
+
         [Header("Grab")]
         [MMReadOnly]
         [SerializeField, Tooltip("whether or not this Character is grabbing something right now")]
@@ -68,7 +73,7 @@ namespace SilverPillar.Integrations.MMTopDown
         public void ResistGripStrength(float byHowMuch)
         {
             CurrentGripStrength -= byHowMuch;
-            m_OnGrabbedObjectResisting?.Invoke();
+            m_OnGrabbedObjectResisting?.Invoke(m_CarriedObject.gameObject);
         }
         public void RecoverGripStrength()
         {
@@ -112,6 +117,10 @@ namespace SilverPillar.Integrations.MMTopDown
         [SerializeField]
         private ForceApplier m_ThrowForceApplier;
 
+        [SerializeField, Tooltip("This enables or disables OnThrowNothing event")]
+        private bool m_AllowThrowEvenIfNotCarryingAnything;
+
+
         /// whether or not this Character is throwing something this frame
         [MMReadOnly]
         [SerializeField, Tooltip("whether or not this Character is throwing something this frame")]
@@ -152,9 +161,9 @@ namespace SilverPillar.Integrations.MMTopDown
         private UnityEvent m_OnGrabbedTriggered;
         /// a UnityEvent triggered when the object gets grabbed
         [SerializeField, Tooltip("a UnityEvent triggered when the object gets grabbed")]
-        private UnityEvent m_OnGrabbedSuccessful;
+        private UnityEvent<GameObject> m_OnGrabbedSuccessful;
         [SerializeField, Tooltip("a UnityEvent triggered when the object couldn't get grabbed because self didn't have enough grip strength")]
-        private UnityEvent m_OnGrabbedUnsuccessful;
+        private UnityEvent<GameObject> m_OnGrabbedUnsuccessful;
         /// a UnityEvent triggered when the object gets grabbed
         [SerializeField, Tooltip("a UnityEvent triggered when triggering grab input and not grabbing anything")]
         private UnityEvent m_OnGrabbedMiss;
@@ -167,16 +176,16 @@ namespace SilverPillar.Integrations.MMTopDown
         [SerializeField, Tooltip("a UnityEvent triggered when the throw input is triggered")]
         private UnityEvent m_OnThrowTriggered;
         [SerializeField, Tooltip("a UnityEvent triggered when the object gets thrown")]
-        private UnityEvent m_OnThrowSuccess;
-        [SerializeField, Tooltip("a UnityEvent triggered when the throw input gets triggered but you don't have anything to throw")]
+        private UnityEvent<GameObject> m_OnThrowSuccess;
+        [SerializeField, MMCondition(nameof(m_AllowThrowEvenIfNotCarryingAnything), true), Tooltip("a UnityEvent triggered when the throw input gets triggered but you don't have anything to throw")]
         private UnityEvent m_OnThrowNothing;
 
 
         [Header("Resisting Events")]
         [SerializeField, Tooltip("a UnityEvent triggered when the grabbed item is resisting")]
-        private UnityEvent m_OnGrabbedObjectResisting;
+        private UnityEvent<GameObject> m_OnGrabbedObjectResisting;
         [SerializeField, Tooltip("a UnityEvent triggered when the grabbed item escaped.")]
-        private UnityEvent m_OnGrabbedObjectEscaped;
+        private UnityEvent<GameObject> m_OnGrabbedObjectEscaped;
 
         private Vector2 m_RecoilVector;
 
@@ -304,19 +313,17 @@ namespace SilverPillar.Integrations.MMTopDown
         /// </summary>
         protected override void HandleInput()
         {
-            if (m_GameInputManager.ThrowButton.State.CurrentState == MMInput.ButtonStates.ButtonDown)
+
+            if (m_HandleThrowInput && 
+                m_GameInputManager.ThrowButton.State.CurrentState == MMInput.ButtonStates.ButtonDown)
             {
-                if (m_Carrying)
-                {
-                    TryThrow();
-                }
+                TryThrow();
+                
             }
-            if (m_GameInputManager.GrabButton.State.CurrentState == MMInput.ButtonStates.ButtonDown)
+            if (m_HandleGrabInput && 
+                m_GameInputManager.GrabButton.State.CurrentState == MMInput.ButtonStates.ButtonDown)
             {
-                if (!m_Carrying)
-                {
-                    GrabAttempt();
-                }
+                TryGrab();
             }
         }
 
@@ -326,6 +333,14 @@ namespace SilverPillar.Integrations.MMTopDown
             if (other != _character.gameObject && other.TryGetComponent(out possibleCarriedObject))
             {
                 m_PossibleCarriedObject = possibleCarriedObject;
+                GrabAttempt();
+            }
+        }
+
+        public void TryGrab()
+        {
+            if (!m_Carrying)
+            {
                 GrabAttempt();
             }
         }
@@ -370,12 +385,14 @@ namespace SilverPillar.Integrations.MMTopDown
                 return;
             }
 
-            m_ThrowForceApplier.SetGameObject(m_CarriedObject.gameObject);
-            m_EscapeForceApplier.SetGameObject(m_CarriedObject.gameObject);
+            GameObject carriedGameObject = m_CarriedObject.gameObject;
+
+            m_ThrowForceApplier.SetGameObject(carriedGameObject);
+            m_EscapeForceApplier.SetGameObject(carriedGameObject);
 
             if (m_CarriedObject.Grab(this))
             {
-                m_OnGrabbedSuccessful?.Invoke();
+                m_OnGrabbedSuccessful?.Invoke(carriedGameObject);
                 m_Carrying = true;
                 m_CarryingID = m_CarriedObject.CarryingAnimationId;
                 m_Grabbing = true;
@@ -383,8 +400,49 @@ namespace SilverPillar.Integrations.MMTopDown
             }
             else
             {
-                m_OnGrabbedUnsuccessful?.Invoke();
+                m_OnGrabbedUnsuccessful?.Invoke(carriedGameObject);
             }
+        }
+
+        public void Throw(GameObject gameObjectToThrow)
+        {
+            if (!AbilityAuthorized)
+            {
+                if (m_TriggerOnThrowTriggeredEvenIfAbilityIsNotAuthorized)
+                {
+                    m_OnThrowTriggered?.Invoke();
+                }
+                return;
+            }
+
+            gameObjectToThrow.transform.position = CarryParent.transform.position;
+            gameObjectToThrow.transform.rotation = CarryParent.transform.rotation;  
+
+            m_OnThrowTriggered?.Invoke();
+
+            if (gameObjectToThrow == null)
+            {
+                m_OnThrowNothing?.Invoke();
+                return;
+            }
+
+            Vector3 direction = VectorTools.ApplyConstraint(gameObjectToThrow.transform.position - m_ThrowReferenceTransform.position, m_ConstraintThrowVector);
+
+            if (m_ThrowForceApplier.SetGameObject(gameObjectToThrow))
+            {
+                m_ThrowForceApplier.ApplyForce(direction.normalized * m_ThrowForce);
+            }
+
+            // apply recoil
+            if (m_ThrowRecoilForce != 0f)
+            {
+                m_RecoilVector = direction.normalized;
+                m_RecoilVector *= m_ThrowRecoilForce;
+                m_ThrowRecoilForceApplier.ApplyForce(-m_RecoilVector);
+            }
+
+            m_OnThrowSuccess?.Invoke(gameObjectToThrow);
+            m_Throwing = true;
         }
 
         /// <summary>
@@ -392,6 +450,11 @@ namespace SilverPillar.Integrations.MMTopDown
         /// </summary>
         public virtual void TryThrow()
         {
+            if (!m_Carrying && !m_AllowThrowEvenIfNotCarryingAnything)
+            {
+                return;
+            }
+
             if (!AbilityAuthorized)
             {
                 if (m_TriggerOnThrowTriggeredEvenIfAbilityIsNotAuthorized)
@@ -424,11 +487,11 @@ namespace SilverPillar.Integrations.MMTopDown
             }
 
             StopFeedbacks();
+            m_OnThrowSuccess?.Invoke(m_CarriedObject.gameObject);
             m_CarriedObject = null;
             m_CarryingID = -1;
             m_Carrying = false;
             m_Throwing = true;
-            m_OnThrowSuccess?.Invoke();
         }
 
         public void Escape()
@@ -452,7 +515,8 @@ namespace SilverPillar.Integrations.MMTopDown
             }
 
             m_Carrying = false;
-            m_OnGrabbedObjectEscaped?.Invoke();
+            m_OnGrabbedObjectEscaped?.Invoke(m_CarriedObject.gameObject);
+            m_CarriedObject = null;
         }
 
       

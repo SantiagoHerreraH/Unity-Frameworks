@@ -108,7 +108,7 @@ namespace SilverPillar.GOAP
         }
     }
 
-    [CreateAssetMenu(fileName = "Brain", menuName = "SilverPillar/GOAP/Brain")]
+    [CreateAssetMenu(fileName = "UndoableBrain", menuName = "SilverPillar/GOAP/UndoableBrain")]
     public class UndoableBrain : SaveableScriptableObject
     {
         [Title("Creation Data")]

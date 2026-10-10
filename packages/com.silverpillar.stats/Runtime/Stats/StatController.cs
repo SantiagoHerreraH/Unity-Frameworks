@@ -1,4 +1,4 @@
-using JetBrains.Annotations;
+
 using SilverPillar.Core;
 using Sirenix.OdinInspector;
 using Sirenix.Serialization;
@@ -220,24 +220,40 @@ namespace SilverPillar.Stats
     }
 
     [Serializable]
-    public struct StatSetting
+    public class StatSetting
     {
         public StatType StatType;
         [Range(0,100)]
         public float Value;
-        
-        public StatEvent CurrentStatEvents;
-        public StatEvent DefaultStatEvents;
-        public StatEvent MinLimitStatEvents;
-        public StatEvent MaxLimitStatEvents;
+
+        public StatRatioEvent   CurrentToDefaultRatioEvents;
+        public StatEvent        CurrentStatEvents;
+        public StatEvent        DefaultStatEvents;
+        public StatEvent        MinLimitStatEvents;
+        public StatEvent        MaxLimitStatEvents;
 
         public void Apply(StatController statController)
         {
             statController.CreateStatType(StatType, Value);
+            statController.SubscribeOnCurrentDefaultRatioChange(StatType, TriggerCurrentDefaultRatioChange);
             statController.SubscribeOnCurrentStatChange(StatType, TriggerCurrentStatChange);
             statController.SubscribeOnDefaultStatChange(StatType, TriggerDefaultStatChange);
             statController.SubscribeOnMinLimitStatChange(StatType, TriggerMinLimitStatChange);
             statController.SubscribeOnMaxLimitStatChange(StatType, TriggerMaxLimitStatChange);
+        }
+
+        public void ForceNextCall()
+        {
+            CurrentToDefaultRatioEvents.ForceNextCall();
+            CurrentStatEvents.ForceNextCall();
+            DefaultStatEvents.ForceNextCall();
+            MinLimitStatEvents.ForceNextCall();
+            MaxLimitStatEvents.ForceNextCall();
+        }
+
+        private void TriggerCurrentDefaultRatioChange(float lastValue, float newValue)
+        {
+            CurrentToDefaultRatioEvents.Trigger(lastValue, newValue);
         }
 
         private void TriggerCurrentStatChange(float lastValue, float newValue)
@@ -259,6 +275,63 @@ namespace SilverPillar.Stats
     }
 
     [Serializable]
+    public struct StatRatioEvent
+    {
+        public UnityEvent<float> OnRatioChange;
+        public UnityEvent<float> OnRatioDecrease;
+        public UnityEvent<float> OnRatioIncrease;
+        public UnityEvent<float> OnRatioOne;
+        public UnityEvent<float> OnRatioZero;
+
+        private bool m_IsCallForced;
+
+        public void ForceNextCall()
+        {
+            m_IsCallForced = true;
+        }
+        public void DoNotForceNextCall()
+        {
+            m_IsCallForced = false;
+        }
+
+        public void Trigger(float lastValue, float newValue)
+        {
+            bool changed = !Mathf.Approximately(lastValue, newValue);
+            if (!m_IsCallForced && !changed)
+            {
+                return;
+            }
+
+            m_IsCallForced = false;
+
+            if (changed)
+            {
+                OnRatioChange?.Invoke(newValue);
+            }
+
+            if (newValue > lastValue)
+            {
+                OnRatioIncrease?.Invoke(newValue);
+            }
+
+            if (newValue < lastValue)
+            {
+                OnRatioDecrease?.Invoke(newValue);
+            }
+
+            if (newValue <= 0)
+            {
+                OnRatioZero?.Invoke(newValue);
+            }
+            if (newValue >= 1)
+            {
+                OnRatioOne?.Invoke(newValue);
+            }
+
+        }
+    }
+
+    [Serializable]
     public struct StatEvent
     {
         public UnityEvent<float> OnStatChange;
@@ -267,15 +340,30 @@ namespace SilverPillar.Stats
         public UnityEvent<float> OnStatWorldMin;
         public UnityEvent<float> OnStatWorldMax;
 
+        private bool m_IsCallForced;
+
+        public void ForceNextCall()
+        {
+            m_IsCallForced = true;
+        }
+        public void DoNotForceNextCall()
+        {
+            m_IsCallForced = false;
+        }
         public void Trigger(float lastValue, float newValue)
         {
-
-            if (Mathf.Approximately(lastValue, newValue))
+            bool changed = !Mathf.Approximately(lastValue, newValue);
+            if (!m_IsCallForced && !changed)
             {
                 return;
             }
 
-            OnStatChange?.Invoke(newValue);
+            m_IsCallForced = false;
+
+            if (changed)
+            {
+                OnStatChange?.Invoke(newValue);
+            }
 
             if (newValue > lastValue)
             {
@@ -304,6 +392,9 @@ namespace SilverPillar.Stats
         [FoldoutGroup("Stats")]
         [SerializeField]
         private bool m_ResetCurrentStatsOnEnable = true;
+        [FoldoutGroup("Stats")]
+        [SerializeField, ShowIf(nameof(m_ResetCurrentStatsOnEnable))]
+        private bool m_CallStatEventsOnEnable = true;
         [FoldoutGroup("Stats")]
         [SerializeField]
         private List<StatSetting> m_StatSettings = new();
@@ -381,11 +472,24 @@ namespace SilverPillar.Stats
         {
             if (m_ResetCurrentStatsOnEnable)
             {
-                foreach (var item in m_StatSettings)
+                if (m_CallStatEventsOnEnable)
                 {
-                    var stat = GetStat(item.StatType);
-                    stat.CurrentStat.Set(item.Value);
+                    for (int i = 0; i < m_StatSettings.Count; i++)
+                    {
+                        m_StatSettings[i].ForceNextCall();
+                        var stat = GetStat(m_StatSettings[i].StatType);
+                        stat.SetStat(m_StatSettings[i].Value, StatVariable.Current);
+                    }
                 }
+                else
+                {
+                    foreach (var item in m_StatSettings)
+                    {
+                        var stat = GetStat(item.StatType);
+                        stat.CurrentStat.Set(item.Value);
+                    }
+                }
+                    
             }
         }
 
@@ -533,6 +637,24 @@ namespace SilverPillar.Stats
             }
         }
 
+        public void SubscribeOnCurrentDefaultRatioChange(StatType statType, Action<float, float> action)
+        {
+            var statStruct = GetStat(statType);
+            if (statStruct != null)
+            {
+                statStruct.OnCurrentDefaultRatioChange += action;
+            }
+        }
+
+        public void UnsubscribeOnCurrentDefaultRatioChange(StatType statType, Action<float, float> action)
+        {
+            var statStruct = GetStat(statType);
+            if (statStruct != null)
+            {
+                statStruct.OnCurrentDefaultRatioChange += action;
+            }
+        }
+
         public void UnsubscribeOnCurrentStatChange(StatType statType, Action<float, float> action)
         {
             var statStruct = GetStat(statType);
@@ -651,7 +773,7 @@ namespace SilverPillar.Stats
 
         #endregion
 
-        #region Stat Modification
+        #region Stat Modification Operations
         
         public void Modify(StatType statType, float value, StatOperation statOperation, StatVariable statVariable)
         {
@@ -667,6 +789,27 @@ namespace SilverPillar.Stats
                     Debug.Log(gameObject.name + "'s" + statType.name + " " + statVariable.ToString() + " stat is " + GetStat(statType, statVariable));
                 }
             }
+        }
+
+        public void ZeroCurrentStat(StatType statType)
+        {
+            CreateStatType(statType);
+
+            if (m_StatType_To_Stat.ContainsKey(statType))
+            {
+                m_StatType_To_Stat[statType].SetStat(0, StatVariable.Current);
+            }
+        }
+
+        public void SetCurrentStatToDefault(StatType statType)
+        {
+            CreateStatType(statType);
+
+            if (m_StatType_To_Stat.ContainsKey(statType))
+            {
+                m_StatType_To_Stat[statType].SetStat(m_StatType_To_Stat[statType].DefaultStat.Value, StatVariable.Current);
+            }
+
         }
 
         #endregion

@@ -227,6 +227,15 @@ namespace SilverPillar.GOAP
 
         private void CreateGraph()
         {
+            if (m_ActionList == null ||
+                m_ActionList.PossibleActions == null ||
+                m_ActionList.PossibleActions.Count == 0)
+            {
+                return;
+            }
+
+            m_ActionToNode ??= new();
+
             m_IsDirty = false;
 
             var possibleActions = m_ActionList.PossibleActions.ToList();
@@ -236,8 +245,15 @@ namespace SilverPillar.GOAP
             // Create nodes
             foreach (var action in possibleActions)
             {
-                var node = new ActionNode { Action = action };
-                m_ActionToNode[action] = node;
+                if (action != null)
+                {
+                    var node = new ActionNode { Action = action };
+                    m_ActionToNode[action] = node;
+                }
+                else
+                {
+                    Debug.LogError($"There is a null action in the action list of GOAP Brain {name}");
+                }
             }
 
             // Create edges (directed)
@@ -247,6 +263,15 @@ namespace SilverPillar.GOAP
                 {
                     var a = possibleActions[i];
                     var b = possibleActions[j];
+
+                    if (a == null)
+                    {
+                        break;
+                    }
+                    else if (b == null)
+                    {
+                        continue;
+                    }
 
                     var nodeA = m_ActionToNode[a];
                     var nodeB = m_ActionToNode[b];

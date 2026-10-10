@@ -15,6 +15,7 @@ public class GameInputManager : InputManager
     protected Vector2 _secondaryMovementInput;
 
 
+    public virtual MMInput.IMButton SuperButton { get; protected set; }
     public virtual MMInput.IMButton ThrowButton { get; protected set; }
     public virtual MMInput.IMButton GrabButton { get; protected set; }
 
@@ -31,6 +32,7 @@ public class GameInputManager : InputManager
     {
         base.Initialization();
 
+        ButtonList.Add(SuperButton = new MMInput.IMButton(PlayerID, "Super", SuperButtonDown, SuperButtonPressed, SuperButtonUp));
         ButtonList.Add(ThrowButton = new MMInput.IMButton(PlayerID, "Throw", ThrowButtonDown, ThrowButtonPressed, ThrowButtonUp));
         ButtonList.Add(GrabButton = new MMInput.IMButton(PlayerID, "Grab", GrabButtonDown, GrabButtonPressed, GrabButtonUp));
 
@@ -64,6 +66,7 @@ public class GameInputManager : InputManager
 
         InputActions.PlayerControls.Throw.performed += context => { BindButton(context, ThrowButton); };
         InputActions.PlayerControls.Grab.performed += context => { BindButton(context, GrabButton); };
+        InputActions.PlayerControls.Super.performed += context => { BindButton(context, SuperButton); };
     }
 
     protected virtual void TestForceDesktop()
@@ -131,6 +134,10 @@ public class GameInputManager : InputManager
         }
     }
 
+
+    public virtual void SuperButtonDown() { SuperButton.State.ChangeState(MMInput.ButtonStates.ButtonDown); }
+    public virtual void SuperButtonPressed() { SuperButton.State.ChangeState(MMInput.ButtonStates.ButtonPressed); }
+    public virtual void SuperButtonUp() { SuperButton.State.ChangeState(MMInput.ButtonStates.ButtonUp); }
 
     public virtual void ThrowButtonDown() { ThrowButton.State.ChangeState(MMInput.ButtonStates.ButtonDown); }
     public virtual void ThrowButtonPressed() { ThrowButton.State.ChangeState(MMInput.ButtonStates.ButtonPressed); }
