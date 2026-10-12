@@ -25,6 +25,31 @@ namespace SilverPillar.State
         [SerializeField]
         private ICachedCondition m_CanTransitionIf = null;
 
+        [FoldoutGroup("Scriptable Actions")]
+        [SerializeField]
+        private List<ScriptableAction> m_ScriptableActions = null;
+        private List<IAction> m_ScriptableActionInstances = new();
+        private bool m_InitializedScriptableActions = false;
+
+        private void InitializeScriptableActions()
+        {
+            if (m_InitializedScriptableActions)
+            {
+                return;
+            }
+            if (m_ScriptableActions != null)
+            {
+                m_ScriptableActionInstances ??= new();
+
+                for (int i = 0; i < m_ScriptableActions.Count; i++)
+                {
+                    m_ScriptableActionInstances.Add(m_ScriptableActions[i].Clone());
+                }
+            }
+
+            m_InitializedScriptableActions = true;
+        }
+
         [FoldoutGroup("Actions")]
         [OdinSerialize, ShowInInspector]
         private List<IAction> m_Actions = new();
@@ -100,6 +125,14 @@ namespace SilverPillar.State
         public State(State other)
         {
             m_CanTransitionIf = other.m_CanTransitionIf?.Clone();
+
+            if (other.m_ScriptableActions != null)
+            {
+                m_ScriptableActions = new List<ScriptableAction>(other.m_ScriptableActions);
+            }
+
+            m_InitializedScriptableActions = other.m_InitializedScriptableActions;
+            m_ScriptableActionInstances = other.m_ScriptableActionInstances?.Select(a => a.Clone()).ToList() ?? new();
             m_Actions = other.m_Actions?.Select(a => a.Clone()).ToList() ?? new();
             m_OnStart = other.m_OnStart;
             m_OnUpdate = other.m_OnUpdate;
@@ -205,6 +238,13 @@ namespace SilverPillar.State
                 action.SetGameObject(gameObj);
             }
 
+            InitializeScriptableActions();
+
+            foreach (var action in m_ScriptableActionInstances)
+            {
+                action.SetGameObject(gameObj);
+            }
+
             return true;
         }
 
@@ -221,6 +261,11 @@ namespace SilverPillar.State
                 action.StartAction();
             }
 
+            foreach (var action in m_ScriptableActionInstances)
+            {
+                action.StartAction();
+            }
+
             m_OnStart?.Invoke();
         }
 
@@ -230,6 +275,11 @@ namespace SilverPillar.State
                 return;
 
             foreach (var action in m_Actions)
+            {
+                action.UpdateAction();
+            }
+
+            foreach (var action in m_ScriptableActionInstances)
             {
                 action.UpdateAction();
             }
@@ -292,6 +342,11 @@ namespace SilverPillar.State
                 return;
 
             foreach (var action in m_Actions)
+            {
+                action.EndAction();
+            }
+
+            foreach (var action in m_ScriptableActionInstances)
             {
                 action.EndAction();
             }

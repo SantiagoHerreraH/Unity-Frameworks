@@ -1,0 +1,16 @@
+{
+  "name": "SilverPillar.Faction",
+  "rootNamespace": "SilverPillar.Faction",
+  "references": [
+    "SilverPillar.Core"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

@@ -6,8 +6,13 @@ namespace SilverPillar.Senses
 {
     public class SensedInformation
     {
-        public HashSet<GameObject> Sensed;
-        public HashSet<GameObject> NotSensed;
+        public HashSet<SenseTarget> Sensed;
+        public HashSet<SenseTarget> NotSensed;
+
+        public bool IsSensing(SenseTarget senseTarget)
+        {
+            return Sensed.Contains(senseTarget);
+        }
 
         public void EnsureCapacity(int capacity)
         {

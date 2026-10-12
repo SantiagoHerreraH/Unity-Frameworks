@@ -69,11 +69,11 @@ namespace SilverPillar.Senses
                 bool sensed = CanSeeTarget(m_Targets[i].Colliders, forward);
                 if (sensed)
                 {
-                    m_SensedInformation.Sensed.Add(target.gameObject);
+                    m_SensedInformation.Sensed.Add(target);
                 }
                 else
                 {
-                    m_SensedInformation.NotSensed.Add(target.gameObject);
+                    m_SensedInformation.NotSensed.Add(target);
                 }
 
             }
@@ -147,8 +147,8 @@ namespace SilverPillar.Senses
             m_Targets.RemoveAt(lastIndex);
 
             m_RegisteredTargets_To_Index.Remove(senseTarget);
-            m_SensedInformation.Sensed?.Remove(senseTarget.gameObject);
-            m_SensedInformation.NotSensed?.Remove(senseTarget.gameObject);
+            m_SensedInformation.Sensed?.Remove(senseTarget);
+            m_SensedInformation.NotSensed?.Remove(senseTarget);
         }
 
         private bool IsAllowedToSeeTarget(SenseTarget target)
