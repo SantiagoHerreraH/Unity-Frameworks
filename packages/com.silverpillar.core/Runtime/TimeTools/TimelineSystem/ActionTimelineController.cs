@@ -25,10 +25,45 @@ namespace SilverPillar.Core
         [Serializable]
         public class ActionTimelineScriptableObjectData
         {
+            [Title("Settings")]
             public WhenToStartTimeline WhenToStartTimeline;
             public WhenToStopTimeline WhenToStopTimeline;
+
+            [Title("Name")]
             public TimerName TimelineName;
-            public ActionTimelineScriptableObject ActionTimeline;
+
+            [Title("Data")]
+            public ActionTimelineCreatorScriptableObject.SegmentType ActionTimelineType;
+            [SerializeField, ShowIf(nameof(ActionTimelineType), ActionTimelineCreatorScriptableObject.SegmentType.ActionTimeline)]
+            [PropertySpace(SpaceAfter = 10)]
+            private ActionTimelineScriptableObject m_ActionTimeline;
+            [SerializeField, ShowIf(nameof(ActionTimelineType), ActionTimelineCreatorScriptableObject.SegmentType.ActionTimelineCreator)]
+            [PropertySpace(SpaceAfter = 10)]
+            private ActionTimelineCreatorScriptableObject m_ActionTimelineCreatorScriptableObject;
+
+            public ActionTimeline Clone()
+            {
+                ActionTimeline actionTimeline = null;
+                switch (ActionTimelineType)
+                {
+                    case ActionTimelineCreatorScriptableObject.SegmentType.ActionTimeline:
+                        if (m_ActionTimeline != null)
+                        {
+                            actionTimeline = m_ActionTimeline.Clone();
+                        }
+                        break;
+                    case ActionTimelineCreatorScriptableObject.SegmentType.ActionTimelineCreator:
+                        if (m_ActionTimelineCreatorScriptableObject != null)
+                        {
+                            actionTimeline = m_ActionTimelineCreatorScriptableObject.Clone();
+                        }
+                        break;
+                    default:
+                        break;
+                }
+
+                return actionTimeline;
+            }
         }
 
         [Serializable]
@@ -408,32 +443,13 @@ namespace SilverPillar.Core
                     continue;
                 }
 
-                if (source.ActionTimeline == null)
-                {
-                    Debug.LogError(
-                        $"{nameof(ActionTimelineController)} on {name}: " +
-                        $"Timeline '{source.TimelineName}' has no " +
-                        $"{nameof(ActionTimelineScriptableObject)} assigned.",
-                        this);
-
-                    continue;
-                }
-
-                AddRuntimeTimeline(
-                    source.WhenToStartTimeline,
-                    source.WhenToStopTimeline,
-                    source.TimelineName,
-                    source.ActionTimeline);
+                AddRuntimeTimeline(source);
             }
         }
 
-        private void AddRuntimeTimeline(
-            WhenToStartTimeline whenToStart,
-            WhenToStopTimeline whenToStop,
-            TimerName timelineName,
-            ActionTimelineScriptableObject sourceTimeline)
+        private void AddRuntimeTimeline(ActionTimelineScriptableObjectData data)
         {
-            if (timelineName == null)
+            if (data.TimelineName == null)
             {
                 Debug.LogError(
                     $"{nameof(ActionTimelineController)} on {name}: " +
@@ -443,22 +459,22 @@ namespace SilverPillar.Core
                 return;
             }
 
-            if (sourceTimeline == null || sourceTimeline.IsNull())
+            if (data == null)
             {
                 Debug.LogError(
                     $"{nameof(ActionTimelineController)} on {name}: " +
-                    $"ScriptableObject assigned to '{timelineName}' " +
+                    $"ScriptableObject assigned to '{data.TimelineName}' " +
                     $"contains no valid {nameof(ActionTimeline)}.",
                     this);
 
                 return;
             }
 
-            if (m_TimelineLookup.ContainsKey(timelineName))
+            if (m_TimelineLookup.ContainsKey(data.TimelineName))
             {
                 Debug.LogError(
                     $"{nameof(ActionTimelineController)} on {name}: " +
-                    $"More than one timeline uses the name '{timelineName}'. " +
+                    $"More than one timeline uses the name '{data.TimelineName}'. " +
                     $"Timeline names must be unique inside a controller.",
                     this);
 
@@ -466,13 +482,13 @@ namespace SilverPillar.Core
             }
 
             ActionTimeline runtimeTimeline =
-                sourceTimeline.Clone();
+                data.Clone();
 
             if (runtimeTimeline == null)
             {
                 Debug.LogError(
                     $"{nameof(ActionTimelineController)} on {name}: " +
-                    $"Failed to clone timeline '{timelineName}'.",
+                    $"Failed to clone timeline '{data.TimelineName}'.",
                     this);
 
                 return;
@@ -482,7 +498,7 @@ namespace SilverPillar.Core
             {
                 Debug.LogError(
                     $"{nameof(ActionTimelineController)} on {name}: " +
-                    $"One or more actions in timeline '{timelineName}' " +
+                    $"One or more actions in timeline '{data.TimelineName}' " +
                     $"failed to initialize with GameObject '{gameObject.name}'.",
                     this);
             }
@@ -490,9 +506,9 @@ namespace SilverPillar.Core
             RuntimeTimelineData runtimeData =
                 new RuntimeTimelineData
                 {
-                    WhenToStartTimeline = whenToStart,
-                    WhenToStopTimeline = whenToStop,
-                    TimelineName = timelineName,
+                    WhenToStartTimeline = data.WhenToStartTimeline,
+                    WhenToStopTimeline = data.WhenToStopTimeline,
+                    TimelineName = data.TimelineName,
                     ActionTimeline = runtimeTimeline,
 
                     IsStarted = false,
@@ -502,7 +518,7 @@ namespace SilverPillar.Core
                 };
 
             m_AllTimelineActions.Add(runtimeData);
-            m_TimelineLookup.Add(timelineName, runtimeData);
+            m_TimelineLookup.Add(data.TimelineName, runtimeData);
         }
 
 

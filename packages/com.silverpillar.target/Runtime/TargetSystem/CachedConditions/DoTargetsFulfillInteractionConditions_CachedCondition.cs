@@ -18,6 +18,9 @@ namespace SilverPillar.Target
         [SerializeField]
         private WhichTargets m_WhichTargets;
 
+        [SerializeField, Min(1), ShowIf(nameof(m_WhichTargets), WhichTargets.AnyPossibleTarget)]
+        private int m_MinimumTargetCountToFulfillCondition = 1;
+
         [SerializeField]
         private bool m_WhatToReturnIfThereAreNoPossibleTargets;
 
@@ -54,6 +57,8 @@ namespace SilverPillar.Target
                     return m_WhatToReturnIfThereAreNoPossibleTargets;
                 }
 
+                int numberToFulfillCondition = 0;
+
                 switch (m_WhichTargets)
                 {
                     case WhichTargets.AllPossibleTargets:
@@ -72,7 +77,12 @@ namespace SilverPillar.Target
                         {
                             if (m_ConditionToFulfill.IsFulfilled(possibleTarget))
                             {
-                                return true;
+                                ++numberToFulfillCondition;
+
+                                if (numberToFulfillCondition >= m_MinimumTargetCountToFulfillCondition)
+                                {
+                                    return true;
+                                }
                             }
                         }
                         return false;

@@ -12,6 +12,12 @@ namespace SilverPillar.Core
         EverytimeOnStartingTimeline
     }
 
+    public enum HowToCalculateTimelineDuration
+    {
+        SetDurationInTimeline,
+        CalculateDurationFromTimelineSequenceData,
+        CalculateDurationFromFreeActionData
+    }
 
     [Serializable]
     public class ActionTimeline : IAction
@@ -43,6 +49,11 @@ namespace SilverPillar.Core
             [ReadOnly]
             private float m_Duration;
 
+            // Unclamped calculated duration. Sequence layout must not overwrite this
+            // because the timeline duration may change on the next StartAction().
+            [NonSerialized]
+            private float m_RequestedDuration;
+
 
             [Title("Actions")]
             [OdinSerialize, ShowInInspector]
@@ -54,6 +65,7 @@ namespace SilverPillar.Core
             public float StartTime => m_StartTime;
             public float EndTime => m_EndTime;
             public float Duration => m_Duration;
+            public float RequestedDuration => m_RequestedDuration;
 
 
             public ActionSequenceData()
@@ -70,6 +82,7 @@ namespace SilverPillar.Core
                 m_StartTime = other.m_StartTime;
                 m_EndTime = other.m_EndTime;
                 m_Duration = other.m_Duration;
+                m_RequestedDuration = other.m_RequestedDuration;
                 m_UseExplicitTiming = other.m_UseExplicitTiming;
 
                 m_WhenToCalculateDuration =
@@ -118,11 +131,16 @@ namespace SilverPillar.Core
 
             public void SetDuration(float duration)
             {
-                m_Duration =
-                    Mathf.Max(0f, duration);
+                m_RequestedDuration = Mathf.Max(0f, duration);
+                m_Duration = m_RequestedDuration;
+                m_EndTime = m_StartTime + m_Duration;
+            }
 
-                m_EndTime =
-                    m_StartTime + m_Duration;
+            // Used only by timeline layout: preserves the requested duration.
+            public void SetClampedDuration(float duration)
+            {
+                m_Duration = Mathf.Max(0f, duration);
+                m_EndTime = m_StartTime + m_Duration;
             }
 
             public void SetEndTime(float endTime)
@@ -132,6 +150,7 @@ namespace SilverPillar.Core
 
                 m_Duration =
                     m_EndTime - m_StartTime;
+                m_RequestedDuration = m_Duration;
             }
 
 
@@ -332,6 +351,13 @@ namespace SilverPillar.Core
             [ReadOnly]
             private float m_Duration;
 
+            // The values produced by calculators / explicit configuration, before
+            // they are clipped to the containing timeline's duration.
+            [NonSerialized]
+            private float m_RequestedStartTime;
+            [NonSerialized]
+            private float m_RequestedDuration;
+
 
             [Title("Actions")]
             [OdinSerialize, ShowInInspector]
@@ -343,6 +369,8 @@ namespace SilverPillar.Core
             public float StartTime => m_StartTime;
             public float EndTime => m_EndTime;
             public float Duration => m_Duration;
+            public float RequestedDuration => m_RequestedDuration;
+            public float RequestedEndTime => m_RequestedStartTime + m_RequestedDuration;
 
 
             public ActionData()
@@ -354,6 +382,8 @@ namespace SilverPillar.Core
                 m_StartTime = other.m_StartTime;
                 m_EndTime = other.m_EndTime;
                 m_Duration = other.m_Duration;
+                m_RequestedStartTime = other.m_RequestedStartTime;
+                m_RequestedDuration = other.m_RequestedDuration;
                 m_UseExplicitTiming = other.m_UseExplicitTiming;
 
                 m_WhenToCalculateStartTime =
@@ -404,8 +434,8 @@ namespace SilverPillar.Core
 
             public void SetStartTime(float startTime)
             {
-                m_StartTime =
-                    Mathf.Max(0f, startTime);
+                m_StartTime = Mathf.Max(0f, startTime);
+                m_RequestedStartTime = m_StartTime;
 
                 m_EndTime =
                     m_StartTime + m_Duration;
@@ -413,8 +443,8 @@ namespace SilverPillar.Core
 
             public void SetDuration(float duration)
             {
-                m_Duration =
-                    Mathf.Max(0f, duration);
+                m_Duration = Mathf.Max(0f, duration);
+                m_RequestedDuration = m_Duration;
 
                 m_EndTime =
                     m_StartTime + m_Duration;
@@ -425,8 +455,8 @@ namespace SilverPillar.Core
                 m_EndTime =
                     Mathf.Max(m_StartTime, endTime);
 
-                m_Duration =
-                    m_EndTime - m_StartTime;
+                m_Duration = m_EndTime - m_StartTime;
+                m_RequestedDuration = m_Duration;
             }
 
 
@@ -449,7 +479,7 @@ namespace SilverPillar.Core
                 if (m_WhenToCalculateStartTime == calculationMode &&
                     m_StartTimeCalculator != null)
                 {
-                    m_StartTime =
+                    m_RequestedStartTime =
                         Mathf.Max(
                             0f,
                             m_StartTimeCalculator.CalculateScore());
@@ -458,14 +488,15 @@ namespace SilverPillar.Core
                 if (m_WhenToCalculateDuration == calculationMode &&
                     m_DurationCalculator != null)
                 {
-                    m_Duration =
+                    m_RequestedDuration =
                         Mathf.Max(
                             0f,
                             m_DurationCalculator.CalculateScore());
                 }
 
-                m_EndTime =
-                    m_StartTime + m_Duration;
+                m_StartTime = m_RequestedStartTime;
+                m_Duration = m_RequestedDuration;
+                m_EndTime = m_StartTime + m_Duration;
             }
 
 
@@ -480,13 +511,13 @@ namespace SilverPillar.Core
 
                 m_StartTime =
                     Mathf.Clamp(
-                        m_StartTime,
+                        m_RequestedStartTime,
                         0f,
                         timelineDuration);
 
                 m_EndTime =
                     Mathf.Clamp(
-                        m_StartTime + m_Duration,
+                        m_RequestedStartTime + m_RequestedDuration,
                         m_StartTime,
                         timelineDuration);
 
@@ -537,7 +568,7 @@ namespace SilverPillar.Core
                         WhenToCalculateTimelineValues
                             .OnceWhenSettingTheGameObject)
                     {
-                        m_StartTime =
+                        m_RequestedStartTime =
                             Mathf.Max(
                                 0f,
                                 m_StartTimeCalculator.CalculateScore());
@@ -569,7 +600,7 @@ namespace SilverPillar.Core
                         WhenToCalculateTimelineValues
                             .OnceWhenSettingTheGameObject)
                     {
-                        m_Duration =
+                        m_RequestedDuration =
                             Mathf.Max(
                                 0f,
                                 m_DurationCalculator.CalculateScore());
@@ -577,8 +608,9 @@ namespace SilverPillar.Core
                 }
 
 
-                m_EndTime =
-                    m_StartTime + m_Duration;
+                m_StartTime = m_RequestedStartTime;
+                m_Duration = m_RequestedDuration;
+                m_EndTime = m_StartTime + m_Duration;
 
 
                 // ----------------------------
@@ -671,13 +703,24 @@ namespace SilverPillar.Core
         // TIMELINE DATA
         // =========================================================
 
-        [SerializeField, Min(0)]
+        [Title("Duration Config")]
+        [SerializeField, Tooltip(
+            "Set Duration In Timeline uses the manually configured duration. " +
+            "Calculate Duration From Timeline Sequence Data sums the requested sequence durations. " +
+            "Calculate Duration From Free Action Data uses the latest requested free-action end time (start + duration).")]
+        private HowToCalculateTimelineDuration m_HowToCalculateTimelineDuration;
+
+        [SerializeField, Min(0), ShowIf(nameof(m_HowToCalculateTimelineDuration), HowToCalculateTimelineDuration.SetDurationInTimeline)]
         private float m_Duration;
 
+
+        [Title("Sequence Config")]
         [SerializeField]
         private List<ActionSequenceData> m_SequenceData =
             new List<ActionSequenceData>();
 
+
+        [Title("Free Actions Config")]
         [SerializeField]
         private List<ActionData> m_FreeActionData =
             new List<ActionData>();
@@ -685,13 +728,33 @@ namespace SilverPillar.Core
 
         public float Duration => m_Duration;
 
+        public HowToCalculateTimelineDuration DurationCalculationMode =>
+            m_HowToCalculateTimelineDuration;
+
+        public void SetDurationCalculationMode(HowToCalculateTimelineDuration mode)
+        {
+            m_HowToCalculateTimelineDuration = mode;
+            RecalculateTimelineData();
+        }
+
         public void AddSequentialTimeline(ActionTimeline timeline)
         {
             if (timeline == null) return;
             var segment = new ActionSequenceData();
             segment.ConfigureExplicit(timeline.Duration, timeline);
             m_SequenceData.Add(segment);
-            m_Duration += timeline.Duration;
+
+            // Preserve the original programmatic composition behavior when
+            // the duration is set explicitly. In calculated modes, derive it.
+            if (m_HowToCalculateTimelineDuration ==
+                HowToCalculateTimelineDuration.SetDurationInTimeline)
+            {
+                m_Duration += timeline.Duration;
+            }
+            else
+            {
+                RecalculateTimelineDuration();
+            }
         }
 
         public void AddFreeTimeline(ActionTimeline timeline, float start, float duration)
@@ -700,6 +763,11 @@ namespace SilverPillar.Core
             var segment = new ActionData();
             segment.ConfigureExplicit(start, duration, timeline);
             m_FreeActionData.Add(segment);
+            if (m_HowToCalculateTimelineDuration !=
+                HowToCalculateTimelineDuration.SetDurationInTimeline)
+            {
+                RecalculateTimelineDuration();
+            }
         }
 
         // =========================================================
@@ -728,6 +796,7 @@ namespace SilverPillar.Core
         public ActionTimeline(ActionTimeline other)
         {
             m_Duration = other.m_Duration;
+            m_HowToCalculateTimelineDuration = other.m_HowToCalculateTimelineDuration;
 
 
             // ----------------------------
@@ -865,9 +934,9 @@ namespace SilverPillar.Core
         /// </summary>
         private void RecalculateTimelineData()
         {
-            m_Duration =
-                Mathf.Max(0f, m_Duration);
-
+            // All score calculators have already been evaluated for this phase.
+            // Derive duration before clipping entries to the timeline.
+            RecalculateTimelineDuration();
             RecalculateSequenceData();
 
             if (m_FreeActionData != null)
@@ -888,6 +957,57 @@ namespace SilverPillar.Core
             }
 
             EnsureActionRuntimeState();
+        }
+
+
+        /// <summary>
+        /// Derives the timeline duration from the selected source. It uses
+        /// requested (unclamped) times so a previous layout cannot affect the
+        /// next calculation. This method never evaluates ICachedScore values.
+        /// </summary>
+        private void RecalculateTimelineDuration()
+        {
+            switch (m_HowToCalculateTimelineDuration)
+            {
+                case HowToCalculateTimelineDuration.SetDurationInTimeline:
+                    m_Duration = Mathf.Max(0f, m_Duration);
+                    break;
+
+                case HowToCalculateTimelineDuration.CalculateDurationFromTimelineSequenceData:
+                {
+                    float duration = 0f;
+                    if (m_SequenceData != null)
+                    {
+                        foreach (ActionSequenceData data in m_SequenceData)
+                        {
+                            if (data != null)
+                                duration += Mathf.Max(0f, data.RequestedDuration);
+                        }
+                    }
+                    m_Duration = duration;
+                    break;
+                }
+
+                case HowToCalculateTimelineDuration.CalculateDurationFromFreeActionData:
+                {
+                    float latestEndTime = 0f;
+                    if (m_FreeActionData != null)
+                    {
+                        foreach (ActionData data in m_FreeActionData)
+                        {
+                            if (data != null)
+                                latestEndTime = Mathf.Max(latestEndTime, data.RequestedEndTime);
+                        }
+                    }
+                    m_Duration = latestEndTime;
+                    break;
+                }
+
+                default:
+                    Debug.LogError($"Unknown timeline duration calculation mode: {m_HowToCalculateTimelineDuration}.");
+                    m_Duration = Mathf.Max(0f, m_Duration);
+                    break;
+            }
         }
 
 
@@ -924,13 +1044,13 @@ namespace SilverPillar.Core
                     Mathf.Min(
                         Mathf.Max(
                             0f,
-                            data.Duration),
+                            data.RequestedDuration),
                         remainingDuration);
 
                 data.SetStartTime(
                     currentStartTime);
 
-                data.SetDuration(
+                data.SetClampedDuration(
                     clampedDuration);
 
                 currentStartTime =

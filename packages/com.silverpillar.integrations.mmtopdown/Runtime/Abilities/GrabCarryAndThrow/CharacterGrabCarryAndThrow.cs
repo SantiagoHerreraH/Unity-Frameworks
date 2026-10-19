@@ -99,6 +99,8 @@ namespace SilverPillar.Integrations.MMTopDown
         [SerializeField, Tooltip("a reference to the object being carried")]
         private GrabCarryAndThrowObject m_CarriedObject = null;
 
+        public GameObject Carried { get { return m_CarriedObject != null ? m_CarriedObject.gameObject : null; } }
+
         [MMReadOnly]
         [SerializeField, Tooltip("a reference to the object being carried")]
         private GrabCarryAndThrowObject m_PossibleCarriedObject = null;
@@ -202,6 +204,11 @@ namespace SilverPillar.Integrations.MMTopDown
         private const string m_ThrowingAnimationParameterName = "Throwing";
         private int m_ThrowingAnimationParameter;
         private Vector3 m_ActualRaycastDirection;
+
+        public bool IsCarrying()
+        {
+            return m_Carrying;
+        }
 
         /// <summary>
         /// On init we set our CarryParent to the character transform if null

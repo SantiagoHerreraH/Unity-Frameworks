@@ -13,6 +13,14 @@ namespace SilverPillar.Core
         public IGameObjectCalculator Clone();
     }
 
+    public enum WhereToGetComponentFrom
+    {
+        Self,
+        SelfAndChildren,
+        Parent,
+        Custom
+    }
+
     [Serializable]
     public struct GameObjectCalculatorData
     {

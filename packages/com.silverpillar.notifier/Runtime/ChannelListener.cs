@@ -49,24 +49,24 @@ namespace SilverPillar.Notifier
         [SerializeField]
         private WhatActionsToTriggerFirst m_WhatActionsToTriggerFirst;
 
-        
+
+        [Title("Actions On Notifier")]
+
+        [OdinSerialize, ShowInInspector, Tooltip("These actions are executed on listen.")]
+        private List<ICachedGameAction> m_ActionsToExecuteOnNotifier = new();
+
 
         [Title("Actions On Self")]
 
+        [OdinSerialize, ShowInInspector, Tooltip("These actions are executed on listen")]
+        private List<ICachedGameAction> m_ActionsToExecuteOnSelf = new();
+        private bool m_InitializedActionsOnSelf = false;
         [Button("Check Actions On Self")]
         private void CheckActionsOnSelfButton()
         {
             CheckActionsOnSelf(true);
         }
 
-        [OdinSerialize, Tooltip("These actions are executed on listen")]
-        private List<ICachedGameAction> m_ActionsToExecuteOnSelf = new();
-        private bool m_InitializedActionsOnSelf = false;
-
-        [Title("Actions On Notifier")]
-
-        [OdinSerialize, Tooltip("These actions are executed on listen.")]
-        private List<ICachedGameAction> m_ActionsToExecuteOnNotifier = new();
 
         private static HashSet<ChannelListener> m_AllChannelListeners = new();
         private static Dictionary<Channel, HashSet<ChannelListener>> m_Channel_To_ChannelListeners = new();
