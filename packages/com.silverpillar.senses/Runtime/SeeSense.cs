@@ -1,5 +1,7 @@
+using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using UnityEngine;
 
 namespace SilverPillar.Senses
@@ -36,10 +38,20 @@ namespace SilverPillar.Senses
         private List<EyeField> m_EyeFields;
 
         private SenseController m_SenseController;
-        private readonly Dictionary<SenseTarget, int> m_RegisteredTargets_To_Index = new();
-        private readonly List<RegisteredData> m_Targets = new();
-        private readonly SensedInformation m_SensedInformation = new();
-        private readonly List<Collider> m_ValidColliders = new();
+        //the fileds below are the ones that are null at runtime
+        private Dictionary<SenseTarget, int> m_RegisteredTargets_To_Index = new();
+        private List<RegisteredData> m_Targets = new();
+        private SensedInformation m_SensedInformation = new();
+        private List<Collider> m_ValidColliders = new();
+
+        [OnDeserialized]
+        private void InitializeRuntimeFields()
+        {
+            m_RegisteredTargets_To_Index ??= new Dictionary<SenseTarget, int>();
+            m_Targets ??= new List<RegisteredData>();
+            m_SensedInformation ??= new SensedInformation();
+            m_ValidColliders ??= new List<Collider>();
+        }
 
         public override SensedInformation CalculateSensed()
         {

@@ -125,7 +125,10 @@ namespace SilverPillar.Core
         {
             return new Distance_InteractionCondition
             {
-                m_ThanDistanceToCompare = this.m_ThanDistanceToCompare.Clone(),
+                m_WhatAxisToCompare = this.m_WhatAxisToCompare,
+                m_IfDistanceIs = this.m_IfDistanceIs,
+                m_ThanDistanceToCompare = this.m_ThanDistanceToCompare != null ? this.m_ThanDistanceToCompare.Clone() : null,
+                m_ValueIfNullScore = this.m_ValueIfNullScore,
                 m_Self = this.m_Self
             };
         }

@@ -86,8 +86,10 @@ namespace SilverPillar.Senses
         SenseEvenIfSenseTargetHidden,
     }
 
+    [Serializable]
     public abstract class ISense
     {
+        [SerializeField]
         protected bool m_CanSense = true;
 
         public abstract void SetSenseController(SenseController senseController);

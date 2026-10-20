@@ -34,7 +34,10 @@ namespace SilverPillar.Target
             m_ConditionToChooseTheCurrentTarget = other.m_ConditionToChooseTheCurrentTarget.Clone();
             m_HowToCalculateScore = other.m_HowToCalculateScore.Clone();
             m_TargetSystem = other.m_TargetSystem;
-            m_QualifiedTargets = new(other.m_QualifiedTargets);
+            if (other.m_QualifiedTargets != null)
+            {
+                m_QualifiedTargets = new(other.m_QualifiedTargets);
+            }
         }
 
         public ICachedGameAction Clone()

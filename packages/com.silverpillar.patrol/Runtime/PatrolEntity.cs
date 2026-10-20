@@ -13,13 +13,22 @@ namespace SilverPillar.Patrol
         [OdinSerialize, ShowInInspector]
         private ICachedGameAction m_ActionOnEntityArrived;
 
-        [SerializeField]
-        private UnityEvent m_OnEntityArrived;
+        [Title("Events")]
+
+        [SerializeField, Tooltip("Input is patrol point")]
+        private UnityEvent<GameObject> m_OnEntityArrived;
+
+        [SerializeField, Tooltip("Input is first patrol point")]
+        private UnityEvent<GameObject> m_OnRebuildPatrolPath;
+
+        [SerializeField, Tooltip("Input is next patrol point")]
+        private UnityEvent<GameObject> m_OnNextPatrolPoint;
 
         public enum HowToGetPatrolPath
         {
             SetExplicitTransformReferences,
-            SearchPatrolRootsThatMeetConditions
+            SearchPatrolRootsThatMeetConditions,
+            Both
         }
 
         public enum TransformParamsToChange
@@ -59,6 +68,9 @@ namespace SilverPillar.Patrol
 
         [Title("Patrol Points")]
 
+        [SerializeField, Tooltip("If this is false, it needs to be called manually")]
+        private bool m_AutoTransitionToNextPatrolPoint = true;
+
         [SerializeField]
         private OnWhichPatrolPointToStartPatrol m_OnWhichPatrolPointToStartPatrol;
 
@@ -66,22 +78,28 @@ namespace SilverPillar.Patrol
         private ICachedInteractionScore m_ArrivalRadius;
 
         [SerializeField]
+        private AxisFilter m_AxisesToTakeIntoAccountWhenCalculatingArrivalDistance;
+
+        [SerializeField]
         private HowToGetPatrolPath m_HowToGetPatrolPath;
 
-        [SerializeField, ShowIf(nameof(m_HowToGetPatrolPath), HowToGetPatrolPath.SetExplicitTransformReferences)]
+        private bool m_ShowPatrolPointsInOrder => m_HowToGetPatrolPath != HowToGetPatrolPath.SearchPatrolRootsThatMeetConditions;
+
+        [SerializeField, ShowIf(nameof(m_ShowPatrolPointsInOrder))]
         private List<Transform> m_PatrolPointsInOrder;
 
         [InfoBox("In a patrol point search, the order of the patrol points starting from the first root that meets the condition is depth first search from the top child to the bottom child.")]
-        [OdinSerialize, ShowInInspector, ShowIf(nameof(m_HowToGetPatrolPath), HowToGetPatrolPath.SearchPatrolRootsThatMeetConditions)]
+        [OdinSerialize, ShowInInspector, Tooltip("If null, no condition"), ShowIf(nameof(m_HowToGetPatrolPath), HowToGetPatrolPath.SearchPatrolRootsThatMeetConditions)]
         private IInteractionCondition m_ConditionThatPatrolRootsHaveToFulfill;
 
-        [OdinSerialize, ShowInInspector, Tooltip("One path per root. Zero and negative means there is no max number."), ShowIf(nameof(m_HowToGetPatrolPath), HowToGetPatrolPath.SearchPatrolRootsThatMeetConditions)]
+        [OdinSerialize, ShowInInspector, Tooltip("One path per root. Leaving it null, zero and negative means there is no max number."), ShowIf(nameof(m_HowToGetPatrolPath), HowToGetPatrolPath.SearchPatrolRootsThatMeetConditions)]
         private IntCachedScore m_MaxNumberOfPatrolPaths;
 
         public enum PatrolMovementType
         {
             TransformLerp,
-            RigidbodyVelocity
+            RigidbodyVelocity,
+            DontAutoMove
         }
 
         public enum PatrolRotationType
@@ -102,8 +120,10 @@ namespace SilverPillar.Patrol
             First
         }
 
+        private bool m_AutoMove => m_PatrolMovementType != PatrolMovementType.DontAutoMove;
+
         [Title("Patrol Movement")]
-        [SerializeField]
+        [SerializeField, Tooltip("If you don't move it internally, this system will just check patrol point arrival and execute events.")]
         private PatrolMovementType m_PatrolMovementType;
 
         public enum MovementMultiplierType
@@ -113,17 +133,17 @@ namespace SilverPillar.Patrol
             MultiplyMovementByAverageWorldScale
         }
         [SerializeField]
-        [Tooltip("Multiplies movement speed by the average absolute world scale of the entity.")]
+        [ShowIf(nameof(m_AutoMove)), Tooltip("Multiplies movement speed by the average absolute world scale of the entity.")]
         private MovementMultiplierType m_MovementMultiplierType;
 
-        [OdinSerialize, ShowInInspector]
+        [OdinSerialize, ShowInInspector, ShowIf(nameof(m_AutoMove))]
         private ICachedScore m_MovementSpeed; 
         
-        [SerializeField]
+        [SerializeField, ShowIf(nameof(m_AutoMove))]
         private PatrolMovementDirectionType m_PatrolMovementDirectionType;
 
         private bool m_ShowSmoothFollowRotationSettings =>
-            m_PatrolMovementDirectionType == PatrolMovementDirectionType.SmoothFollowRotation;
+            m_PatrolMovementDirectionType == PatrolMovementDirectionType.SmoothFollowRotation && m_AutoMove;
 
         [SerializeField, Range(0f, 1f), ShowIf(nameof(m_ShowSmoothFollowRotationSettings))]
         [Tooltip("0 means move directly to the patrol point. 1 means move fully using the entity forward direction.")]
@@ -195,6 +215,10 @@ namespace SilverPillar.Patrol
                 MoveWithTransform(Time.deltaTime);
                 CheckArrival();
             }
+            else if (m_PatrolMovementType == PatrolMovementType.DontAutoMove)
+            {
+                CheckArrival();
+            }
 
             if (m_PatrolRotationType == PatrolRotationType.TransformRotationLerp)
             {
@@ -233,6 +257,10 @@ namespace SilverPillar.Patrol
                 case HowToGetPatrolPath.SearchPatrolRootsThatMeetConditions:
                     BuildSearchedPatrolPaths();
                     break;
+                case HowToGetPatrolPath.Both:
+                    BuildExplicitPatrolPath();
+                    BuildSearchedPatrolPaths();
+                    break;
             }
 
             m_CurrentPathIndex = 0;
@@ -244,6 +272,13 @@ namespace SilverPillar.Patrol
                 return;
 
             SetStartingPatrolPoint();
+
+            var firstPatrolPoint = GetCurrentPatrolPoint();
+
+            if (firstPatrolPoint != null)
+            {
+                m_OnRebuildPatrolPath?.Invoke(firstPatrolPoint.gameObject);
+            }
         }
         private void CacheAwakeTransformParams()
         {
@@ -370,7 +405,7 @@ namespace SilverPillar.Patrol
                     if (currentPatrolPoint == null)
                         continue;
 
-                    float sqrDistance = (currentPatrolPoint.position - currentPosition).sqrMagnitude;
+                    float sqrDistance = Vector3.SqrMagnitude(currentPatrolPoint.position - currentPosition);
 
                     if (sqrDistance >= closestSqrDistance)
                         continue;
@@ -467,7 +502,8 @@ namespace SilverPillar.Patrol
                     if (patrolPoint == null)
                         continue;
 
-                    float sqrDistance = (patrolPoint.position - currentPosition).sqrMagnitude;
+
+                    float sqrDistance = Vector3.SqrMagnitude(patrolPoint.position - currentPosition);
 
                     if (sqrDistance >= closestSqrDistance)
                         continue;
@@ -743,6 +779,7 @@ namespace SilverPillar.Patrol
             float directFinalApproachDistance =
                 arrivalRadius + maxDistanceDelta * Mathf.Max(0f, m_DirectFinalApproachDistanceMultiplier);
 
+
             float distanceToTarget = Vector3.Distance(transform.position, patrolPoint.position);
 
             return distanceToTarget <= directFinalApproachDistance;
@@ -834,7 +871,8 @@ namespace SilverPillar.Patrol
 
             float arrivalRadius = GetArrivalRadius(patrolPoint.gameObject);
 
-            float sqrDistance = (patrolPoint.position - transform.position).sqrMagnitude;
+
+            float sqrDistance = AxisFilterTools.CalculateSquareDistance(m_AxisesToTakeIntoAccountWhenCalculatingArrivalDistance, patrolPoint.position, transform.position);
 
             if (sqrDistance <= arrivalRadius * arrivalRadius)
             {
@@ -847,14 +885,17 @@ namespace SilverPillar.Patrol
             StopRigidbodyMovementIfNeeded();
 
             ExecuteEntityArrivedAction();
-            m_OnEntityArrived?.Invoke();
+            m_OnEntityArrived?.Invoke(patrolPoint.gameObject);
 
             if (patrolPoint.TryGetComponent(out PatrolPoint patrolPointComponent))
             {
                 patrolPointComponent.OnEntityArrived(gameObject);
             }
 
-            GoToNextPatrolPoint();
+            if (m_AutoTransitionToNextPatrolPoint)
+            {
+                GoToNextPatrolPoint();
+            }
         }
 
         private void ExecuteEntityArrivedAction()
@@ -868,7 +909,7 @@ namespace SilverPillar.Patrol
             }
         }
 
-        private void GoToNextPatrolPoint()
+        public void GoToNextPatrolPoint()
         {
             if (!m_HasValidPatrolPath)
                 return;
@@ -877,8 +918,19 @@ namespace SilverPillar.Patrol
 
             m_CurrentPointIndex++;
 
+            Transform currentPatrolPoint;
+
             if (m_CurrentPointIndex < currentPath.Count)
+            {
+                currentPatrolPoint = GetCurrentPatrolPoint();
+
+                if (currentPatrolPoint != null)
+                {
+                    m_OnNextPatrolPoint?.Invoke(currentPatrolPoint.gameObject);
+                }
+
                 return;
+            }
 
             m_CurrentPointIndex = 0;
             m_CurrentPathIndex++;
@@ -886,6 +938,13 @@ namespace SilverPillar.Patrol
             if (m_CurrentPathIndex >= m_PatrolPaths.Count)
             {
                 m_CurrentPathIndex = 0;
+            }
+
+            currentPatrolPoint = GetCurrentPatrolPoint();
+
+            if (currentPatrolPoint != null)
+            {
+                m_OnNextPatrolPoint?.Invoke(currentPatrolPoint.gameObject);
             }
         }
 

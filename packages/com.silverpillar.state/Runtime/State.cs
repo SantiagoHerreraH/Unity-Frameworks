@@ -240,10 +240,14 @@ namespace SilverPillar.State
 
             InitializeScriptableActions();
 
-            foreach (var action in m_ScriptableActionInstances)
+            if (m_ScriptableActionInstances != null)
             {
-                action.SetGameObject(gameObj);
+                foreach (var action in m_ScriptableActionInstances)
+                {
+                    action.SetGameObject(gameObj);
+                }
             }
+            
 
             return true;
         }
@@ -261,9 +265,12 @@ namespace SilverPillar.State
                 action.StartAction();
             }
 
-            foreach (var action in m_ScriptableActionInstances)
+            if (m_ScriptableActionInstances != null)
             {
-                action.StartAction();
+                foreach (var action in m_ScriptableActionInstances)
+                {
+                    action.StartAction();
+                }
             }
 
             m_OnStart?.Invoke();
@@ -279,9 +286,12 @@ namespace SilverPillar.State
                 action.UpdateAction();
             }
 
-            foreach (var action in m_ScriptableActionInstances)
+            if (m_ScriptableActionInstances != null)
             {
-                action.UpdateAction();
+                foreach (var action in m_ScriptableActionInstances)
+                {
+                    action.UpdateAction();
+                }
             }
 
             m_OnUpdate?.Invoke();
@@ -346,9 +356,12 @@ namespace SilverPillar.State
                 action.EndAction();
             }
 
-            foreach (var action in m_ScriptableActionInstances)
+            if (m_ScriptableActionInstances != null)
             {
-                action.EndAction();
+                foreach (var action in m_ScriptableActionInstances)
+                {
+                    action.EndAction();
+                }
             }
 
             m_OnEnd?.Invoke();
