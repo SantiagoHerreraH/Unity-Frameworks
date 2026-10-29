@@ -22,7 +22,8 @@ namespace SilverPillar.Senses
         public struct RegisteredData
         {
             public SenseTarget SenseTarget;
-            public Collider[] Colliders; 
+            public SeeSenseTargetQuality SeeSenseTargetQuality;
+            public Collider[] Colliders;
         }
         [SerializeField]
         private SensingPermissions m_SensingPermissions;
@@ -44,6 +45,21 @@ namespace SilverPillar.Senses
         private SensedInformation m_SensedInformation = new();
         private List<Collider> m_ValidColliders = new();
 
+        // Reused for raycasts, avoiding a new RaycastHit[] for every visibility test.
+        // Grows as needed so that no raycast hits are ever silently discarded.
+        [NonSerialized]
+        private RaycastHit[] m_RaycastHits = new RaycastHit[16];
+
+        private sealed class RaycastHitDistanceComparer : IComparer<RaycastHit>
+        {
+            public static readonly RaycastHitDistanceComparer Instance = new();
+
+            public int Compare(RaycastHit a, RaycastHit b)
+            {
+                return a.distance.CompareTo(b.distance);
+            }
+        }
+
         [OnDeserialized]
         private void InitializeRuntimeFields()
         {
@@ -51,6 +67,7 @@ namespace SilverPillar.Senses
             m_Targets ??= new List<RegisteredData>();
             m_SensedInformation ??= new SensedInformation();
             m_ValidColliders ??= new List<Collider>();
+            m_RaycastHits ??= new RaycastHit[16];
         }
 
         public override SensedInformation CalculateSensed()
@@ -72,14 +89,16 @@ namespace SilverPillar.Senses
 
             for (int i = 0; i < m_Targets.Count; i++)
             {
-                SenseTarget target = m_Targets[i].SenseTarget;
+                // Read each RegisteredData struct only once from the list.
+                RegisteredData registeredData = m_Targets[i];
+                SenseTarget target = registeredData.SenseTarget;
+
                 if (!IsAllowedToSeeTarget(target))
                 {
                     continue;
                 }
 
-                bool sensed = CanSeeTarget(m_Targets[i].Colliders, forward);
-                if (sensed)
+                if (CanSeeTarget(registeredData.Colliders, forward))
                 {
                     m_SensedInformation.Sensed.Add(target);
                 }
@@ -87,7 +106,6 @@ namespace SilverPillar.Senses
                 {
                     m_SensedInformation.NotSensed.Add(target);
                 }
-
             }
 
             return m_SensedInformation;
@@ -95,7 +113,18 @@ namespace SilverPillar.Senses
 
         public override bool RegisterSenseTarget(SenseTarget senseTarget)
         {
-            if (senseTarget == null || m_RegisteredTargets_To_Index.ContainsKey(senseTarget))
+            if (m_SenseController.gameObject == senseTarget.gameObject ||
+                senseTarget == null ||
+                m_RegisteredTargets_To_Index.ContainsKey(senseTarget) ||
+                m_SenseController.transform.IsChildOf(senseTarget.transform) ||
+                senseTarget.transform.IsChildOf(m_SenseController.transform))
+            {
+                return false;
+            }
+
+            SeeSenseTargetQuality targetQuality = senseTarget.GetSenseQuality<SeeSenseTargetQuality>();
+
+            if (targetQuality == null || !targetQuality.CanBeSeen())
             {
                 return false;
             }
@@ -107,7 +136,7 @@ namespace SilverPillar.Senses
             }
 
             m_RegisteredTargets_To_Index.Add(senseTarget, m_Targets.Count);
-            m_Targets.Add(new RegisteredData { SenseTarget = senseTarget, Colliders = colliders });
+            m_Targets.Add(new RegisteredData { SenseTarget = senseTarget, SeeSenseTargetQuality = targetQuality, Colliders = colliders });
             return true;
         }
 
@@ -174,7 +203,7 @@ namespace SilverPillar.Senses
             {
                 case SensingPermissions.DontSenseIfSenseTargetHiddenOrSenseTargetQualityHidden:
                     return target.CanBeSensed(SenseTargetQualityNeededToSense());
-                case SensingPermissions.DontSenseIfSenseTargetHidden: 
+                case SensingPermissions.DontSenseIfSenseTargetHidden:
                     return target.CanBeSensed();
                 case SensingPermissions.SenseEvenIfSenseTargetHidden:
                     break;
@@ -186,6 +215,7 @@ namespace SilverPillar.Senses
         private bool CanSeeTarget(Collider[] targetColliders, Vector3 forward)
         {
             m_ValidColliders.Clear();
+
             for (int i = 0; i < targetColliders.Length; i++)
             {
                 Collider collider = targetColliders[i];
@@ -195,7 +225,8 @@ namespace SilverPillar.Senses
                 }
             }
 
-            if (m_ValidColliders.Count == 0)
+            int validColliderCount = m_ValidColliders.Count;
+            if (validColliderCount == 0)
             {
                 return false;
             }
@@ -209,14 +240,17 @@ namespace SilverPillar.Senses
                 }
 
                 Vector3 eyePosition = m_EyeTransform.position + forward * eyeField.ForwardOffsetFromTransform;
+                float halfAngle = eyeField.Angle * 0.5f;
 
-                for (int colliderIndex = 0; colliderIndex < m_ValidColliders.Count; colliderIndex++)
+                for (int colliderIndex = 0; colliderIndex < validColliderCount; colliderIndex++)
                 {
                     Collider targetCollider = m_ValidColliders[colliderIndex];
                     Vector3 targetPoint = targetCollider.ClosestPoint(eyePosition);
                     Vector3 toTarget = targetPoint - eyePosition;
                     float distance = toTarget.magnitude;
 
+                    // Preserve the original immediate-success rule, even when
+                    // the collider does not directly have a SenseTarget component.
                     if (distance <= Mathf.Epsilon)
                     {
                         return true;
@@ -228,12 +262,23 @@ namespace SilverPillar.Senses
                     }
 
                     Vector3 direction = toTarget / distance;
-                    if (Vector3.Angle(forward, direction) > eyeField.Angle * 0.5f)
+
+                    // Keep Vector3.Angle to preserve threshold/rounding behavior.
+                    if (Vector3.Angle(forward, direction) > halfAngle)
                     {
                         continue;
                     }
 
-                    if (HasLineOfSight(eyePosition, direction, distance, targetCollider))
+                    // The original HasLineOfSight required a SenseTarget directly
+                    // on this collider's GameObject (NOT in a parent). Resolve it
+                    // before the expensive physics query without changing results.
+                    SenseTarget targetSenseTarget = targetCollider.GetComponent<SenseTarget>();
+                    if (targetSenseTarget == null)
+                    {
+                        continue;
+                    }
+
+                    if (HasLineOfSight(eyePosition, direction, distance, targetSenseTarget))
                     {
                         return true;
                     }
@@ -243,38 +288,86 @@ namespace SilverPillar.Senses
             return false;
         }
 
-        private bool HasLineOfSight(Vector3 origin, Vector3 direction, float targetDistance, Collider targetCollider)
+        private bool HasLineOfSight(Vector3 origin, Vector3 direction, float targetDistance, SenseTarget targetSenseTarget)
         {
-            const float raycastExtraDistance = 0.01f;
-            RaycastHit[] hits = Physics.RaycastAll(
-                origin,
-                direction,
-                targetDistance + raycastExtraDistance,
-                m_EyeRaycastLayer,
-                QueryTriggerInteraction.Ignore);
+            const float raycastExtraDistance = 0.05f;
 
-            if (hits.Length == 0)
+            // Runtime fields may not be initialized by every serialization path.
+            m_RaycastHits ??= new RaycastHit[16];
+
+            int hitCount;
+            do
+            {
+                hitCount = Physics.RaycastNonAlloc(
+                    origin,
+                    direction,
+                    m_RaycastHits,
+                    targetDistance + raycastExtraDistance,
+                    m_EyeRaycastLayer,
+                    QueryTriggerInteraction.Ignore);
+
+                // Physics.RaycastNonAlloc can return a truncated set of hits when
+                // the supplied buffer is full. Grow and repeat until complete.
+                if (hitCount < m_RaycastHits.Length)
+                {
+                    break;
+                }
+
+                Array.Resize(ref m_RaycastHits, m_RaycastHits.Length * 2);
+            }
+            while (true);
+
+            if (hitCount == 0)
             {
                 return false;
             }
 
-            Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-
-            for (int i = 0; i < hits.Length; i++)
+            // Same distance ordering as Physics.RaycastAll + Array.Sort.
+            if (hitCount > 1)
             {
-                Collider hitCollider = hits[i].collider;
+                Array.Sort(m_RaycastHits, 0, hitCount, RaycastHitDistanceComparer.Instance);
+            }
+
+            Transform selfTransform = m_SenseController != null
+                ? m_SenseController.transform
+                : null;
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider hitCollider = m_RaycastHits[i].collider;
                 if (hitCollider == null)
                 {
                     continue;
                 }
 
-                // Ignore the sensing object's own colliders.
-                if (m_SenseController != null && hitCollider.transform.IsChildOf(m_SenseController.transform))
+                // Ignore colliders belonging to the sensing object.
+                if (selfTransform != null && hitCollider.transform.IsChildOf(selfTransform))
                 {
                     continue;
                 }
 
-                return hitCollider == targetCollider || hitCollider.transform.IsChildOf(targetCollider.transform);
+                // Preserve GetComponent (not GetComponentInParent) semantics.
+                SenseTarget hitSenseTarget = hitCollider.GetComponent<SenseTarget>();
+                if (hitSenseTarget == null || !hitSenseTarget.CanBeSensed())
+                {
+                    continue;
+                }
+
+                SeeSenseTargetQuality quality = hitSenseTarget.GetSenseQuality<SeeSenseTargetQuality>();
+                if (quality == null || !quality.CanBeSensed())
+                {
+                    continue;
+                }
+
+                if (hitSenseTarget == targetSenseTarget)
+                {
+                    return true;
+                }
+
+                if (quality.CanBlockSight())
+                {
+                    return false;
+                }
             }
 
             return false;

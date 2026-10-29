@@ -3,6 +3,7 @@ using Sirenix.Serialization;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace SilverPillar.Core
 {
@@ -14,9 +15,9 @@ namespace SilverPillar.Core
 
     public enum HowToCalculateTimelineDuration
     {
-        SetDurationInTimeline,
-        CalculateDurationFromTimelineSequenceData,
-        CalculateDurationFromFreeActionData
+        SetDurationInTimeline, //the duration is explicitly set by the Timeline's m_Duration variable
+        CalculateDurationFromTimelineSequenceData, // the duration is calculated by summing all of the durations of the sequence data
+        CalculateDurationFromFreeActionData // the duration is calculated by the latest end time of the free action data
     }
 
     [Serializable]
@@ -165,6 +166,22 @@ namespace SilverPillar.Core
                 m_Actions = new List<IAction> { action };
             }
 
+            /// <summary>
+            /// Use the nested timeline's actual duration, rather than capturing
+            /// its possibly unevaluated Duration at composition time.
+            /// This is especially important for timeline-creator results.
+            /// </summary>
+            public void ConfigureFromNestedTimeline(ActionTimeline timeline)
+            {
+                if (timeline == null)
+                    throw new ArgumentNullException(nameof(timeline));
+
+                m_UseExplicitTiming = false;
+                m_DurationCalculator = null;
+                m_Actions = new List<IAction> { timeline };
+                SetDuration(0f); // Resolved after binding and on each parent start.
+            }
+
             public void CalculateDuration(
                 WhenToCalculateTimelineValues calculationMode)
             {
@@ -180,6 +197,69 @@ namespace SilverPillar.Core
 
                 SetDuration(
                     m_DurationCalculator.CalculateScore());
+            }
+
+            // Inspector-configured sequences may contain ActionTimeline actions
+            // without a separate duration calculator. Such actions are run in
+            // parallel, so the longest nested timeline defines the segment length.
+            private bool HasNestedTimeline()
+            {
+                if (m_Actions == null) return false;
+
+                for (int i = 0; i < m_Actions.Count; i++)
+                {
+                    if (m_Actions[i] is ActionTimeline)
+                        return true;
+                }
+
+                return false;
+            }
+
+            internal void PrepareNestedTimelinesForDuration()
+            {
+                // A score calculator or explicit timing takes precedence.
+                if (m_UseExplicitTiming || m_DurationCalculator != null ||
+                    m_Actions == null)
+                    return;
+
+                for (int i = 0; i < m_Actions.Count; i++)
+                {
+                    if (m_Actions[i] is ActionTimeline timeline)
+                        timeline.PrepareForStart();
+                }
+            }
+
+            internal void RefreshDurationFromNestedTimelines()
+            {
+                if (m_UseExplicitTiming || m_DurationCalculator != null ||
+                    m_Actions == null)
+                    return;
+
+                bool foundTimeline = false;
+                float longestDuration = 0f;
+
+                for (int i = 0; i < m_Actions.Count; i++)
+                {
+                    if (m_Actions[i] is ActionTimeline timeline)
+                    {
+                        foundTimeline = true;
+                        longestDuration = Mathf.Max(longestDuration, timeline.Duration);
+                    }
+                }
+
+                if (foundTimeline)
+                    SetDuration(longestDuration);
+            }
+
+            internal void InvalidateNestedTimelinePreparation()
+            {
+                if (m_Actions == null) return;
+
+                for (int i = 0; i < m_Actions.Count; i++)
+                {
+                    if (m_Actions[i] is ActionTimeline timeline)
+                        timeline.InvalidatePreparedStartValues();
+                }
             }
 
 
@@ -205,13 +285,18 @@ namespace SilverPillar.Core
                 // Duration Calculator
                 // ----------------------------
 
+                // A nested ActionTimeline is a valid alternative duration source.
                 if (m_DurationCalculator == null && !m_UseExplicitTiming)
                 {
-                    Debug.LogError(
-                        $"{nameof(ActionSequenceData)}: " +
-                        $"{nameof(m_DurationCalculator)} is null.");
+                    if (!HasNestedTimeline())
+                    {
+                        Debug.LogError(
+                            $"{nameof(ActionSequenceData)}: " +
+                            $"{nameof(m_DurationCalculator)} is null and no nested " +
+                            $"{nameof(ActionTimeline)} provides a duration.");
 
-                    allGood = false;
+                        allGood = false;
+                    }
                 }
                 else
                 {
@@ -366,6 +451,13 @@ namespace SilverPillar.Core
 
             private bool m_UseExplicitTiming;
 
+            // TimelineCreator's free slots are fractions of the parent duration.
+            // The parent duration may only become known after SetGameObject(),
+            // and can also change on each StartAction().
+            private bool m_UseDistributedTiming;
+            private int m_DistributedSlotIndex;
+            private int m_DistributedSlotCount;
+
             public float StartTime => m_StartTime;
             public float EndTime => m_EndTime;
             public float Duration => m_Duration;
@@ -385,6 +477,9 @@ namespace SilverPillar.Core
                 m_RequestedStartTime = other.m_RequestedStartTime;
                 m_RequestedDuration = other.m_RequestedDuration;
                 m_UseExplicitTiming = other.m_UseExplicitTiming;
+                m_UseDistributedTiming = other.m_UseDistributedTiming;
+                m_DistributedSlotIndex = other.m_DistributedSlotIndex;
+                m_DistributedSlotCount = other.m_DistributedSlotCount;
 
                 m_WhenToCalculateStartTime =
                     other.m_WhenToCalculateStartTime;
@@ -467,9 +562,44 @@ namespace SilverPillar.Core
             public void ConfigureExplicit(float start, float duration, IAction action)
             {
                 m_UseExplicitTiming = true;
+                m_UseDistributedTiming = false;
                 SetStartTime(start);
                 SetDuration(duration);
                 m_Actions = new List<IAction> { action };
+            }
+
+            /// <summary>
+            /// Defers creator-generated free-slot timing until the containing
+            /// timeline's sequential duration has actually been calculated.
+            /// </summary>
+            public void ConfigureDistributed(int slotIndex, int slotCount, IAction action)
+            {
+                if (slotCount <= 0 || slotIndex < 0 || slotIndex >= slotCount)
+                    throw new ArgumentOutOfRangeException(nameof(slotIndex));
+
+                m_UseExplicitTiming = true;
+                m_UseDistributedTiming = true;
+                m_DistributedSlotIndex = slotIndex;
+                m_DistributedSlotCount = slotCount;
+                m_Actions = new List<IAction> { action };
+                SetStartTime(0f);
+                SetDuration(0f);
+            }
+
+            internal void RefreshDistributedTiming(float timelineDuration)
+            {
+                if (!m_UseDistributedTiming || m_DistributedSlotCount <= 0)
+                    return;
+
+                // Calculate boundaries independently to prevent accumulated
+                // rounding error from leaving a gap at the end of the timeline.
+                float start = timelineDuration *
+                    ((float)m_DistributedSlotIndex / m_DistributedSlotCount);
+                float end = timelineDuration *
+                    ((float)(m_DistributedSlotIndex + 1) / m_DistributedSlotCount);
+
+                SetStartTime(start);
+                SetDuration(Mathf.Max(0f, end - start));
             }
 
             public void CalculateTimeValues(
@@ -497,6 +627,68 @@ namespace SilverPillar.Core
                 m_StartTime = m_RequestedStartTime;
                 m_Duration = m_RequestedDuration;
                 m_EndTime = m_StartTime + m_Duration;
+            }
+
+            // Nested timelines in a free segment run simultaneously. When no
+            // duration calculator is supplied, infer the duration from the
+            // longest nested timeline (not the sum of their durations).
+            private bool HasNestedTimeline()
+            {
+                if (m_Actions == null) return false;
+
+                for (int i = 0; i < m_Actions.Count; i++)
+                {
+                    if (m_Actions[i] is ActionTimeline)
+                        return true;
+                }
+
+                return false;
+            }
+
+            internal void PrepareNestedTimelinesForDuration()
+            {
+                if (m_UseExplicitTiming || m_DurationCalculator != null ||
+                    m_Actions == null)
+                    return;
+
+                for (int i = 0; i < m_Actions.Count; i++)
+                {
+                    if (m_Actions[i] is ActionTimeline timeline)
+                        timeline.PrepareForStart();
+                }
+            }
+
+            internal void RefreshDurationFromNestedTimelines()
+            {
+                if (m_UseExplicitTiming || m_DurationCalculator != null ||
+                    m_Actions == null)
+                    return;
+
+                bool foundTimeline = false;
+                float longestDuration = 0f;
+
+                for (int i = 0; i < m_Actions.Count; i++)
+                {
+                    if (m_Actions[i] is ActionTimeline timeline)
+                    {
+                        foundTimeline = true;
+                        longestDuration = Mathf.Max(longestDuration, timeline.Duration);
+                    }
+                }
+
+                if (foundTimeline)
+                    SetDuration(longestDuration);
+            }
+
+            internal void InvalidateNestedTimelinePreparation()
+            {
+                if (m_Actions == null) return;
+
+                for (int i = 0; i < m_Actions.Count; i++)
+                {
+                    if (m_Actions[i] is ActionTimeline timeline)
+                        timeline.InvalidatePreparedStartValues();
+                }
             }
 
 
@@ -582,11 +774,15 @@ namespace SilverPillar.Core
 
                 if (m_DurationCalculator == null && !m_UseExplicitTiming)
                 {
-                    Debug.LogError(
-                        $"{nameof(ActionData)}: " +
-                        $"{nameof(m_DurationCalculator)} is null.");
+                    if (!HasNestedTimeline())
+                    {
+                        Debug.LogError(
+                            $"{nameof(ActionData)}: " +
+                            $"{nameof(m_DurationCalculator)} is null and no nested " +
+                            $"{nameof(ActionTimeline)} provides a duration.");
 
-                    allGood = false;
+                        allGood = false;
+                    }
                 }
                 else
                 {
@@ -725,8 +921,48 @@ namespace SilverPillar.Core
         private List<ActionData> m_FreeActionData =
             new List<ActionData>();
 
+        private UnityEvent m_OnTimelineStart;
+        private UnityEvent m_OnTimelineEnd;
 
-        public float Duration => m_Duration;
+        public void SubscribeOnStart(UnityAction unityAction)
+        {
+            m_OnTimelineStart ??= new();
+            m_OnTimelineStart.AddListener(unityAction);
+        }
+
+        public void SubscribeOnEnd(UnityAction unityAction)
+        {
+
+            m_OnTimelineEnd ??= new();
+            m_OnTimelineEnd.AddListener(unityAction);
+        }
+
+        public void UnsubscribeOnStart(UnityAction unityAction)
+        {
+            m_OnTimelineStart ??= new();
+            m_OnTimelineStart.RemoveListener(unityAction);
+        }
+
+        public void UnsubscribeOnEnd(UnityAction unityAction)
+        {
+
+            m_OnTimelineEnd ??= new();
+            m_OnTimelineEnd.RemoveListener(unityAction);
+        }
+
+        private bool m_CalculatedDurationAtLeastOnce = false;
+        public float Duration { get
+            {
+                if (!m_CalculatedDurationAtLeastOnce)
+                {
+                    RecalculateTimelineDuration();
+                }
+
+                return m_Duration;
+
+            } }
+
+        public bool IsRunning => m_IsRunning;
 
         public HowToCalculateTimelineDuration DurationCalculationMode =>
             m_HowToCalculateTimelineDuration;
@@ -741,20 +977,13 @@ namespace SilverPillar.Core
         {
             if (timeline == null) return;
             var segment = new ActionSequenceData();
-            segment.ConfigureExplicit(timeline.Duration, timeline);
+            segment.ConfigureFromNestedTimeline(timeline);
+            m_SequenceData ??= new List<ActionSequenceData>();
             m_SequenceData.Add(segment);
 
-            // Preserve the original programmatic composition behavior when
-            // the duration is set explicitly. In calculated modes, derive it.
-            if (m_HowToCalculateTimelineDuration ==
-                HowToCalculateTimelineDuration.SetDurationInTimeline)
-            {
-                m_Duration += timeline.Duration;
-            }
-            else
-            {
-                RecalculateTimelineDuration();
-            }
+            // Before SetGameObject this may only be a provisional duration.
+            // The nested timing is re-read after binding and on each start.
+            RecalculateTimelineData();
         }
 
         public void AddFreeTimeline(ActionTimeline timeline, float start, float duration)
@@ -762,12 +991,24 @@ namespace SilverPillar.Core
             if (timeline == null) return;
             var segment = new ActionData();
             segment.ConfigureExplicit(start, duration, timeline);
+            m_FreeActionData ??= new List<ActionData>();
             m_FreeActionData.Add(segment);
-            if (m_HowToCalculateTimelineDuration !=
-                HowToCalculateTimelineDuration.SetDurationInTimeline)
-            {
-                RecalculateTimelineDuration();
-            }
+            RecalculateTimelineData();
+        }
+
+        /// <summary>
+        /// Adds a free timeline to one of N equal slots. Unlike AddFreeTimeline,
+        /// this does not capture the parent duration before SetGameObject().
+        /// Used by ActionTimelineCreatorScriptableObject.
+        /// </summary>
+        public void AddDistributedFreeTimeline(ActionTimeline timeline, int slotIndex, int slotCount)
+        {
+            if (timeline == null) return;
+            var segment = new ActionData();
+            segment.ConfigureDistributed(slotIndex, slotCount, timeline);
+            m_FreeActionData ??= new List<ActionData>();
+            m_FreeActionData.Add(segment);
+            RecalculateTimelineData();
         }
 
         // =========================================================
@@ -779,6 +1020,15 @@ namespace SilverPillar.Core
         private float m_CurrentTime;
 
         private bool m_IsRunning;
+
+        // A parent can need a nested timeline's duration BEFORE that nested
+        // timeline actually starts. This caches the preparation so the nested
+        // timeline does not re-evaluate its per-start scores a second time.
+        [NonSerialized]
+        private bool m_HasPreparedStartValues;
+
+        [NonSerialized]
+        private bool m_IsPreparingStartValues;
 
         private int m_CurrentSequenceIndex = -1;
 
@@ -863,6 +1113,8 @@ namespace SilverPillar.Core
             m_CurrentTime = 0f;
 
             m_IsRunning = false;
+            m_HasPreparedStartValues = false;
+            m_IsPreparingStartValues = false;
 
             m_CurrentSequenceIndex = -1;
 
@@ -876,6 +1128,71 @@ namespace SilverPillar.Core
         // =========================================================
         // TIMELINE VALUE CALCULATION
         // =========================================================
+
+        /// <summary>
+        /// Prepares timing without executing actions or invoking timeline events.
+        /// This lets parent timelines derive their own duration from nested
+        /// inspector-assigned timelines, including nested per-start scores.
+        /// </summary>
+        private void PrepareForStart()
+        {
+            if (m_HasPreparedStartValues)
+                return;
+
+            if (m_IsPreparingStartValues)
+            {
+                Debug.LogError($"{nameof(ActionTimeline)}: Cyclic nested timeline reference detected.");
+                return;
+            }
+
+            m_IsPreparingStartValues = true;
+            try
+            {
+                // Only prepare children whose duration is needed by a segment.
+                // Children with an explicit duration/score will prepare normally
+                // when their own StartAction() is called.
+                if (m_SequenceData != null)
+                {
+                    for (int i = 0; i < m_SequenceData.Count; i++)
+                        m_SequenceData[i]?.PrepareNestedTimelinesForDuration();
+                }
+
+                if (m_FreeActionData != null)
+                {
+                    for (int i = 0; i < m_FreeActionData.Count; i++)
+                        m_FreeActionData[i]?.PrepareNestedTimelinesForDuration();
+                }
+
+                CalculateValuesOnTimelineStart();
+                RecalculateTimelineData();
+                m_HasPreparedStartValues = true;
+            }
+            finally
+            {
+                m_IsPreparingStartValues = false;
+            }
+        }
+
+        /// <summary>
+        /// Discards a prepared but unconsumed nested start (e.g. when its
+        /// parent ends before this segment is reached).
+        /// </summary>
+        private void InvalidatePreparedStartValues()
+        {
+            m_HasPreparedStartValues = false;
+
+            if (m_SequenceData != null)
+            {
+                for (int i = 0; i < m_SequenceData.Count; i++)
+                    m_SequenceData[i]?.InvalidateNestedTimelinePreparation();
+            }
+
+            if (m_FreeActionData != null)
+            {
+                for (int i = 0; i < m_FreeActionData.Count; i++)
+                    m_FreeActionData[i]?.InvalidateNestedTimelinePreparation();
+            }
+        }
 
         /// <summary>
         /// Recalculates all values configured to calculate whenever
@@ -934,10 +1251,31 @@ namespace SilverPillar.Core
         /// </summary>
         private void RecalculateTimelineData()
         {
-            // All score calculators have already been evaluated for this phase.
-            // Derive duration before clipping entries to the timeline.
+            // Inspector-assigned entries do not pass through AddSequentialTimeline
+            // or AddFreeTimeline. Read durations from their nested timelines when
+            // there is no explicit timing or duration score calculator.
+            // The nested timelines are already bound/prepared for this phase.
+            if (m_SequenceData != null)
+            {
+                for (int i = 0; i < m_SequenceData.Count; i++)
+                    m_SequenceData[i]?.RefreshDurationFromNestedTimelines();
+            }
+
+            if (m_FreeActionData != null)
+            {
+                for (int i = 0; i < m_FreeActionData.Count; i++)
+                    m_FreeActionData[i]?.RefreshDurationFromNestedTimelines();
+            }
+
+            // Derive duration before distributing or clipping entries.
             RecalculateTimelineDuration();
             RecalculateSequenceData();
+
+            if (m_FreeActionData != null)
+            {
+                for (int i = 0; i < m_FreeActionData.Count; i++)
+                    m_FreeActionData[i]?.RefreshDistributedTiming(m_Duration);
+            }
 
             if (m_FreeActionData != null)
             {
@@ -974,40 +1312,42 @@ namespace SilverPillar.Core
                     break;
 
                 case HowToCalculateTimelineDuration.CalculateDurationFromTimelineSequenceData:
-                {
-                    float duration = 0f;
-                    if (m_SequenceData != null)
                     {
-                        foreach (ActionSequenceData data in m_SequenceData)
+                        float duration = 0f;
+                        if (m_SequenceData != null)
                         {
-                            if (data != null)
-                                duration += Mathf.Max(0f, data.RequestedDuration);
+                            foreach (ActionSequenceData data in m_SequenceData)
+                            {
+                                if (data != null)
+                                    duration += Mathf.Max(0f, data.RequestedDuration);
+                            }
                         }
+                        m_Duration = duration;
+                        break;
                     }
-                    m_Duration = duration;
-                    break;
-                }
 
                 case HowToCalculateTimelineDuration.CalculateDurationFromFreeActionData:
-                {
-                    float latestEndTime = 0f;
-                    if (m_FreeActionData != null)
                     {
-                        foreach (ActionData data in m_FreeActionData)
+                        float latestEndTime = 0f;
+                        if (m_FreeActionData != null)
                         {
-                            if (data != null)
-                                latestEndTime = Mathf.Max(latestEndTime, data.RequestedEndTime);
+                            foreach (ActionData data in m_FreeActionData)
+                            {
+                                if (data != null)
+                                    latestEndTime = Mathf.Max(latestEndTime, data.RequestedEndTime);
+                            }
                         }
+                        m_Duration = latestEndTime;
+                        break;
                     }
-                    m_Duration = latestEndTime;
-                    break;
-                }
 
                 default:
                     Debug.LogError($"Unknown timeline duration calculation mode: {m_HowToCalculateTimelineDuration}.");
                     m_Duration = Mathf.Max(0f, m_Duration);
                     break;
             }
+
+            m_CalculatedDurationAtLeastOnce = true;
         }
 
 
@@ -1093,16 +1433,11 @@ namespace SilverPillar.Core
             }
 
 
-            /*
-             * Calculate all values configured to change every time
-             * the timeline starts.
-             *
-             * This happens BEFORE arranging sequence entries and
-             * clamping independent actions.
-             */
-            CalculateValuesOnTimelineStart();
-
-            RecalculateTimelineData();
+            // Precompute nested durations before deriving this timeline's
+            // duration. If this timeline was precomputed by its parent, reuse
+            // that result instead of evaluating per-start scores twice.
+            PrepareForStart();
+            m_HasPreparedStartValues = false;
 
 
             m_CurrentTime = 0f;
@@ -1120,6 +1455,16 @@ namespace SilverPillar.Core
                     m_ActionDataActive.Length);
             }
 
+
+            // Notify listeners after runtime state is initialized,
+            // but before starting any actions scheduled at time zero.
+            m_OnTimelineStart?.Invoke();
+
+            // A start listener may stop the timeline.
+            if (!m_IsRunning)
+            {
+                return;
+            }
 
             /*
              * Process time zero immediately so actions whose start
@@ -1211,6 +1556,14 @@ namespace SilverPillar.Core
 
 
             m_IsRunning = false;
+
+            // Any nested timeline that was only prepared (but never reached)
+            // must calculate afresh if it is started independently later.
+            InvalidatePreparedStartValues();
+
+            // Notify listeners only after every active action has ended
+            // and the timeline is no longer running.
+            m_OnTimelineEnd?.Invoke();
         }
 
 
@@ -1480,6 +1833,7 @@ namespace SilverPillar.Core
             }
 
             m_Self = gameObj;
+            InvalidatePreparedStartValues();
 
             bool allGood = true;
 

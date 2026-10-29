@@ -23,6 +23,11 @@ namespace SilverPillar.Core
         [SerializeField, ShowIf(nameof(m_WhereToGetScoreGameObjectFrom), SelfType.CustomGameObject)]
         private GameObject m_ScoreGameObject;
 
+        public bool IsScoreNull()
+        {
+            return m_Score == null;
+        }
+
         public bool IsValid()
         {
             return m_Score != null && m_ScoreGameObject != null;
@@ -31,7 +36,7 @@ namespace SilverPillar.Core
         public CachedScoreData CloneData()
         {
             return new CachedScoreData { 
-                m_Score = m_Score.Clone(), 
+                m_Score = m_Score != null ? m_Score.Clone() : null, 
                 m_ScoreGameObject = m_ScoreGameObject,
                 m_WhereToGetScoreGameObjectFrom = m_WhereToGetScoreGameObjectFrom};
         }

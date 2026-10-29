@@ -9,6 +9,7 @@ namespace SilverPillar.Senses
 
    public class SenseTarget : SerializedMonoBehaviour
     {
+
         private static List<SenseTarget> m_RegisteredTargets = new();
         public static List<SenseTarget> RegisteredTargets {  get { return m_RegisteredTargets; } }
         private bool m_Registered;
@@ -32,6 +33,24 @@ namespace SilverPillar.Senses
         public bool CanBeSensed()
         {
             return m_CanBeSensed;
+        }
+
+        public T GetSenseQuality<T>() where T : SenseTargetQuality
+        {
+            if (m_SenseTargetQualities == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < m_SenseTargetQualities.Count; i++)
+            {
+                if (m_SenseTargetQualities[i] is T quality)
+                {
+                    return quality;
+                }
+            }
+
+            return null;
         }
 
         public bool HasSenseQualityType(Type byWhatSenseTargetQuality)

@@ -68,7 +68,10 @@ namespace SilverPillar.Integrations.MMTopDown
         {
             m_Self = gameObj;
 
-            m_Multiplier.SetGameObject(gameObj);
+            if (m_OperationType == OperationType.SetMovementMultiplier)
+            {
+                m_Multiplier.SetGameObject(gameObj);
+            }
 
             if (m_WhichCharacterMovement == SelfType.ThisGameObject)
             {

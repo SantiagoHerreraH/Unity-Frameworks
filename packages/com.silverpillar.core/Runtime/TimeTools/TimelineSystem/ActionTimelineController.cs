@@ -3,6 +3,7 @@ using Sirenix.Serialization;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace SilverPillar.Core
 {
@@ -41,6 +42,12 @@ namespace SilverPillar.Core
             [PropertySpace(SpaceAfter = 10)]
             private ActionTimelineCreatorScriptableObject m_ActionTimelineCreatorScriptableObject;
 
+            [Title("Events")]
+            [SerializeField]
+            private UnityEvent m_OnStart;
+            [SerializeField]
+            private UnityEvent m_OnEnd;
+
             public ActionTimeline Clone()
             {
                 ActionTimeline actionTimeline = null;
@@ -60,6 +67,18 @@ namespace SilverPillar.Core
                         break;
                     default:
                         break;
+                }
+
+                if (actionTimeline != null)
+                {
+                    if (m_OnStart != null)
+                    {
+                        actionTimeline.SubscribeOnStart(() => m_OnStart?.Invoke()); // if this object is destroyed before timeline, want to prevent accessing null data
+                    }
+                    if (m_OnEnd != null)
+                    {
+                        actionTimeline.SubscribeOnEnd(() => m_OnEnd?.Invoke()); // if this object is destroyed before timeline, want to prevent accessing null data
+                    }
                 }
 
                 return actionTimeline;
@@ -142,9 +161,28 @@ namespace SilverPillar.Core
 
         private void Update()
         {
-            for (int i = 0; i < m_ActiveTimelineCount; i++)
+            int i = 0;
+            while (i < m_ActiveTimelineCount)
             {
-                m_AllTimelineActions[i].ActionTimeline.UpdateAction();
+                RuntimeTimelineData data = m_AllTimelineActions[i];
+                data.ActionTimeline.UpdateAction();
+
+                // A timeline that reaches its calculated duration ends itself.
+                // Keep controller state in sync instead of leaving a completed
+                // timeline permanently inside the active region.
+                if (data.IsStarted && data.IsPlaying &&
+                    !data.ActionTimeline.IsRunning)
+                {
+                    data.IsStarted = false;
+                    data.IsPlaying = false;
+                    MoveToInactiveRegion(data);
+                }
+
+                // An end callback can remove/reorder timelines. When this
+                // index now contains a different active timeline, process it.
+                if (i < m_ActiveTimelineCount &&
+                    ReferenceEquals(m_AllTimelineActions[i], data))
+                    i++;
             }
         }
 
@@ -419,6 +457,56 @@ namespace SilverPillar.Core
             m_ActiveTimelineCount = 0;
 
             InitializeScriptableTimelines();
+            InitializeInlineTimelines();
+        }
+
+        private void InitializeInlineTimelines()
+        {
+            if (m_TimeLineActions == null)
+                return;
+
+            for (int i = 0; i < m_TimeLineActions.Count; i++)
+            {
+                ActionTimelineData source = m_TimeLineActions[i];
+                if (source == null || source.TimelineName == null ||
+                    source.ActionTimeline == null)
+                {
+                    Debug.LogError(
+                        $"{nameof(ActionTimelineController)} on {name}: " +
+                        $"Invalid inline timeline at index {i}.", this);
+                    continue;
+                }
+
+                if (m_TimelineLookup.ContainsKey(source.TimelineName))
+                {
+                    Debug.LogError(
+                        $"{nameof(ActionTimelineController)} on {name}: " +
+                        $"Duplicate timeline name '{source.TimelineName}'.", this);
+                    continue;
+                }
+
+                ActionTimeline runtime = (ActionTimeline)source.ActionTimeline.Clone();
+                if (!runtime.SetGameObject(gameObject))
+                {
+                    Debug.LogError(
+                        $"{nameof(ActionTimelineController)} on {name}: " +
+                        $"Failed to initialize inline timeline '{source.TimelineName}'.", this);
+                }
+
+                RuntimeTimelineData data = new RuntimeTimelineData
+                {
+                    WhenToStartTimeline = source.WhenToStartTimeline,
+                    WhenToStopTimeline = source.WhenToStopTimeline,
+                    TimelineName = source.TimelineName,
+                    ActionTimeline = runtime,
+                    IsStarted = false,
+                    IsPlaying = false,
+                    ListIndex = m_AllTimelineActions.Count
+                };
+
+                m_AllTimelineActions.Add(data);
+                m_TimelineLookup.Add(source.TimelineName, data);
+            }
         }
 
         private void InitializeScriptableTimelines()
@@ -449,22 +537,17 @@ namespace SilverPillar.Core
 
         private void AddRuntimeTimeline(ActionTimelineScriptableObjectData data)
         {
+            if (data == null)
+            {
+                Debug.LogError($"{nameof(ActionTimelineController)} on {name}: Null timeline configuration.", this);
+                return;
+            }
+
             if (data.TimelineName == null)
             {
                 Debug.LogError(
                     $"{nameof(ActionTimelineController)} on {name}: " +
                     $"A timeline has a null {nameof(TimerName)}.",
-                    this);
-
-                return;
-            }
-
-            if (data == null)
-            {
-                Debug.LogError(
-                    $"{nameof(ActionTimelineController)} on {name}: " +
-                    $"ScriptableObject assigned to '{data.TimelineName}' " +
-                    $"contains no valid {nameof(ActionTimeline)}.",
                     this);
 
                 return;
@@ -526,36 +609,26 @@ namespace SilverPillar.Core
             WhenToStartTimeline trigger)
         {
             if (!m_Initialized)
-            {
                 return;
+
+            // Snapshot candidates before starting them: StartAction callbacks can
+            // end/reorder entries immediately, so iterating the active/inactive
+            // partition in-place could retry the same entry indefinitely.
+            var candidates = new List<RuntimeTimelineData>();
+            for (int i = m_ActiveTimelineCount; i < m_AllTimelineActions.Count; i++)
+            {
+                RuntimeTimelineData data = m_AllTimelineActions[i];
+                if (data.WhenToStartTimeline == trigger && !data.IsStarted)
+                    candidates.Add(data);
             }
 
-            /*
-             * Activating entries rearranges the list, so a standard for-loop
-             * would potentially skip entries.
-             *
-             * Scan only the inactive region. If an entry is activated,
-             * another inactive item is swapped into its old slot, so test
-             * the same index again.
-             */
-            int index = m_ActiveTimelineCount;
-
-            while (index < m_AllTimelineActions.Count)
+            for (int i = 0; i < candidates.Count; i++)
             {
-                RuntimeTimelineData data =
-                    m_AllTimelineActions[index];
-
-                if (data.WhenToStartTimeline == trigger)
-                {
+                RuntimeTimelineData data = candidates[i];
+                if (data.ListIndex >= 0 && !data.IsStarted &&
+                    data.ListIndex < m_AllTimelineActions.Count &&
+                    ReferenceEquals(m_AllTimelineActions[data.ListIndex], data))
                     StartTimeline(data);
-
-                    // StartTimeline moves it into the active prefix.
-                    // Another inactive item now occupies 'index'.
-                }
-                else
-                {
-                    index++;
-                }
             }
         }
 
@@ -587,10 +660,14 @@ namespace SilverPillar.Core
 
             data.ActionTimeline.StartAction();
 
-            data.IsStarted = true;
-            data.IsPlaying = true;
+            // A start-event listener may immediately end the timeline.
+            data.IsStarted = data.ActionTimeline.IsRunning;
+            data.IsPlaying = data.IsStarted;
 
-            MoveToActiveRegion(data);
+            if (data.IsPlaying)
+                MoveToActiveRegion(data);
+            else
+                MoveToInactiveRegion(data);
         }
 
 

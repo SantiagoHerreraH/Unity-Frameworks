@@ -104,6 +104,11 @@ namespace SilverPillar.GOAP
             m_CurrentActionInstance.UpdateAction();
 
         }
+
+        public void NullCurrentAction()
+        {
+            m_CurrentActionInstance = null;
+        }
     }
 }
 

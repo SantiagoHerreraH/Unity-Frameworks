@@ -31,6 +31,11 @@ namespace SilverPillar.State
 
         public Dictionary<StateTag, State> States => m_States;
 
+
+        [FoldoutGroup("Debug")]
+        [SerializeField]
+        private bool m_PrintCurrentState;
+
         [FoldoutGroup("Debug")]
         [SerializeField, ReadOnly]
         private StateTag m_CurrentStateTag = null;
@@ -202,8 +207,7 @@ namespace SilverPillar.State
             m_IsTransitioning = true;
             m_TransitionPhase = phase;
 
-            m_CurrentState = transitionState;
-            m_CurrentStateTag = transitionTag;
+            SetCurrentState(transitionTag, transitionState);
 
             transitionState.StartAction();
 
@@ -261,8 +265,7 @@ namespace SilverPillar.State
             m_TransitionPhase = TransitionPhase.None;
             m_TransitionSourceState = null;
 
-            m_CurrentState = m_PendingState;
-            m_CurrentStateTag = m_PendingStateTag;
+            SetCurrentState(m_PendingStateTag, m_PendingState);
 
             m_PendingState = null;
             m_PendingStateTag = null;
@@ -281,8 +284,7 @@ namespace SilverPillar.State
             m_TransitionPhase = TransitionPhase.None;
             m_TransitionSourceState = null;
 
-            m_CurrentState = null;
-            m_CurrentStateTag = null;
+            SetCurrentState(null, null);
 
             m_PendingState = null;
             m_PendingStateTag = null;
@@ -291,6 +293,23 @@ namespace SilverPillar.State
             ClearQueuedState();
 
             m_OnNullState?.Invoke();
+        }
+
+        private void SetCurrentState(StateTag stateTag, State state)
+        {
+            bool stateChanged = !ReferenceEquals(m_CurrentStateTag, stateTag) ||
+                                !ReferenceEquals(m_CurrentState, state);
+
+            m_CurrentState = state;
+            m_CurrentStateTag = stateTag;
+
+            if (!m_PrintCurrentState || !stateChanged)
+                return;
+
+            string stateName = stateTag != null ? stateTag.name : "NULL";
+            string phase = m_IsTransitioning ? $" ({m_TransitionPhase})" : string.Empty;
+
+            Debug.Log($"[StateMachine] {gameObject.name}: Current state -> {stateName}{phase}", this);
         }
 
         private void ClearQueuedState()

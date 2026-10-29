@@ -17,7 +17,7 @@ namespace SilverPillar.Core
 
         public ActionTimeline Clone()
         {
-            return m_ActionTimeline.Clone() as ActionTimeline;
+            return m_ActionTimeline?.Clone() as ActionTimeline;
         }
     }
 }

@@ -97,6 +97,8 @@ namespace SilverPillar.Core
         private class TimelineSegment
         {
             [SerializeField]
+            private string Name;
+            [SerializeField]
             private List<PossibleSegment> m_PossibleSegments = new();
 
             public IEnumerable<PossibleSegment> PossibleSegments =>
@@ -178,6 +180,8 @@ namespace SilverPillar.Core
             }
         }
 
+        [InfoBox("The duration is calculated by adding the total duration of the sequential timeline segments.")]
+
         [Title("Sequential Timeline Segments")]
         [SerializeField]
         private List<TimelineSegment> m_SequentialTimelineSegment = new();
@@ -249,6 +253,7 @@ namespace SilverPillar.Core
                 return null;
 
             var result = new ActionTimeline();
+            result.SetDurationCalculationMode(HowToCalculateTimelineDuration.CalculateDurationFromTimelineSequenceData);
 
             // Sequential timelines
             var sequential =
@@ -263,6 +268,7 @@ namespace SilverPillar.Core
 
                 result.AddSequentialTimeline(asset.Clone());
             }
+
 
             // Free timelines
             var free =
@@ -280,19 +286,19 @@ namespace SilverPillar.Core
 
             if (validCount > 0)
             {
-                float slotDuration = result.Duration / validCount;
+                // Do NOT use result.Duration here. Any nested timeline that
+                // uses ICachedScore may not have calculated its duration yet,
+                // because SetGameObject() is called later by the controller.
+                // Equal-slot placement is resolved after binding and again
+                // on each parent StartAction() (if its duration changes).
                 int index = 0;
-
                 foreach (var asset in free)
                 {
                     if (asset == null || asset.IsNull())
                         continue;
 
-                    result.AddFreeTimeline(
-                        asset.Clone(),
-                        index * slotDuration,
-                        slotDuration);
-
+                    result.AddDistributedFreeTimeline(
+                        asset.Clone(), index, validCount);
                     index++;
                 }
             }
