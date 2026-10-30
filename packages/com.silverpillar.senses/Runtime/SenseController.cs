@@ -88,6 +88,34 @@ namespace SilverPillar.Senses
             " to stop sensing or forget (whichever unregister mode you chose) this object.")]
         private UnityEvent<GameObject> m_OnLastInGroupToStopSensingOrForget;
 
+        public bool HasTargetsInMemory()
+        {
+            return m_CurrentSenseInformation.Sensed.Count > 0
+                || m_ForgetTimerIndices.Count > 0;
+        }
+
+        //aka hasn't forgotten
+        public bool IsInMemory(GameObject gameObject)
+        {
+            if (gameObject != null &&
+                gameObject.TryGetComponent(out SenseTarget target))
+            {
+                return IsInMemory(target);
+            }
+
+            return false;
+        }
+
+        public bool IsInMemory(SenseTarget senseTarget)
+        {
+            if (senseTarget == null)
+            {
+                return false;
+            }
+
+            return m_CurrentSenseInformation.IsSensing(senseTarget)
+                || m_ForgetTimerIndices.ContainsKey(senseTarget);
+        }
 
         public bool IsSensing(GameObject gameObject)
         {

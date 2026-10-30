@@ -13,7 +13,9 @@ namespace SilverPillar.Integrations.MMTopDown
             CanAttackShortRange,
             CanAttackLongRange,
             PreferShortRange,
-            PreferLongRange
+            PreferLongRange,
+            IsPermittedShortRange,
+            IsPermittedLongRange
         }
 
         public enum SelfType
@@ -76,6 +78,10 @@ namespace SilverPillar.Integrations.MMTopDown
                     return targetComponent.PreferShortRange();
                 case RangeConditionType.PreferLongRange:
                     return targetComponent.PreferLongRange();
+                case RangeConditionType.IsPermittedShortRange:
+                    return targetComponent.IsPermittedToAttackShortRange();
+                case RangeConditionType.IsPermittedLongRange:
+                    return targetComponent.IsPermittedToAttackLongRange();
                 default:
                     return false;
             }

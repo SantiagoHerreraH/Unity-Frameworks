@@ -109,6 +109,17 @@ namespace SilverPillar.Integrations.MMTopDown
             m_Target = target;
         }
 
+        public bool IsPermittedToAttackShortRange()
+        {
+            return m_AllowShortRange;
+        }
+
+        public bool IsPermittedToAttackLongRange()
+        {
+
+            return m_AllowLongRange;
+        }
+
         public bool CanAttackLongRange()
         {
             if (!m_AllowLongRange || m_Target == null) return false;

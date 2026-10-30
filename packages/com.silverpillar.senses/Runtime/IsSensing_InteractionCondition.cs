@@ -12,8 +12,7 @@ namespace SilverPillar.Senses
         {
             IsSensing,
             IsInSenseGroup,
-            Both,
-            Either
+            IsInMemory
         }
         [SerializeField]
         private SensingManner m_SensingManner;
@@ -50,14 +49,9 @@ namespace SilverPillar.Senses
                         return m_SenseController.IsSensing(senseTarget);
                     case SensingManner.IsInSenseGroup:
                         return m_SenseController.IsInSensingGroup(senseTarget);
-                    case SensingManner.Both:
-                        return 
-                            m_SenseController.IsSensing(senseTarget) && 
-                            m_SenseController.IsInSensingGroup(senseTarget);
-                    case SensingManner.Either:
-                        return 
-                            m_SenseController.IsSensing(senseTarget) ||
-                            m_SenseController.IsInSensingGroup(senseTarget);
+                    case SensingManner.IsInMemory:
+                        return
+                            m_SenseController.IsInMemory(senseTarget);
                     default:
                         break;
                 }
