@@ -1,0 +1,7 @@
+{
+  "name": "SilverPillar.Core.Editor",
+  "rootNamespace": "SilverPillar.Core.Editor",
+  "includePlatforms": ["Editor"],
+  "references": [],
+  "autoReferenced": true
+}
