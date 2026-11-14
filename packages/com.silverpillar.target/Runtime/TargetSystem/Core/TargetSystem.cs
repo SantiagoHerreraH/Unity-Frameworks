@@ -72,6 +72,7 @@ namespace SilverPillar.Target
         private WhatToDoIfPossibleTargetDoesntPassFilter m_WhatToDoIfPossibleTargetDoesntPassFilter = WhatToDoIfPossibleTargetDoesntPassFilter.NullCurrentTarget;
 
         [FoldoutGroup("When to Filter Current Target")]
+        [Tooltip("On enable, operation order is nulling -> choosing -> filtering -> clearing possible targets")]
         [SerializeField]
         private TargetOperationModes m_WhenToFilterTarget = TargetOperationModes.DontDoSoAutomatically;
         [FoldoutGroup("When to Filter Current Target")]
@@ -106,6 +107,7 @@ namespace SilverPillar.Target
         private ICachedInteractionScore m_HowToCalculateScore;
 
         [FoldoutGroup("When to Choose Current Target")]
+        [Tooltip("On enable, operation order is nulling -> choosing -> filtering -> clearing possible targets")]
         [SerializeField]
         private TargetOperationModes m_WhenToChooseTarget = TargetOperationModes.DontDoSoAutomatically;
 
@@ -113,6 +115,25 @@ namespace SilverPillar.Target
         [SerializeField, Min(0), Tooltip("0 means every tick"), ShowIf(nameof(m_WhenToChooseTarget), TargetOperationModes.OnUpdate)]
         private float m_HowOftenToRecalculateCurrentTarget;
         private float m_TimeSinceLastCalculatedCurrentTarget = 0;
+
+        private enum TargetClearingOperations
+        {
+            DontDoSoAutomatically,
+            OnEnable,
+            OnDisable
+        }
+
+        [FoldoutGroup("When to Null Current Target")]
+        [Tooltip("On enable, operation order is nulling -> choosing -> filtering -> clearing possible targets")]
+        [SerializeField]
+        private TargetClearingOperations m_WhenToNullCurrentTarget = TargetClearingOperations.DontDoSoAutomatically;
+
+
+        [FoldoutGroup("When to Clear Possible Targets")]
+        [Tooltip("On enable, operation order is nulling -> choosing -> filtering -> clearing possible targets")]
+        [SerializeField]
+        private TargetClearingOperations m_WhenToClearPossibleTargets = TargetClearingOperations.DontDoSoAutomatically;
+
 
         [FoldoutGroup("Events")]
         [SerializeField]
@@ -182,6 +203,11 @@ namespace SilverPillar.Target
 
         private void OnEnable()
         {
+            if (m_WhenToNullCurrentTarget == TargetClearingOperations.OnEnable)
+            {
+                NullCurrentTarget();
+            }
+
             if (m_WhenToChooseTarget == TargetOperationModes.OnEnable)
             {
                 ChooseCurrentTarget();
@@ -191,11 +217,30 @@ namespace SilverPillar.Target
             {
                 FilterCurrentTarget();
             }
+
+            if (m_WhenToClearPossibleTargets == TargetClearingOperations.OnEnable)
+            {
+                ClearPossibleTargets();
+            }
         }
         private void Update()
         {
             UpdateChooseTarget();
             UpdateFilterTarget();
+        }
+
+
+        private void OnDisable()
+        {
+            if (m_WhenToNullCurrentTarget == TargetClearingOperations.OnDisable)
+            {
+                NullCurrentTarget();
+            }
+
+            if (m_WhenToClearPossibleTargets == TargetClearingOperations.OnDisable)
+            {
+                ClearPossibleTargets();
+            }
         }
 
         private void UpdateChooseTarget()
@@ -272,6 +317,12 @@ namespace SilverPillar.Target
                     FilterCurrentTarget();
                 }
             }
+        }
+
+        public void ClearPossibleTargets()
+        {
+            m_PossibleTargets?.Clear();
+            m_PossibleTargetsHashset?.Clear();
         }
 
         public bool HasPossibleTarget(GameObject possibleTarget)

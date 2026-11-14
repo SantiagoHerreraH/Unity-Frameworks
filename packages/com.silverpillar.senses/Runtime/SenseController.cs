@@ -376,15 +376,9 @@ namespace SilverPillar.Senses
 
                 Initialize();
 
-                for (int i = 0; i < m_Senses.Count; i++)
-                {
-                    m_Senses[i]?.UnregisterAll();
-                }
+                UnregisterAllTargets();
 
-                for (int i = 0; i < SenseTarget.RegisteredTargets.Count; i++)
-                {
-                    Register(SenseTarget.RegisteredTargets[i]);
-                }
+                RegisterAllTargets();
             }
         }
 
@@ -400,10 +394,7 @@ namespace SilverPillar.Senses
 
             Initialize();
 
-            for (int i = 0; i < m_Senses.Count; i++)
-            {
-                m_Senses[i]?.UnregisterAll();
-            }
+            UnregisterAllTargets();
 
             ClearForgetTimers();
         }
@@ -449,6 +440,26 @@ namespace SilverPillar.Senses
             // The target is no longer part of this controller at all,
             // so it shouldn't have a pending forget timer.
             ResetForgetTimer(target);
+        }
+
+        private void UnregisterAllTargets()
+        {
+            m_RegisteredTargets?.Clear();
+
+            for (int i = 0; i < m_Senses.Count; i++)
+            {
+                m_Senses[i]?.UnregisterAll();
+            }
+
+            ClearForgetTimers();
+        }
+
+        private void RegisterAllTargets()
+        {
+            for (int i = 0; i < SenseTarget.RegisteredTargets.Count; i++)
+            {
+                Register(SenseTarget.RegisteredTargets[i]);
+            }
         }
 
         private void Initialize()

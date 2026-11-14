@@ -89,6 +89,46 @@ namespace SilverPillar.State
             m_CurrentState?.UpdateAction();
         }
 
+        public void ForceChangeState(StateTag stateTag)
+        {
+            // Validate the requested state.
+            if (stateTag == null ||
+                !m_States.TryGetValue(stateTag, out State requestedState) ||
+                requestedState == null)
+                return;
+
+            // Do nothing if already in the requested state,
+            // unless currently transitioning.
+            if (!m_IsTransitioning && m_CurrentStateTag == stateTag)
+                return;
+
+            // End the current state (including an active transition state).
+            m_CurrentState?.EndAction();
+
+            // Cancel any ongoing transition.
+            m_IsTransitioning = false;
+            m_TransitionPhase = TransitionPhase.None;
+            m_TransitionSourceState = null;
+
+            // Clear pending state.
+            m_PendingStateTag = null;
+            m_PendingState = null;
+            m_PendingNullState = false;
+
+            // Clear queued state.
+            ClearQueuedState();
+
+            // Immediately enter the requested state.
+            SetCurrentState(stateTag, requestedState);
+
+            // Invoke state change event.
+            m_OnStateChange?.Invoke(stateTag);
+
+            // Start the new state.
+            requestedState.StartAction();
+        }
+
+
         public void ChangeState(StateTag stateTag)
         {
             if (stateTag == null || !m_States.TryGetValue(stateTag, out State requestedState))

@@ -25,9 +25,9 @@ namespace SilverPillar.Core
 
         [Title("Registration Settings")]
         [SerializeField]
-        private WhenToRegisterSpawnPoint m_WhenToRegisterSpawnPoint;
+        private WhenToRegisterSpawnPoint m_WhenToRegisterSpawnPoint = WhenToRegisterSpawnPoint.OnAwake;
         [SerializeField]
-        private WhenToDeregisterSpawnPoint m_WhenToDeregisterSpawnPoint;
+        private WhenToDeregisterSpawnPoint m_WhenToDeregisterSpawnPoint = WhenToDeregisterSpawnPoint.OnDestroy;
 
         [Title("Events")]
         public UnityEvent<GameObject> m_OnRespawn = new();
