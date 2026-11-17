@@ -55,7 +55,7 @@ namespace SilverPillar.Core
         [OdinSerialize, ShowInInspector]
         private ICachedCondition m_ConditionToRegister;
 
-        [SerializeField, Min(1)]
+        [SerializeField, Min(0), Tooltip("Zero means infinite")]
         private int m_MaxGameObjectsToRegister = 1;
 
         [SerializeField]
@@ -65,7 +65,7 @@ namespace SilverPillar.Core
         private WhenToDeRegister m_WhenToDeRegister = WhenToDeRegister.All;
 
 
-        [Header("Action")]
+        [Title("Action")]
         [SerializeField]
         private WhenToActOnRegistered m_WhenToActOnRegistered;
 
@@ -94,7 +94,7 @@ namespace SilverPillar.Core
                 return false;
             }
 
-            if (m_RegisteredGameObjects.Contains(gameObject))
+            if (m_RegisteredGameObjects.Contains(gameObject) || (m_RegisteredGameObjects.Count >= m_MaxGameObjectsToRegister && m_MaxGameObjectsToRegister > 0))
             {
                 return false;
             }
