@@ -80,6 +80,7 @@ namespace SilverPillar.Stats
         [SerializeField]
         public StatValue MaxLimitStat;
 
+        public bool IsImmune;
 
         public Action<float, float> OnCurrentDefaultRatioChange;  //new value
         public Action<float, float> OnCurrentStatChange;  //past value, new value

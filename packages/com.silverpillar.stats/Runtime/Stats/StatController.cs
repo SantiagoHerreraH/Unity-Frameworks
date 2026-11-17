@@ -222,10 +222,14 @@ namespace SilverPillar.Stats
     [Serializable]
     public class StatSetting
     {
+        [Title("Data")]
         public StatType StatType;
         [Range(0,100)]
         public float Value;
+        [Tooltip("If is immune, won't be affected by modifcation and modification events will not be triggered.")]
+        public bool IsImmuneToModification = false;
 
+        [Title("Events")]
         public StatRatioEvent   CurrentToDefaultRatioEvents;
         public StatEvent        CurrentStatEvents;
         public StatEvent        DefaultStatEvents;
@@ -235,6 +239,16 @@ namespace SilverPillar.Stats
         public void Apply(StatController statController)
         {
             statController.CreateStatType(StatType, Value);
+
+            if (IsImmuneToModification)
+            {
+                statController.ActivateImmunity(StatType);
+            }
+            else
+            {
+                statController.DeactivateImmunity(StatType);
+            }
+            
             statController.SubscribeOnCurrentDefaultRatioChange(StatType, TriggerCurrentDefaultRatioChange);
             statController.SubscribeOnCurrentStatChange(StatType, TriggerCurrentStatChange);
             statController.SubscribeOnDefaultStatChange(StatType, TriggerDefaultStatChange);
@@ -501,6 +515,35 @@ namespace SilverPillar.Stats
             }
         }
 
+        public bool IsImmune(StatType statType)
+        {
+            var stat = GetStat(statType);
+            if (stat != null)
+            {
+                return stat.IsImmune;
+            }
+
+            return true;
+        }
+
+        public void ActivateImmunity(StatType statType)
+        {
+            var stat = GetStat(statType);
+            if (stat != null)
+            {
+                stat.IsImmune = true;
+            }
+        }
+
+        public void DeactivateImmunity(StatType statType)
+        {
+            var stat = GetStat(statType);
+            if (stat != null)
+            {
+                stat.IsImmune = false;
+            }
+        }
+
         private void CreateStatTypes()
         {
             foreach (var statType in m_StatSettings)
@@ -606,85 +649,85 @@ namespace SilverPillar.Stats
 
         public void SubscribeOnCurrentStatChange(StatType statType, Action<float, float> action)
         {
-            var statStruct = GetStat(statType);
-            if (statStruct != null)
+            var stat = GetStat(statType);
+            if (stat != null)
             {
-                statStruct.OnCurrentStatChange += action;
+                stat.OnCurrentStatChange += action;
             }
         }
         public void SubscribeOnDefaultStatChange(StatType statType, Action<float, float> action)
         {
-            var statStruct = GetStat(statType);
-            if (statStruct != null)
+            var stat = GetStat(statType);
+            if (stat != null)
             {
-                statStruct.OnDefaultStatChange += action;
+                stat.OnDefaultStatChange += action;
             }
         }
         public void SubscribeOnMinLimitStatChange(StatType statType, Action<float, float> action)
         {
-            var statStruct = GetStat(statType);
-            if (statStruct != null)
+            var stat = GetStat(statType);
+            if (stat != null)
             {
-                statStruct.OnMinLimitStatChange += action;
+                stat.OnMinLimitStatChange += action;
             }
         }
         public void SubscribeOnMaxLimitStatChange(StatType statType, Action<float, float> action)
         {
-            var statStruct = GetStat(statType);
-            if (statStruct != null)
+            var stat = GetStat(statType);
+            if (stat != null)
             {
-                statStruct.OnMaxLimitStatChange += action;
+                stat.OnMaxLimitStatChange += action;
             }
         }
 
         public void SubscribeOnCurrentDefaultRatioChange(StatType statType, Action<float, float> action)
         {
-            var statStruct = GetStat(statType);
-            if (statStruct != null)
+            var stat = GetStat(statType);
+            if (stat != null)
             {
-                statStruct.OnCurrentDefaultRatioChange += action;
+                stat.OnCurrentDefaultRatioChange += action;
             }
         }
 
         public void UnsubscribeOnCurrentDefaultRatioChange(StatType statType, Action<float, float> action)
         {
-            var statStruct = GetStat(statType);
-            if (statStruct != null)
+            var stat = GetStat(statType);
+            if (stat != null)
             {
-                statStruct.OnCurrentDefaultRatioChange += action;
+                stat.OnCurrentDefaultRatioChange += action;
             }
         }
 
         public void UnsubscribeOnCurrentStatChange(StatType statType, Action<float, float> action)
         {
-            var statStruct = GetStat(statType);
-            if (statStruct != null)
+            var stat = GetStat(statType);
+            if (stat != null)
             {
-                statStruct.OnCurrentStatChange -= action;
+                stat.OnCurrentStatChange -= action;
             }
         }
         public void UnsubscribeOnDefaultStatChange(StatType statType, Action<float, float> action)
         {
-            var statStruct = GetStat(statType);
-            if (statStruct != null)
+            var stat = GetStat(statType);
+            if (stat != null)
             {
-                statStruct.OnDefaultStatChange -= action;
+                stat.OnDefaultStatChange -= action;
             }
         }
         public void UnsubscribeOnMinLimitStatChange(StatType statType, Action<float, float> action)
         {
-            var statStruct = GetStat(statType);
-            if (statStruct != null)
+            var stat = GetStat(statType);
+            if (stat != null)
             {
-                statStruct.OnMinLimitStatChange -= action;
+                stat.OnMinLimitStatChange -= action;
             }
         }
         public void UnsubscribeOnMaxLimitStatChange(StatType statType, Action<float, float> action)
         {
-            var statStruct = GetStat(statType);
-            if (statStruct != null)
+            var stat = GetStat(statType);
+            if (stat != null)
             {
-                statStruct.OnMaxLimitStatChange -= action;
+                stat.OnMaxLimitStatChange -= action;
             }
         }
         #endregion
@@ -777,7 +820,7 @@ namespace SilverPillar.Stats
         
         public void Modify(StatType statType, float value, StatOperation statOperation, StatVariable statVariable)
         {
-            if (HasStatType(statType))
+            if (!IsImmune(statType)) //returns true if does not have statType
             {
                 ModificationType modType = new ModificationType{StatTypeThatIsBeingAffected = statType, StatOperationOnAffectedStat = statOperation, StatVariableOfAffectedStat = statVariable};
 
