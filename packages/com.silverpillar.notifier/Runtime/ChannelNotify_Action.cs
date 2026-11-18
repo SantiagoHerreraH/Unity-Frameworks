@@ -16,8 +16,7 @@ namespace SilverPillar.Notifier
                 Notify,
                 LockLocal,
                 UnlockLocal,
-                CallNotifyOnAllLocal,
-                RefreshPossibleListeners
+                CallNotifyOnAllLocal
             }
 
             public enum TriggerMoment
@@ -101,10 +100,6 @@ namespace SilverPillar.Notifier
                 {
                     case NotifyFunction.Notify:
                         m_TargetNotifier.Notify();
-                        break;
-
-                    case NotifyFunction.RefreshPossibleListeners:
-                        m_TargetNotifier.RefreshPossibleListeners();
                         break;
 
                     case NotifyFunction.LockLocal:

@@ -90,24 +90,30 @@ namespace SilverPillar.GOAP
 
                 m_CurrentActionInstance.StartAction();
 
-                if (m_BehaviorActionEvents != null && m_BehaviorActionEventsDictionary.TryGetValue(m_CurrentActionInstance.Action, out m_CurrentEvent))
+                if (m_BehaviorActionEvents != null && m_CurrentActionInstance != null && m_BehaviorActionEventsDictionary.TryGetValue(m_CurrentActionInstance.Action, out m_CurrentEvent))
                 {
                     m_CurrentEvent.OnStart?.Invoke();
                 }
 
-                if (m_PrintActionOnActionChange)
+                if (m_PrintActionOnActionChange && m_CurrentActionInstance != null)
                 {
                     Debug.Log($"{gameObject}'s Brain Holder NEW ACTION is {m_CurrentActionInstance.Action.name}");
                 }
             }
 
-            m_CurrentActionInstance.UpdateAction();
+            m_CurrentActionInstance?.UpdateAction();
 
         }
 
         public void NullCurrentAction()
         {
+            if (m_BehaviorActionEvents != null && m_CurrentActionInstance != null && m_BehaviorActionEventsDictionary.TryGetValue(m_CurrentActionInstance.Action, out m_CurrentEvent))
+            {
+                m_CurrentEvent.OnEnd?.Invoke();
+            }
+
             m_CurrentActionInstance = null;
+            m_CurrentEvent = null;
         }
     }
 }

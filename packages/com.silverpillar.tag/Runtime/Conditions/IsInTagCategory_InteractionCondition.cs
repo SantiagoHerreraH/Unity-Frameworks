@@ -1,4 +1,5 @@
 using SilverPillar.Core;
+using Sirenix.OdinInspector;
 using System;
 using UnityEngine;
 
@@ -8,9 +9,12 @@ namespace SilverPillar.Tag
     public class IsInTagCategory_InteractionCondition : IInteractionCondition
     {
         [SerializeField]
+        private SelfType m_WhichTagCatgeoryDefiner;
+        [SerializeField, ShowIf(nameof(m_WhichTagCatgeoryDefiner), SelfType.CustomGameObject)]
+        private TagCategoryDefiner m_TagCategoryDefiner;
+        [SerializeField]
         private Tag m_CategoryTag;
 
-        private TagCategoryDefiner m_TagCategoryDefiner;
 
         public IsInTagCategory_InteractionCondition() { }
         public IsInTagCategory_InteractionCondition(IsInTagCategory_InteractionCondition other)
@@ -44,7 +48,12 @@ namespace SilverPillar.Tag
 
         public bool SetGameObject(GameObject self)
         {
-            return self.TryGetComponent(out m_TagCategoryDefiner);
+            if (m_WhichTagCatgeoryDefiner == SelfType.ThisGameObject)
+            {
+                return self.TryGetComponent(out m_TagCategoryDefiner);
+            }
+
+            return m_TagCategoryDefiner != null;
         }
 
 #nullable enable

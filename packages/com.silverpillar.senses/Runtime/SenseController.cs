@@ -52,7 +52,7 @@ namespace SilverPillar.Senses
         private bool m_GroupSensingAndCanForget => m_RegisterInSenseGroupUponSensing && m_CanForget;
 
         [SerializeField, ShowIf(nameof(m_GroupSensingAndCanForget))]
-        private WhenToUnregisterInSenseGroup m_WhenToUnregisterInSenseGroup = WhenToUnregisterInSenseGroup.OnStopSensing;
+        private WhenToUnregisterInSenseGroup m_WhenToUnregisterInSenseGroup = WhenToUnregisterInSenseGroup.OnForget;
 
         [OdinSerialize, ShowIf(nameof(m_RegisterInSenseGroupUponSensing))]
         private IString m_SenseGroupName;

@@ -11,9 +11,23 @@ namespace SilverPillar.Notifier
 
     public class ChannelListener : SerializedMonoBehaviour
     {
-        [Title("Settings")]
-        [SerializeField, Tooltip("The gameObject has to be active at least once for it to listen to anything")]
-        private bool m_ListenEvenIfDeactivated;
+        private enum WhenToRegister
+        {
+            OnEnable,
+            OnAwake
+        }
+
+        private enum WhenToDeregister
+        {
+            OnDisable,
+            OnDestroy
+        }
+
+        [Title("Registration Settings")]
+        [SerializeField]
+        private WhenToRegister m_WhenToRegister;
+        [SerializeField]
+        private WhenToDeregister m_WhenToDeregister;
 
 
         [Title("Channels")]
@@ -92,19 +106,12 @@ namespace SilverPillar.Notifier
             if (!m_Initialized)
             {
                 m_Initialized = true;
-                m_AllChannelListeners = Object.FindObjectsByType<ChannelListener>(FindObjectsInactive.Include, FindObjectsSortMode.None).ToHashSet();
 
                 var allChannels = ScriptableObjectRegistry.Instance.GetAllOfType<Channel>();
                 foreach (var channel in allChannels)
                 {
                     m_Channel_To_ChannelListeners.Add(channel, new());
                 }
-
-                foreach (var listener in m_AllChannelListeners)
-                {
-                    Register(listener);
-                }
-
             }
         }
 
@@ -127,6 +134,11 @@ namespace SilverPillar.Notifier
                     m_Channel_To_ChannelListeners[channel].Add(listener);
                 }
             }
+
+            foreach (ChannelNotifier item in ChannelNotifier.RegisteredChannelNotifiers)
+            {
+                item.AddListener(listener);
+            }
         }
 
         private static void Unregister(ChannelListener listener)
@@ -148,16 +160,43 @@ namespace SilverPillar.Notifier
                     m_Channel_To_ChannelListeners[channel].Remove(listener);
                 }
             }
+
+            foreach (ChannelNotifier item in ChannelNotifier.RegisteredChannelNotifiers)
+            {
+                item.RemoveListener(listener);
+            }
         }
 
         private void Awake()
         {
-            Register(this);
+            if (m_WhenToRegister == WhenToRegister.OnAwake)
+            {
+                Register(this);
+            }
+        }
+
+        private void OnEnable()
+        {
+            if (m_WhenToRegister == WhenToRegister.OnEnable)
+            {
+                Register(this);
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (m_WhenToDeregister == WhenToDeregister.OnDisable)
+            {
+                Unregister(this);
+            }
         }
 
         private void OnDestroy()
         {
-            Unregister(this);
+            if (m_WhenToDeregister == WhenToDeregister.OnDestroy)
+            {
+                Unregister(this);
+            }
         }
 
         public void Listen(ChannelNotifier notifier)
@@ -193,9 +232,7 @@ namespace SilverPillar.Notifier
 
         public bool CanListenTo(ChannelNotifier notifier)
         {
-            return
-                (m_ListenEvenIfDeactivated || (gameObject.activeInHierarchy)) &&
-                (m_ListenOnAllChannels || NotifierChannelMatchesListenerChannel(notifier));
+            return m_ListenOnAllChannels || NotifierChannelMatchesListenerChannel(notifier);
         }
 
         public bool HasChannel(Channel dataChannel)

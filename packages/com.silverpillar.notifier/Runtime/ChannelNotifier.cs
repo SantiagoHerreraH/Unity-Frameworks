@@ -67,6 +67,8 @@ namespace SilverPillar.Notifier
         [OdinSerialize, ShowInInspector, Tooltip("These actions are executed on notify to.")]
         private List<ICachedGameAction> m_ActionsToExecuteOnListener = new();
 
+
+        private HashSet<ChannelListener> m_PossibleChannelListenersSet = new();
         private List<ChannelListener> m_PossibleChannelListeners = new();
         private List<ChannelNotifier> m_GameObjectChannelNotifiers = new();
         public static List<ChannelNotifier> RegisteredChannelNotifiers { get; private set; } = new();
@@ -79,11 +81,6 @@ namespace SilverPillar.Notifier
         private void OnDestroy()
         {
             Unregister(this);
-        }
-
-        private void Start()
-        {
-            RefreshPossibleListeners();
         }
 
         #region Static Calls
@@ -217,16 +214,21 @@ namespace SilverPillar.Notifier
 
 #endregion
 
-        public void RefreshPossibleListeners()
+        public void AddListener(ChannelListener listener)
         {
-            m_PossibleChannelListeners.Clear();
-
-            foreach (var listener in ChannelListener.AllChannelListeners)
+            if (listener.CanListenTo(this) && !m_PossibleChannelListenersSet.Contains(listener))
             {
-                if (listener.CanListenTo(this))
-                {
-                    m_PossibleChannelListeners.Add(listener);
-                }
+                m_PossibleChannelListeners.Add(listener);
+                m_PossibleChannelListenersSet.Add(listener);
+            }
+        }
+
+        public void RemoveListener(ChannelListener listener)
+        {
+            if (m_PossibleChannelListenersSet.Contains(listener))
+            {
+                m_PossibleChannelListeners.Remove(listener);
+                m_PossibleChannelListenersSet.Remove(listener);
             }
         }
 
@@ -245,11 +247,6 @@ namespace SilverPillar.Notifier
             if (m_NotifyIf != null && m_NotifyIf.GetGameObject() == null)
             {
                 m_NotifyIf.SetGameObject(gameObject);
-            }
-
-            if (m_PossibleChannelListeners.Count == 0)
-            {
-                RefreshPossibleListeners();
             }
 
             m_OnNotifyAllPossibleListeners.Invoke();
