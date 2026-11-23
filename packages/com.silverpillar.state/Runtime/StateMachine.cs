@@ -24,6 +24,9 @@ namespace SilverPillar.State
         [FoldoutGroup("Events")]
         [SerializeField]
         private StateEvent m_OnStateChange = null;
+        [FoldoutGroup("Events")]
+        [SerializeField]
+        private UnityEvent<string> m_OnStateChangeString = null;
 
         [FoldoutGroup("Events")]
         [SerializeField]
@@ -123,6 +126,7 @@ namespace SilverPillar.State
 
             // Invoke state change event.
             m_OnStateChange?.Invoke(stateTag);
+            m_OnStateChangeString?.Invoke(stateTag.name);
 
             // Start the new state.
             requestedState.StartAction();
@@ -315,6 +319,7 @@ namespace SilverPillar.State
                 return;
 
             m_OnStateChange?.Invoke(m_CurrentStateTag);
+            m_OnStateChangeString?.Invoke(m_CurrentStateTag.name);
             m_CurrentState.StartAction();
         }
 

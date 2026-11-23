@@ -445,6 +445,7 @@ namespace SilverPillar.Senses
         private void UnregisterAllTargets()
         {
             m_RegisteredTargets?.Clear();
+            ClearSensedInformation();
 
             for (int i = 0; i < m_Senses.Count; i++)
             {
@@ -452,6 +453,13 @@ namespace SilverPillar.Senses
             }
 
             ClearForgetTimers();
+        }
+
+        private void ClearSensedInformation()
+        {
+            m_CurrentSenseInformation.Clear();
+            m_NewSenseInformation.Clear();
+            m_ChangesSenseInformation.Clear();
         }
 
         private void RegisterAllTargets()

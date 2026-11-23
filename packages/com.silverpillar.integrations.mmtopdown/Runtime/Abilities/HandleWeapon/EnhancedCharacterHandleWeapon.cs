@@ -821,17 +821,17 @@ namespace SilverPillar.Integrations.MMTopDown
             // End whichever shooting session is currently active.
             EndShoot();
 
-            base.OnDeath();
+            StopAbilityUsedSfx();
+            ShootStop();
 
             if (CurrentSuperWeapon != null)
             {
                 CurrentSuperWeapon.TurnWeaponOff();
-                Destroy(CurrentSuperWeapon.gameObject);
             }
 
-            CurrentSuperWeapon = null;
-            CurrentNonSuperWeapon = null;
-            CurrentWeapon = null;
+            //CurrentSuperWeapon = null;
+            //CurrentNonSuperWeapon = null;
+            //CurrentWeapon = null;
 
             m_IsShooting = false;
             m_IsSuperShooting = false;
