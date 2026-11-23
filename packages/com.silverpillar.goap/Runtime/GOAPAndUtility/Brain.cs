@@ -20,6 +20,7 @@ namespace SilverPillar.GOAP
         private Brain m_Brain = null;
         private GameObject m_GameObject = null;
         private BrainInstanceDebugSettings m_DebugSettings;
+        private CachedCondition m_CurrentGoal;
         public GameObject GameObject { get { return m_GameObject; } }
         public BrainInstance(Brain brain, GameObject gameObject, BrainInstanceDebugSettings debugSettings) 
         {
@@ -30,22 +31,26 @@ namespace SilverPillar.GOAP
             m_GoalPlanInstance = brain.GoalPlan.CreateInstance(gameObject);
         }
 
+        public CachedCondition GetCurrentGoal()
+        {
+            return m_CurrentGoal;
+        }
 
         public BehaviorActionInstance GetActionInstance()
         {
             BehaviorActionInstance actionInstance = null;
-            CachedCondition chosenGoal = m_GoalPlanInstance.GetGoal();
+            m_CurrentGoal = m_GoalPlanInstance.GetGoal();
 
-            if (chosenGoal != null)
+            if (m_CurrentGoal != null)
             {
                 if (m_DebugSettings.PrintCurrentGoal)
                 {
-                    Debug.Log($"{m_GameObject}'s GOAP BrainHolder's Current Goal is {chosenGoal.name}");
+                    Debug.Log($"{m_GameObject}'s GOAP BrainHolder's Current Goal is {m_CurrentGoal.name}");
                 }
 
 
                 List<BehaviorAction> currentPossibleActions = m_ActionListInstance.GetCurrentPossibleActions();
-                List<BehaviorAction> actionsThatLeadToGoal = m_ActionListInstance.GetActionsThatLeadToGoal(chosenGoal);
+                List<BehaviorAction> actionsThatLeadToGoal = m_ActionListInstance.GetActionsThatLeadToGoal(m_CurrentGoal);
                 BehaviorAction chosenAction = m_Brain.GetAction(m_GameObject, currentPossibleActions, actionsThatLeadToGoal);
                 
                 if (chosenAction != null)

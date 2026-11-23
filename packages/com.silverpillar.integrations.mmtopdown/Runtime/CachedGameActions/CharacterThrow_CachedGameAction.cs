@@ -9,8 +9,8 @@ namespace SilverPillar.Integrations.MMTopDown
     public class CharacterThrow_CachedGameAction : ICachedGameAction
     {
         [SerializeField]
-        private SelfType m_WhichCharacterGrabCarryAndThrow;
-        [SerializeField, ShowIf(nameof(m_WhichCharacterGrabCarryAndThrow), SelfType.CustomGameObject)]
+        private WhereToGetComponentFrom m_WhichCharacterGrabCarryAndThrow;
+        [SerializeField, ShowIf(nameof(m_WhichCharacterGrabCarryAndThrow), WhereToGetComponentFrom.Custom)]
         private CharacterGrabCarryAndThrow m_CharacterGrabCarryAndThrow;
         private GameObject m_Self;
 
@@ -41,9 +41,21 @@ namespace SilverPillar.Integrations.MMTopDown
         {
             m_Self = gameObj;
 
-            if (m_WhichCharacterGrabCarryAndThrow == SelfType.ThisGameObject)
+            switch (m_WhichCharacterGrabCarryAndThrow)
             {
-                m_CharacterGrabCarryAndThrow = gameObj.GetComponent<CharacterGrabCarryAndThrow>();
+                case WhereToGetComponentFrom.Self:
+                    m_CharacterGrabCarryAndThrow = gameObj.GetComponent<CharacterGrabCarryAndThrow>();
+                    break;
+                case WhereToGetComponentFrom.SelfAndChildren:
+                    m_CharacterGrabCarryAndThrow = gameObj.GetComponentInChildren<CharacterGrabCarryAndThrow>(true);
+                    break;
+                case WhereToGetComponentFrom.Parent:
+                    m_CharacterGrabCarryAndThrow = gameObj.GetComponentInParent<CharacterGrabCarryAndThrow>(true);
+                    break;
+                case WhereToGetComponentFrom.Custom:
+                    break;
+                default:
+                    break;
             }
 
             return m_Self != null && m_CharacterGrabCarryAndThrow != null;

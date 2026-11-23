@@ -20,12 +20,42 @@ namespace SilverPillar.Integrations.MMTopDown
         [SerializeField]
         private Color m_PrintColor = Color.coral;
 
+        private HashSet<GameObject> m_ImmuneGameObjects = new();
+
+        public void AddImmune(GameObject gameObj)
+        {
+            m_ImmuneGameObjects ??= new();
+
+            m_ImmuneGameObjects.Add(gameObj);
+        }
+
+        public void RemoveImmune(GameObject gameObj)
+        {
+
+            m_ImmuneGameObjects ??= new();
+
+            m_ImmuneGameObjects.Remove(gameObj);
+        }
+
+        public void ClearImmune()
+        {
+            m_ImmuneGameObjects ??= new();
+
+            m_ImmuneGameObjects.Clear();
+
+        }
+
         /// <summary>
 		/// When colliding, we apply the appropriate damage
 		/// </summary>
 		/// <param name="collider"></param>
 		protected override void Colliding(GameObject collider)
         {
+            if (m_ImmuneGameObjects != null && m_ImmuneGameObjects.Contains(collider.gameObject))
+            {
+                return;
+            }
+
             if (!EvaluateAvailability(collider))
             {
                 return;

@@ -123,12 +123,10 @@ namespace SilverPillar.Integrations.MMTopDown
 
         private TopDownController m_TopDownController = null;
         private Rigidbody m_Rigidbody;
-        private Vector3 m_ForceVector;
         private WaitForSeconds m_EscapeColliderCooldownWaitForSeconds;
         private WaitForSeconds m_ThrowColliderCooldownWaitForSeconds;
         private WaitForSeconds m_ResistWaitForSeconds;
         private int m_OriginalLayer;
-        private Vector3 m_OriginalScale;
         private MMFollowTarget m_FollowTarget;
         private bool m_WasKinematic;
         private bool m_TopDownControllerWasEnabled;
@@ -151,7 +149,6 @@ namespace SilverPillar.Integrations.MMTopDown
             if (m_UnparentOnEnable)
             {
                 transform.SetParent(null);
-                transform.localScale = m_OriginalScale;
                 m_UnparentOnEnable = false;
             }
         }
@@ -184,7 +181,6 @@ namespace SilverPillar.Integrations.MMTopDown
 
             m_Carrier?.RecoverGripStrength();
             m_Carrier = carrier;
-            m_OriginalScale = transform.localScale;
             m_OriginalLayer = gameObject.layer;
 
             switch (m_CarryMethod)
@@ -368,7 +364,6 @@ namespace SilverPillar.Integrations.MMTopDown
                     else
                     {
                         transform.SetParent(null);
-                        transform.localScale = m_OriginalScale;
                     }
 
                     break;
@@ -430,7 +425,6 @@ namespace SilverPillar.Integrations.MMTopDown
             yield return m_ThrowColliderCooldownWaitForSeconds;
 
             gameObject.layer = m_OriginalLayer;
-            transform.localScale = m_OriginalScale;
         }
 
         protected virtual IEnumerator EscapeResetCollisions()
@@ -438,7 +432,6 @@ namespace SilverPillar.Integrations.MMTopDown
             yield return m_EscapeColliderCooldownWaitForSeconds;
 
             gameObject.layer = m_OriginalLayer;
-            transform.localScale = m_OriginalScale;
         }
 
         protected virtual IEnumerator Resist()

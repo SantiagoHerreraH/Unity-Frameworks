@@ -7,7 +7,7 @@ namespace SilverPillar.Core
 {
     public class CachedConditionMachine : SerializedMonoBehaviour
     {
-        [OdinSerialize, ShowInInspector]
+        [OdinSerialize, ShowInInspector, DictionaryDrawerSettings(DisplayMode = DictionaryDisplayOptions.CollapsedFoldout)]
         private Dictionary<ConditionTag, ICachedCondition> m_Conditions = new();
 
         private bool m_IsInitialized = false;

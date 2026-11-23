@@ -36,13 +36,25 @@ namespace SilverPillar.GOAP
         [SerializeField]
         private SO_Ref<Brain> m_BrainRef = new();
 
-        [Title("Events")]
+        [Title("General Events")]
+
+        [SerializeField]
+        private UnityEvent<string> m_OnNewAction;
+        [SerializeField]
+        private UnityEvent<string> m_OnNewGoal;
+        [SerializeField]
+        private UnityEvent m_OnActionNulled;
+        [SerializeField]
+        private UnityEvent m_OnGoalNulled;
+
+        [Title("Behavior Action Events")]
         [SerializeField]
         private List<EventData> m_BehaviorActionEvents = null;
         private Dictionary<BehaviorAction, BehaviorActionEvent> m_BehaviorActionEventsDictionary = null;
         private BrainInstance m_BrainInstance = null;
         private BehaviorActionInstance m_CurrentActionInstance = null;
         private BehaviorActionEvent m_CurrentEvent;
+        private CachedCondition m_CurrentGoal;
 
         [Title("Debug")]
         [SerializeField]
@@ -71,11 +83,30 @@ namespace SilverPillar.GOAP
         {
             m_CurrentActionInstance = null;
             m_CurrentEvent = null;
+            m_CurrentGoal = null;
+            m_OnActionNulled?.Invoke();
+            m_OnGoalNulled?.Invoke();
         }
 
         void Update() 
         {
             var newAction = m_BrainInstance.GetActionInstance();
+            var newGoal = m_BrainInstance.GetCurrentGoal();
+
+            if (newGoal != m_CurrentGoal)
+            {
+                m_CurrentGoal = newGoal;
+
+                if (m_CurrentGoal == null)
+                {
+                    m_OnGoalNulled?.Invoke();
+                }
+                else
+                {
+                    m_OnNewGoal?.Invoke(m_CurrentGoal.name);
+                }
+
+            }
             
             if (newAction != m_CurrentActionInstance)
             {
@@ -87,6 +118,8 @@ namespace SilverPillar.GOAP
                 }
                 
                 m_CurrentActionInstance = newAction;
+
+                m_OnNewAction?.Invoke(newAction.Action.name);
 
                 m_CurrentActionInstance.StartAction();
 
@@ -114,6 +147,9 @@ namespace SilverPillar.GOAP
 
             m_CurrentActionInstance = null;
             m_CurrentEvent = null;
+            m_CurrentGoal = null;
+            m_OnActionNulled?.Invoke();
+            m_OnGoalNulled?.Invoke();
         }
     }
 }

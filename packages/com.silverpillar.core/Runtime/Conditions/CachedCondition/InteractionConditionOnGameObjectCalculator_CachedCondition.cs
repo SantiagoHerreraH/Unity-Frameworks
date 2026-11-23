@@ -8,10 +8,25 @@ namespace SilverPillar.Core
     [Serializable]
     public class InteractionConditionOnGameObjectCalculator_CachedCondition : ICachedCondition
     {
-        [Title("Game Object")]
+        private enum WhoIsSelf
+        {
+            Self,
+            Custom,
+            GameObjectCalculator
+        }
+        [Title("Self Game Object")]
+        [SerializeField]
+        private WhoIsSelf m_WhoIsInteractionSelf;
+        [SerializeField, ShowIf(nameof(m_WhoIsInteractionSelf), WhoIsSelf.Custom)]
+        private GameObject m_InteractionSelf;
+        [OdinSerialize, ShowIf(nameof(m_WhoIsInteractionSelf), WhoIsSelf.GameObjectCalculator)]
+        private IGameObjectCalculator m_InteractionSelfCalculator;
+
+
+        [Title("Target Game Object")]
 
         [OdinSerialize]
-        private IGameObjectCalculator m_GameObjectCalculatorData;
+        private IGameObjectCalculator m_TargetGameObject;
 
         [Title("Condition")]
 
@@ -28,7 +43,7 @@ namespace SilverPillar.Core
         {
             return new InteractionConditionOnGameObjectCalculator_CachedCondition
             {
-                m_GameObjectCalculatorData = m_GameObjectCalculatorData.Clone(),
+                m_TargetGameObject = m_TargetGameObject.Clone(),
                 m_InteractionCondition = m_InteractionCondition.Clone(),
                 m_WhatToReturnIfGameObjectIsNull = m_WhatToReturnIfGameObjectIsNull,
                 m_Self = m_Self
@@ -42,13 +57,9 @@ namespace SilverPillar.Core
 
         public bool IsFulfilled()
         {
-            var gameObj = m_GameObjectCalculatorData.CalculateGameObject();
+            var gameObj = m_TargetGameObject.CalculateGameObject();
 
-            if (gameObj != null)
-            {
-                m_InteractionCondition.SetGameObject(gameObj);
-            }
-            else
+            if (gameObj == null)
             {
                 return m_WhatToReturnIfGameObjectIsNull;
             }
@@ -58,11 +69,38 @@ namespace SilverPillar.Core
 
         public bool SetGameObject(GameObject gameObj)
         {
+            if (gameObj == null)
+            {
+                Debug.LogError($"NULL input gameobject in class {nameof(InteractionConditionOnGameObjectCalculator_CachedCondition)}");
+                return false;
+            }
             m_Self = gameObj;
-            bool result = m_GameObjectCalculatorData.SetGameObject(gameObj);
-            result &= m_InteractionCondition.SetGameObject(gameObj);
 
-            return m_Self != null && result;
+            switch (m_WhoIsInteractionSelf)
+            {
+                case WhoIsSelf.Self:
+                    m_InteractionSelf = m_Self;
+                    break;
+                case WhoIsSelf.Custom:
+                    break;
+                case WhoIsSelf.GameObjectCalculator:
+                    m_InteractionSelfCalculator?.SetGameObject(m_Self);
+                    m_InteractionSelf = m_InteractionSelfCalculator?.CalculateGameObject();
+                    break;
+                default:
+                    break;
+            }
+
+            if (m_InteractionSelf == null)
+            {
+                Debug.LogError($"NULL Interaction Self in gameobject {m_Self.name} in class {nameof(InteractionConditionOnGameObjectCalculator_CachedCondition)}");
+                return false;
+            }
+
+            bool result = m_TargetGameObject.SetGameObject(m_InteractionSelf);
+            result &= m_InteractionCondition.SetGameObject(m_InteractionSelf);
+
+            return result;
         }
     }
 }

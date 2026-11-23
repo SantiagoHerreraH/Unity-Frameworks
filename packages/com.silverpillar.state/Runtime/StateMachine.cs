@@ -42,6 +42,7 @@ namespace SilverPillar.State
         [FoldoutGroup("Debug")]
         [SerializeField, ReadOnly]
         private StateTag m_CurrentStateTag = null;
+        public StateTag CurrentStateTag => m_CurrentStateTag;
 
         [FoldoutGroup("Debug")]
         [SerializeField, ReadOnly]

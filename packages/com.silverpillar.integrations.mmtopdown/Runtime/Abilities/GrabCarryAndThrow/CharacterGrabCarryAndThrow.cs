@@ -67,7 +67,14 @@ namespace SilverPillar.Integrations.MMTopDown
         [SerializeField, Tooltip("whether or not this Character is grabbing something right now")]
         private bool m_Grabbing = false;
         [SerializeField, Tooltip("Some objects require a minimum grip strength to be carried. If the object can resist being carried, it will weaken the grip strength as time goes on.")]
-        private float m_MaxGripStrength;
+        private float m_MaxGripStrength; 
+        [SerializeField, Min(0f)]
+        [Tooltip("Minimum time in seconds between grab attempts. Zero disables the cooldown.")]
+        private float m_MinTimeBetweenGrabs = 0f;
+
+        private double m_LastGrabAttemptTime;
+        private bool m_HasAttemptedGrab;
+
         public float CurrentGripStrength { get; private set; }
 
         public void ResistGripStrength(float byHowMuch)
@@ -122,11 +129,18 @@ namespace SilverPillar.Integrations.MMTopDown
         [SerializeField, Tooltip("This enables or disables OnThrowNothing event")]
         private bool m_AllowThrowEvenIfNotCarryingAnything;
 
+        [SerializeField, Min(0f)]
+        [Tooltip("Minimum time in seconds after throwing an object before another grab attempt is allowed. Zero disables the cooldown.")]
+        private float m_MinTimeBetweenThrowAndGrab = 0f;
 
+        private double m_LastThrowTime;
+        private bool m_HasThrown;
         /// whether or not this Character is throwing something this frame
         [MMReadOnly]
         [SerializeField, Tooltip("whether or not this Character is throwing something this frame")]
         private bool m_Throwing = false;
+
+        
 
 
         [Header("Throw Recoil")]
@@ -155,6 +169,12 @@ namespace SilverPillar.Integrations.MMTopDown
         [SerializeField]
         private ForceApplier m_EscapeRecoilApplier;
 
+
+        [Header("Contact Events")]
+        [SerializeField]
+        private UnityEvent<GameObject> m_OnEnterContactWithNewPossibleCarriedObject;
+        [SerializeField]
+        private UnityEvent<GameObject> m_OnExitContactWithPossibleCarriedObject;
 
         [Header("Grabbing Events")]
         [SerializeField]
@@ -250,6 +270,7 @@ namespace SilverPillar.Integrations.MMTopDown
             if (collision.gameObject != _character.gameObject && collision.gameObject.TryGetComponent(out possibleCarriedObject))
             {
                 m_PossibleCarriedObject = possibleCarriedObject;
+                m_OnEnterContactWithNewPossibleCarriedObject?.Invoke(m_PossibleCarriedObject.gameObject);
             }
         }
 
@@ -260,6 +281,7 @@ namespace SilverPillar.Integrations.MMTopDown
             if (other.gameObject != _character.gameObject && other.gameObject.TryGetComponent(out possibleCarriedObject))
             {
                 m_PossibleCarriedObject = possibleCarriedObject;
+                m_OnEnterContactWithNewPossibleCarriedObject?.Invoke(m_PossibleCarriedObject.gameObject);
             }
         }
 
@@ -270,6 +292,7 @@ namespace SilverPillar.Integrations.MMTopDown
             if (collision.gameObject != _character.gameObject && collision.gameObject.TryGetComponent(out possibleCarriedObject))
             {
                 m_PossibleCarriedObject = possibleCarriedObject;
+                m_OnEnterContactWithNewPossibleCarriedObject?.Invoke(m_PossibleCarriedObject.gameObject);
             }
         }
 
@@ -280,6 +303,7 @@ namespace SilverPillar.Integrations.MMTopDown
             if (collision.gameObject != _character.gameObject && collision.gameObject.TryGetComponent(out possibleCarriedObject))
             {
                 m_PossibleCarriedObject = possibleCarriedObject;
+                m_OnEnterContactWithNewPossibleCarriedObject?.Invoke(m_PossibleCarriedObject.gameObject);
             }
         }
 
@@ -287,6 +311,7 @@ namespace SilverPillar.Integrations.MMTopDown
         {
             if (m_PossibleCarriedObject != null && m_PossibleCarriedObject.gameObject == other.gameObject)
             {
+                m_OnExitContactWithPossibleCarriedObject?.Invoke(m_PossibleCarriedObject.gameObject);
                 m_PossibleCarriedObject = null;
             }
         }
@@ -295,6 +320,7 @@ namespace SilverPillar.Integrations.MMTopDown
         {
             if (m_PossibleCarriedObject != null && m_PossibleCarriedObject.gameObject == collision.gameObject)
             {
+                m_OnExitContactWithPossibleCarriedObject?.Invoke(m_PossibleCarriedObject.gameObject);
                 m_PossibleCarriedObject = null;
             }
         }
@@ -303,6 +329,7 @@ namespace SilverPillar.Integrations.MMTopDown
         {
             if (m_PossibleCarriedObject != null && m_PossibleCarriedObject.gameObject == collision.gameObject)
             {
+                m_OnExitContactWithPossibleCarriedObject?.Invoke(m_PossibleCarriedObject.gameObject);
                 m_PossibleCarriedObject = null;
             }
         }
@@ -311,6 +338,7 @@ namespace SilverPillar.Integrations.MMTopDown
         {
             if (m_PossibleCarriedObject != null && m_PossibleCarriedObject.gameObject == collision.gameObject)
             {
+                m_OnExitContactWithPossibleCarriedObject?.Invoke(m_PossibleCarriedObject.gameObject);
                 m_PossibleCarriedObject = null;
             }
         }
@@ -340,25 +368,45 @@ namespace SilverPillar.Integrations.MMTopDown
             if (other != _character.gameObject && other.TryGetComponent(out possibleCarriedObject))
             {
                 m_PossibleCarriedObject = possibleCarriedObject;
-                GrabAttempt();
+                TryGrab();
             }
         }
 
         public void TryGrab()
         {
-            if (!m_Carrying)
+            if (m_Carrying)
             {
-                GrabAttempt();
+                return;
             }
+
+            double currentTime = Time.timeAsDouble;
+
+            // Cooldown between grab attempts.
+            if (m_MinTimeBetweenGrabs > 0f && m_HasAttemptedGrab &&
+                currentTime - m_LastGrabAttemptTime < m_MinTimeBetweenGrabs)
+            {
+                return;
+            }
+
+            // Cooldown between throwing and grabbing.
+            if (m_MinTimeBetweenThrowAndGrab > 0f && m_HasThrown &&
+                currentTime - m_LastThrowTime < m_MinTimeBetweenThrowAndGrab)
+            {
+                return;
+            }
+
+            GrabAttempt();
         }
 
-        /// <summary>
-        /// Tries to grab by casting a raycast
-        /// </summary>
         protected virtual void GrabAttempt()
         {
+            // Record the attempt, regardless of its outcome.
+            m_LastGrabAttemptTime = Time.timeAsDouble;
+            m_HasAttemptedGrab = true;
+
             if (!AbilityAuthorized
-                || ((_condition.CurrentState != CharacterStates.CharacterConditions.Normal) && (_condition.CurrentState != CharacterStates.CharacterConditions.ControlledMovement)))
+                || ((_condition.CurrentState != CharacterStates.CharacterConditions.Normal)
+                && (_condition.CurrentState != CharacterStates.CharacterConditions.ControlledMovement)))
             {
                 if (m_TriggerOnGrabbedTriggeredEvenIfAbilityIsNotAuthorized)
                 {
@@ -366,7 +414,6 @@ namespace SilverPillar.Integrations.MMTopDown
                 }
                 return;
             }
-
 
             m_OnGrabbedTriggered?.Invoke();
 
@@ -448,6 +495,9 @@ namespace SilverPillar.Integrations.MMTopDown
                 m_ThrowRecoilForceApplier.ApplyForce(-m_RecoilVector);
             }
 
+            m_LastThrowTime = Time.timeAsDouble;
+            m_HasThrown = true;
+
             m_OnThrowSuccess?.Invoke(gameObjectToThrow);
             m_Throwing = true;
         }
@@ -494,6 +544,10 @@ namespace SilverPillar.Integrations.MMTopDown
             }
 
             StopFeedbacks();
+
+            m_LastThrowTime = Time.timeAsDouble;
+            m_HasThrown = true;
+
             m_OnThrowSuccess?.Invoke(m_CarriedObject.gameObject);
             m_CarriedObject = null;
             m_CarryingID = -1;

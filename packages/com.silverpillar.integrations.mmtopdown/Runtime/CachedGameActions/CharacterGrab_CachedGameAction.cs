@@ -8,15 +8,15 @@ namespace SilverPillar.Integrations.MMTopDown
     public class CharacterGrab_CachedGameAction : ICachedGameAction
     {
         [SerializeField]
-        private SelfType m_WhichCharacterGrab;
-        [SerializeField, ShowIf(nameof(m_WhichCharacterGrab), SelfType.CustomGameObject)]
+        private WhereToGetComponentFrom m_WhereToGetComponentFrom;
+        [SerializeField, ShowIf(nameof(m_WhereToGetComponentFrom), WhereToGetComponentFrom.Custom)]
         private CharacterGrabCarryAndThrow m_CharacterGrab;
         private GameObject m_Self;
 
         public CharacterGrab_CachedGameAction() { }
         public CharacterGrab_CachedGameAction(CharacterGrab_CachedGameAction other)
         {
-            m_WhichCharacterGrab = other.m_WhichCharacterGrab;
+            m_WhereToGetComponentFrom = other.m_WhereToGetComponentFrom;
             m_CharacterGrab = other.m_CharacterGrab;
             m_Self = other.m_Self;
         }
@@ -40,9 +40,21 @@ namespace SilverPillar.Integrations.MMTopDown
         {
             m_Self = gameObj;
 
-            if (m_WhichCharacterGrab == SelfType.ThisGameObject)
+            switch (m_WhereToGetComponentFrom)
             {
-                m_CharacterGrab = gameObj.GetComponent<CharacterGrabCarryAndThrow>();
+                case WhereToGetComponentFrom.Self:
+                    m_CharacterGrab = gameObj.GetComponent<CharacterGrabCarryAndThrow>();
+                    break;
+                case WhereToGetComponentFrom.SelfAndChildren:
+                    m_CharacterGrab = gameObj.GetComponentInChildren<CharacterGrabCarryAndThrow>(true);
+                    break;
+                case WhereToGetComponentFrom.Parent:
+                    m_CharacterGrab = gameObj.GetComponentInParent<CharacterGrabCarryAndThrow>();
+                    break;
+                case WhereToGetComponentFrom.Custom:
+                    break;
+                default:
+                    break;
             }
 
             return m_Self != null && m_CharacterGrab != null;

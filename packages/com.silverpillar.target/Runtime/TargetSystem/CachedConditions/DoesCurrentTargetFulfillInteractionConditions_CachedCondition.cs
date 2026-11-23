@@ -9,13 +9,17 @@ namespace SilverPillar.Target
     [Serializable]
     public class DoesCurrentTargetFulfillInteractionConditions_CachedCondition : ICachedCondition
     {
-        [OdinSerialize, ShowInInspector]
+        [SerializeField]
+        private SelfType m_WhichTargetSystem;
+        [SerializeField, ShowIf(nameof(m_WhichTargetSystem), SelfType.CustomGameObject)]
+        private TargetSystem m_TargetSystem;
+
+        [OdinSerialize, ShowInInspector, Tooltip("Self gameobject in interaction condition will be target system's gameobject")]
         private IInteractionCondition m_ConditionToFulfill = null;
 
         [SerializeField]
         private bool m_ReturnValueIfCurrentTargetIsNull;
 
-        private TargetSystem m_TargetSystem;
 
         public DoesCurrentTargetFulfillInteractionConditions_CachedCondition() { }
 
@@ -53,12 +57,21 @@ namespace SilverPillar.Target
 
         public bool SetGameObject(GameObject gameObj)
         {
-            if (gameObj != null && gameObj.TryGetComponent(out m_TargetSystem))
+            if (gameObj == null)
             {
-                return m_ConditionToFulfill.SetGameObject(gameObj);
+                Debug.LogError($"Null gameobject trying to be set in {(nameof(DoesCurrentTargetFulfillInteractionConditions_CachedCondition))}");
+                return false;
+            }
+            if (m_WhichTargetSystem == SelfType.ThisGameObject)
+            {
+                if (!gameObj.TryGetComponent(out m_TargetSystem))
+                {
+                    Debug.LogError($"No target system in input gameobject {gameObj.name} in class {nameof(DoesCurrentTargetFulfillInteractionConditions_CachedCondition)}");
+                    return false;
+                }
             }
 
-            return false;
+            return m_ConditionToFulfill.SetGameObject(m_TargetSystem.gameObject);
         }
     }
 }
