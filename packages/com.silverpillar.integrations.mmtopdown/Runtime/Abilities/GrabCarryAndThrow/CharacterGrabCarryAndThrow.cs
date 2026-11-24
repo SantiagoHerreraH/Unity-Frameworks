@@ -80,7 +80,7 @@ namespace SilverPillar.Integrations.MMTopDown
         public void ResistGripStrength(float byHowMuch)
         {
             CurrentGripStrength -= byHowMuch;
-            m_OnGrabbedObjectResisting?.Invoke(m_CarriedObject.gameObject);
+            if (m_CarriedObject != null) m_OnGrabbedObjectResisting?.Invoke(m_CarriedObject.gameObject);
         }
         public void RecoverGripStrength()
         {
@@ -190,6 +190,11 @@ namespace SilverPillar.Integrations.MMTopDown
         [SerializeField, Tooltip("a UnityEvent triggered when triggering grab input and not grabbing anything")]
         private UnityEvent m_OnGrabbedMiss;
 
+        [Header("Stealing Events")]
+        [SerializeField, Tooltip("Invoked with the stolen object when another character takes it from this character.")]
+        private UnityEvent<GameObject> m_OnGrabbedObjectStolen;
+        [SerializeField, Tooltip("Invoked with the object when this character steals it from another character.")]
+        private UnityEvent<GameObject> m_OnStoleGrabbedObject;
 
         [Header("Throwing Events")]
         [SerializeField]
@@ -417,9 +422,7 @@ namespace SilverPillar.Integrations.MMTopDown
 
             m_OnGrabbedTriggered?.Invoke();
 
-            m_CarriedObject = m_PossibleCarriedObject;
-
-            if (m_CarriedObject != null)
+            if (m_PossibleCarriedObject != null)
             {
                 Grab();
             }
@@ -439,23 +442,43 @@ namespace SilverPillar.Integrations.MMTopDown
                 return;
             }
 
-            GameObject carriedGameObject = m_CarriedObject.gameObject;
+            GrabCarryAndThrowObject target = m_PossibleCarriedObject;
+            if (target == null) return;
 
-            m_ThrowForceApplier.SetGameObject(carriedGameObject);
-            m_EscapeForceApplier.SetGameObject(carriedGameObject);
+            GameObject carriedGameObject = target.gameObject;
+            CharacterGrabCarryAndThrow previousCarrier = target.Carrier;
+            bool stealing = previousCarrier != null && previousCarrier != this;
 
-            if (m_CarriedObject.Grab(this))
+            if (target.Grab(this) && target.Carrier == this)
             {
-                m_OnGrabbedSuccessful?.Invoke(carriedGameObject);
+                m_CarriedObject = target;
+                m_ThrowForceApplier.SetGameObject(carriedGameObject);
+                m_EscapeForceApplier.SetGameObject(carriedGameObject);
                 m_Carrying = true;
-                m_CarryingID = m_CarriedObject.CarryingAnimationId;
+                m_CarryingID = target.CarryingAnimationId;
                 m_Grabbing = true;
                 PlayAbilityStartFeedbacks();
+                if (stealing) m_OnStoleGrabbedObject?.Invoke(carriedGameObject);
+                m_OnGrabbedSuccessful?.Invoke(carriedGameObject);
             }
             else
             {
                 m_OnGrabbedUnsuccessful?.Invoke(carriedGameObject);
             }
+        }
+
+        /// <summary>Called by the object when another character takes ownership.</summary>
+        public void OnCarriedObjectStolen(GrabCarryAndThrowObject stolenObject)
+        {
+            if (stolenObject == null || m_CarriedObject != stolenObject) return;
+
+            m_CarriedObject = null;
+            m_Carrying = false;
+            m_CarryingID = -1;
+            m_Grabbing = false;
+            StopFeedbacks();
+            RecoverGripStrength();
+            m_OnGrabbedObjectStolen?.Invoke(stolenObject.gameObject);
         }
 
         public void Throw(GameObject gameObjectToThrow)
@@ -469,16 +492,17 @@ namespace SilverPillar.Integrations.MMTopDown
                 return;
             }
 
+            if (gameObjectToThrow == null)
+            {
+                m_OnThrowTriggered?.Invoke();
+                m_OnThrowNothing?.Invoke();
+                return;
+            }
+
             gameObjectToThrow.transform.position = CarryParent.transform.position;
             gameObjectToThrow.transform.rotation = CarryParent.transform.rotation;  
 
             m_OnThrowTriggered?.Invoke();
-
-            if (gameObjectToThrow == null)
-            {
-                m_OnThrowNothing?.Invoke();
-                return;
-            }
 
             Vector3 direction = VectorTools.ApplyConstraint(gameObjectToThrow.transform.position - m_ThrowReferenceTransform.position, m_ConstraintThrowVector);
 
@@ -532,14 +556,15 @@ namespace SilverPillar.Integrations.MMTopDown
 
             Vector3 direction = VectorTools.ApplyConstraint(m_CarriedObject.transform.position - m_ThrowReferenceTransform.position, m_ConstraintThrowVector);
 
-            m_CarriedObject.Release();
-            m_ThrowForceApplier.ApplyForce(direction.normalized * m_ThrowForce * m_CarriedObject.ThrowForceMultiplier);
+            GrabCarryAndThrowObject thrownObject = m_CarriedObject;
+            thrownObject.Release();
+            m_ThrowForceApplier.ApplyForce(direction.normalized * m_ThrowForce * thrownObject.ThrowForceMultiplier);
 
             // apply recoil
             if (m_ThrowRecoilForce != 0f)
             {
                 m_RecoilVector = direction.normalized;
-                m_RecoilVector *= m_ThrowRecoilForce * m_CarriedObject.ThrowRecoilMultiplier;
+                m_RecoilVector *= m_ThrowRecoilForce * thrownObject.ThrowRecoilMultiplier;
                 m_ThrowRecoilForceApplier.ApplyForce(-m_RecoilVector);
             }
 
@@ -548,8 +573,8 @@ namespace SilverPillar.Integrations.MMTopDown
             m_LastThrowTime = Time.timeAsDouble;
             m_HasThrown = true;
 
-            m_OnThrowSuccess?.Invoke(m_CarriedObject.gameObject);
-            m_CarriedObject = null;
+            m_OnThrowSuccess?.Invoke(thrownObject.gameObject);
+            if (m_CarriedObject == thrownObject) m_CarriedObject = null;
             m_CarryingID = -1;
             m_Carrying = false;
             m_Throwing = true;
@@ -576,6 +601,8 @@ namespace SilverPillar.Integrations.MMTopDown
             }
 
             m_Carrying = false;
+            m_CarryingID = -1;
+            StopFeedbacks();
             m_OnGrabbedObjectEscaped?.Invoke(m_CarriedObject.gameObject);
             m_CarriedObject = null;
         }

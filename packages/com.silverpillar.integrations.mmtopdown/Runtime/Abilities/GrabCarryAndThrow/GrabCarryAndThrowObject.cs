@@ -1,5 +1,6 @@
 using MoreMountains.Tools;
 using MoreMountains.TopDownEngine;
+using Sirenix.OdinInspector;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
@@ -24,10 +25,14 @@ namespace SilverPillar.Integrations.MMTopDown
             Follow
         }
 
+
         [Header("Carry")]
 
         [SerializeField, Tooltip("Minimum Grip strength to be carried")]
         private float m_MinimumGripStrengthToBeCarried = 0;
+
+        public bool CanBeStolen => m_CanBeStolen;
+        public CharacterGrabCarryAndThrow Carrier => m_Carrier;
 
         /// the selected carry method
         [SerializeField, Tooltip("the selected carry method")]
@@ -39,7 +44,7 @@ namespace SilverPillar.Integrations.MMTopDown
 
         /// the layer the object should be moved to while carried
         [SerializeField, Tooltip("the layer the object should be moved to while carried")]
-        private string m_CarryLayerMask = "Projectiles";
+        private LayerMask m_CarryLayerMask;
 
         /// an ID that will get passed to the Character's animator when this object is carried
         [SerializeField, Tooltip("an ID that will get passed to the Character's animator when this object is carried")]
@@ -54,6 +59,11 @@ namespace SilverPillar.Integrations.MMTopDown
             get { return m_Carried; }
         }
 
+        [Header("Being Stolen")]
+
+        [SerializeField, Tooltip("Whether another character can take this object while it is carried.")]
+        private bool m_CanBeStolen = true;
+
 
         [Header("Throw")]
 
@@ -61,10 +71,6 @@ namespace SilverPillar.Integrations.MMTopDown
         [SerializeField, Tooltip("the multiplier for thrown force.Throwing force is controlled by character ability.")]
         private float m_ThrowForceMultiplier = 1f;
         public float ThrowForceMultiplier { get { return m_ThrowForceMultiplier; } }
-
-        /// the cooldown after which to reset the layer and scale of the object after a throw
-        [SerializeField, Tooltip("the cooldown (in seconds) after which to reset the layer and scale of our object after a throw")]
-        private float m_ThrowColliderCooldown = 0.2f;
 
         /// the recoil to apply to the throwing Character after a throw
         [SerializeField, Tooltip("the recoil to apply to the throwing Character after a throw")]
@@ -83,9 +89,6 @@ namespace SilverPillar.Integrations.MMTopDown
         [SerializeField, MMCondition(nameof(m_CanResistAndEscape), true)]
         private float m_EscapeForceMultiplier = 1f;
         public float EscapeForceMultiplier { get { return m_EscapeForceMultiplier; } }
-
-        [SerializeField, MMCondition(nameof(m_CanResistAndEscape), true)]
-        private float m_EscapeColliderCooldown = 0.2f;
 
         [SerializeField, MMCondition(nameof(m_CanResistAndEscape), true)]
         private float m_EscapeRecoilMultiplier = 1f;
@@ -121,10 +124,11 @@ namespace SilverPillar.Integrations.MMTopDown
         [SerializeField, Tooltip("a UnityEvent triggered when the object escapes")]
         private UnityEvent<GameObject> m_OnEscaped;
 
+        [SerializeField, ShowIf(nameof(m_CanBeStolen)), Tooltip("Invoked with the new carrier when this object is stolen from another character.")]
+        private UnityEvent<GameObject> m_OnStolen;
+
         private TopDownController m_TopDownController = null;
         private Rigidbody m_Rigidbody;
-        private WaitForSeconds m_EscapeColliderCooldownWaitForSeconds;
-        private WaitForSeconds m_ThrowColliderCooldownWaitForSeconds;
         private WaitForSeconds m_ResistWaitForSeconds;
         private int m_OriginalLayer;
         private MMFollowTarget m_FollowTarget;
@@ -132,8 +136,6 @@ namespace SilverPillar.Integrations.MMTopDown
         private bool m_TopDownControllerWasEnabled;
         private CharacterGrabCarryAndThrow m_Carrier;
         private Coroutine m_ResistCoroutine;
-        private Coroutine m_ThrowCoroutine;
-        private Coroutine m_EscapeCoroutine;
         private bool m_UnparentOnEnable = false;
 
         /// <summary>
@@ -161,8 +163,6 @@ namespace SilverPillar.Integrations.MMTopDown
             m_Rigidbody = GetComponent<Rigidbody>();
             TryGetComponent(out m_TopDownController);
 
-            m_ThrowColliderCooldownWaitForSeconds = new WaitForSeconds(m_ThrowColliderCooldown);
-            m_EscapeColliderCooldownWaitForSeconds = new WaitForSeconds(m_EscapeColliderCooldown); 
             m_ResistWaitForSeconds = new WaitForSeconds(1);
 
             m_FollowTarget = GetComponent<MMFollowTarget>();
@@ -174,14 +174,53 @@ namespace SilverPillar.Integrations.MMTopDown
         /// </summary>
         public virtual bool Grab(CharacterGrabCarryAndThrow carrier)
         {
-            if (m_MinimumGripStrengthToBeCarried > carrier.CurrentGripStrength)
+            if (carrier == null || !isActiveAndEnabled ||
+                m_MinimumGripStrengthToBeCarried > carrier.CurrentGripStrength)
             {
                 return false;
             }
 
-            m_Carrier?.RecoverGripStrength();
+            if (m_Carrier == carrier)
+            {
+                return m_Carried;
+            }
+
+            bool wasStolen = m_Carrier != null;
+
+            if (wasStolen)
+            {
+                if (!m_CanBeStolen)
+                {
+                    return false;
+                }
+
+                CharacterGrabCarryAndThrow previousCarrier = m_Carrier;
+                StopResisting();
+                previousCarrier.OnCarriedObjectStolen(this);
+                // A listener may have changed ownership during the notification.
+                if (m_Carrier != previousCarrier)
+                {
+                    return false;
+                }
+                previousCarrier.RecoverGripStrength();
+                // Keep the original physics/layer snapshots; do not restore them
+                // during an ownership transfer.
+            }
+            else
+            {
+                m_OriginalLayer = gameObject.layer;
+                if (m_Rigidbody != null)
+                {
+                    m_WasKinematic = m_Rigidbody.isKinematic;
+                }
+                if (m_TopDownController != null)
+                {
+                    m_TopDownControllerWasEnabled = m_TopDownController.enabled;
+                }
+            }
+
             m_Carrier = carrier;
-            m_OriginalLayer = gameObject.layer;
+            m_UnparentOnEnable = false;
 
             switch (m_CarryMethod)
             {
@@ -204,12 +243,7 @@ namespace SilverPillar.Integrations.MMTopDown
                     break;
             }
 
-            int carryLayer = LayerMask.NameToLayer(m_CarryLayerMask);
-
-            if (carryLayer >= 0)
-            {
-                gameObject.layer = carryLayer;
-            }
+            gameObject.layer = m_CarryLayerMask;
 
             if (m_Rigidbody != null)
             {
@@ -220,13 +254,11 @@ namespace SilverPillar.Integrations.MMTopDown
                     m_Rigidbody.angularVelocity = Vector3.zero;
                 }
 
-                m_WasKinematic = m_Rigidbody.isKinematic;
                 // Equivalent to RigidbodyType2D.Kinematic
                 m_Rigidbody.isKinematic = true;
             }
             if (m_TopDownController != null)
             {
-                m_TopDownControllerWasEnabled = m_TopDownController.enabled;
                 m_TopDownController.enabled = false;
             }
 
@@ -241,9 +273,19 @@ namespace SilverPillar.Integrations.MMTopDown
                 m_ResistCoroutine = StartCoroutine(Resist());
             }
 
-            m_OnGrabbed?.Invoke(m_Carrier.gameObject);
+            m_OnGrabbed?.Invoke(carrier.gameObject);
 
-            return m_Carried; //if the object escapes on grabbed invoke then you no longer carry this
+            if (!m_Carried || m_Carrier != carrier)
+            {
+                return false;
+            }
+
+            if (wasStolen)
+            {
+                m_OnStolen?.Invoke(carrier.gameObject);
+            }
+
+            return m_Carried && m_Carrier == carrier;
         }
 
         /// <summary>
@@ -256,12 +298,13 @@ namespace SilverPillar.Integrations.MMTopDown
         /// <param name="forceMagnitude">Multiplier applied to the throw force.</param>
         public virtual void Release()
         {
-            if (m_ResistCoroutine != null)
+            if (!m_Carried)
             {
-                StopCoroutine(m_ResistCoroutine);
+                return;
             }
 
-            m_ThrowCoroutine = StartCoroutine(ThrowResetCollisions());
+            StopResisting();
+            gameObject.layer = m_OriginalLayer;
 
             switch (m_CarryMethod)
             {
@@ -291,12 +334,12 @@ namespace SilverPillar.Integrations.MMTopDown
                 m_Rigidbody.isKinematic = m_WasKinematic;
             }
 
-            m_OnRelease?.Invoke(m_Carrier.gameObject);
-
+            CharacterGrabCarryAndThrow releasedBy = m_Carrier;
             m_Carried = false;
             m_ResistCoroutine = null;
-            m_Carrier?.RecoverGripStrength();
             m_Carrier = null;
+            releasedBy?.RecoverGripStrength();
+            m_OnRelease?.Invoke(releasedBy != null ? releasedBy.gameObject : null);
         }
 
         public void Escape()
@@ -306,7 +349,7 @@ namespace SilverPillar.Integrations.MMTopDown
                 return;
             }
 
-            m_EscapeCoroutine = StartCoroutine(EscapeResetCollisions());
+            gameObject.layer = m_OriginalLayer;
 
             EscapeImplementation(false);
         }
@@ -323,23 +366,13 @@ namespace SilverPillar.Integrations.MMTopDown
 
             EscapeImplementation(true);
 
-            if (m_ResistCoroutine != null)
-            {
-                StopCoroutine(m_ResistCoroutine);
-            }
-            if (m_EscapeCoroutine != null)
-            {
-                StopCoroutine(m_EscapeCoroutine);
-            }
-            if (m_ThrowCoroutine != null)
-            {
-                StopCoroutine(m_ThrowCoroutine);
-            }
+            StopResisting();
         }
 
 
         private void EscapeImplementation(bool calledOnDisable)
         {
+            StopResisting();
             m_Carrier.RecoverGripStrength();
 
             switch (m_CarryMethod)
@@ -417,21 +450,13 @@ namespace SilverPillar.Integrations.MMTopDown
 
         }
 
-        /// <summary>
-        /// Resets the object's collision layer and scale after throwing.
-        /// </summary>
-        protected virtual IEnumerator ThrowResetCollisions()
+        private void StopResisting()
         {
-            yield return m_ThrowColliderCooldownWaitForSeconds;
-
-            gameObject.layer = m_OriginalLayer;
-        }
-
-        protected virtual IEnumerator EscapeResetCollisions()
-        {
-            yield return m_EscapeColliderCooldownWaitForSeconds;
-
-            gameObject.layer = m_OriginalLayer;
+            if (m_ResistCoroutine != null)
+            {
+                StopCoroutine(m_ResistCoroutine);
+                m_ResistCoroutine = null;
+            }
         }
 
         protected virtual IEnumerator Resist()
@@ -440,8 +465,10 @@ namespace SilverPillar.Integrations.MMTopDown
             {
                 yield return m_ResistWaitForSeconds;
 
-                m_Carrier.ResistGripStrength(m_ResistAmountPerSecond);
-                m_OnResisting?.Invoke(m_Carrier.gameObject);
+                CharacterGrabCarryAndThrow carrier = m_Carrier;
+                if (carrier == null) break;
+                carrier.ResistGripStrength(m_ResistAmountPerSecond);
+                if (m_Carrier == carrier) m_OnResisting?.Invoke(carrier.gameObject);
             }
 
             Escape();
