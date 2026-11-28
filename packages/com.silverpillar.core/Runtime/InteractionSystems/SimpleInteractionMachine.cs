@@ -7,10 +7,18 @@ namespace SilverPillar.Core
 {
     public class SimpleInteractionMachine : SerializedMonoBehaviour
     {
+        [Title("Block Call")]
         [SerializeField]
         private bool m_DontInteractIfComponentDisabled;
-        [SerializeField, ShowIf(nameof(m_DontInteractIfComponentDisabled))]
-        private bool m_PrintMessageIfCalledInteractWhileComponentDisabled;
+        [SerializeField]
+        private bool m_DontInteractIfGameObjectDisabled;
+
+        private bool m_ShowPrint => m_DontInteractIfComponentDisabled || m_DontInteractIfGameObjectDisabled;
+        [SerializeField, ShowIf(nameof(m_ShowPrint))]
+        private bool m_PrintMessageIfCalledInteractWhileDisabled;
+
+
+        [Title("Interactions")]
         [OdinSerialize, ShowInInspector]
         private List<IInteraction> m_Interactions = new();
         private bool m_Initialized = false;
@@ -34,11 +42,11 @@ namespace SilverPillar.Core
 
         public void Interact(GameObject other)
         {
-            if (m_DontInteractIfComponentDisabled && !enabled)
+            if ((m_DontInteractIfComponentDisabled && !enabled) || (m_DontInteractIfGameObjectDisabled && !gameObject.activeInHierarchy))
             {
-                if (m_PrintMessageIfCalledInteractWhileComponentDisabled)
+                if (m_PrintMessageIfCalledInteractWhileDisabled)
                 {
-                    Debug.Log($"Couldn't Interact because {nameof(SimpleInteractionMachine)} component in {gameObject.name} is disabled.");
+                    Debug.Log($"Couldn't Interact because {nameof(SimpleInteractionMachine)} component in {gameObject.name} is disabled or game object is deactivated.");
                 }
 
                 return;

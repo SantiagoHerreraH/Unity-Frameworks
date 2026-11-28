@@ -21,12 +21,22 @@ namespace SilverPillar.EventTools
             OnDestroy
         }
 
+        [Title("Auto Call")]
         [SerializeField]
         private WhenToAutoCallEvent m_WhenToAutoCall = WhenToAutoCallEvent.DontAutoCall;
 
-        [SerializeField]
-        private UnityEvent m_Event;
 
+        [Title("Block Call")]
+        [SerializeField]
+        private bool m_BlockCallIfComponentDeactivated;
+        [SerializeField]
+        private bool m_BlockCallIfGameObjectDeactivated;
+
+        private bool m_ShowPrint => m_BlockCallIfComponentDeactivated || m_BlockCallIfGameObjectDeactivated;
+        [SerializeField, ShowIf(nameof(m_ShowPrint))]
+        private bool m_PrintWarningIfCalledWhenDeactivated;
+
+        [Title("Number Of Calls")]
         [SerializeField]
         private bool m_CallOnce = true;
 
@@ -34,14 +44,20 @@ namespace SilverPillar.EventTools
         private ICachedScore m_EventTriggerNumber;
         private float m_TriggerNumber;
 
+        [SerializeField, HideIf(nameof(m_CallOnce))]
+        private WhenToCalculateTriggerNumber m_WhenToCalculateTriggerNumber;
+
+        [Title("Event")]
+        [SerializeField]
+        private UnityEvent m_Event;
+
+
         public enum WhenToCalculateTriggerNumber
         {
             Once,
             EveryTimeBeforeTriggering
         }
 
-        [SerializeField, HideIf(nameof(m_CallOnce))]
-        private WhenToCalculateTriggerNumber m_WhenToCalculateTriggerNumber;
 
         private void Awake()
         {
@@ -109,6 +125,14 @@ namespace SilverPillar.EventTools
 
         public void ExecuteEvent()
         {
+            if ((m_BlockCallIfComponentDeactivated && !enabled) || (m_BlockCallIfGameObjectDeactivated && !gameObject.activeInHierarchy))
+            {
+                if (m_PrintWarningIfCalledWhenDeactivated)
+                {
+                    Debug.LogWarning($"{nameof(ExecuteEvent)} called in {nameof(EventCaller)} in gameobject {gameObject.name}, but component or gameobject is disabled and can't execute when disabled.");
+                }
+                return;
+            }
             if (m_CallOnce)
             {
                 m_Event?.Invoke();

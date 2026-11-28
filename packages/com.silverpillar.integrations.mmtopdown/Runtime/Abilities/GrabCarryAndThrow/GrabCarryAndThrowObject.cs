@@ -126,7 +126,6 @@ namespace SilverPillar.Integrations.MMTopDown
         private TopDownController m_TopDownController = null;
         private Rigidbody m_Rigidbody;
         private WaitForSeconds m_ResistWaitForSeconds;
-        private int m_OriginalLayer;
         private MMFollowTarget m_FollowTarget;
         private bool m_WasKinematic;
         private bool m_TopDownControllerWasEnabled;
@@ -204,7 +203,6 @@ namespace SilverPillar.Integrations.MMTopDown
             }
             else
             {
-                m_OriginalLayer = gameObject.layer;
                 if (m_Rigidbody != null)
                 {
                     m_WasKinematic = m_Rigidbody.isKinematic;
@@ -298,7 +296,6 @@ namespace SilverPillar.Integrations.MMTopDown
             }
 
             StopResisting();
-            gameObject.layer = m_OriginalLayer;
 
             switch (m_CarryMethod)
             {
@@ -343,8 +340,6 @@ namespace SilverPillar.Integrations.MMTopDown
                 return;
             }
 
-            gameObject.layer = m_OriginalLayer;
-
             EscapeImplementation(false);
         }
 
@@ -355,8 +350,6 @@ namespace SilverPillar.Integrations.MMTopDown
             {
                 return;
             }
-
-            gameObject.layer = m_OriginalLayer;
 
             EscapeImplementation(true);
 
