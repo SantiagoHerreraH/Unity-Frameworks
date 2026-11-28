@@ -42,10 +42,6 @@ namespace SilverPillar.Integrations.MMTopDown
         [SerializeField, Tooltip("the offset to apply when attaching the object to the character")]
         private Vector3 m_CarryOffset = Vector3.zero;
 
-        /// the layer the object should be moved to while carried
-        [SerializeField, Tooltip("the layer the object should be moved to while carried")]
-        private LayerMask m_CarryLayerMask;
-
         /// an ID that will get passed to the Character's animator when this object is carried
         [SerializeField, Tooltip("an ID that will get passed to the Character's animator when this object is carried")]
         private int m_CarryingAnimationID = 0;
@@ -242,8 +238,6 @@ namespace SilverPillar.Integrations.MMTopDown
 
                     break;
             }
-
-            gameObject.layer = m_CarryLayerMask;
 
             if (m_Rigidbody != null)
             {

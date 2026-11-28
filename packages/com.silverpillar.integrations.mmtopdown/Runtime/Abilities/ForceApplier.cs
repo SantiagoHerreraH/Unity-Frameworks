@@ -1,6 +1,4 @@
-using log4net.Util;
 using MoreMountains.TopDownEngine;
-using SilverPillar.Core;
 using System;
 using UnityEngine;
 
@@ -9,7 +7,7 @@ namespace SilverPillar.Integrations.MMTopDown
     public enum TopDownControllerForceTypes
     {
         AddForce,
-        Impact,
+        Impact
     }
 
     public enum RigidbodyForceTypes
@@ -28,8 +26,26 @@ namespace SilverPillar.Integrations.MMTopDown
 
         private TopDownController m_TopDownController;
         private Rigidbody m_Rigidbody;
-        private CharacterController m_CharacterController;
-        
+
+        public bool SetGameObject(GameObject gameObj)
+        {
+            m_TopDownController = null;
+            m_Rigidbody = null;
+
+            if (gameObj == null)
+            {
+                return false;
+            }
+
+            // Prioritize TopDownController.
+            if (gameObj.TryGetComponent(out m_TopDownController))
+            {
+                return true;
+            }
+
+            return gameObj.TryGetComponent(out m_Rigidbody);
+        }
+
         public void ApplyForce(Vector3 force)
         {
             if (m_TopDownController != null)
@@ -41,12 +57,18 @@ namespace SilverPillar.Integrations.MMTopDown
                         m_TopDownController.AddForce(force);
 
                         break;
+
                     case TopDownControllerForceTypes.Impact:
 
-                        m_TopDownController.Impact(force.normalized, force.magnitude);
+                        float magnitude = force.magnitude;
 
-                        break;
-                    default:
+                        if (magnitude > 0f)
+                        {
+                            m_TopDownController.Impact(
+                                force / magnitude,
+                                magnitude);
+                        }
+
                         break;
                 }
             }
@@ -56,31 +78,32 @@ namespace SilverPillar.Integrations.MMTopDown
                 {
                     case RigidbodyForceTypes.AddForce:
 
-                        m_Rigidbody.AddForce(force, ForceModeForRigidbodyForceType);
+                        m_Rigidbody.AddForce(
+                            force,
+                            ForceModeForRigidbodyForceType);
 
                         break;
+
                     case RigidbodyForceTypes.AddRelativeForce:
 
-                        m_Rigidbody.AddRelativeForce(force, ForceModeForRigidbodyForceType);
+                        m_Rigidbody.AddRelativeForce(
+                            force,
+                            ForceModeForRigidbodyForceType);
 
                         break;
+
                     case RigidbodyForceTypes.AddForceAtPosition:
 
-                        m_Rigidbody.AddForceAtPosition(force, m_Rigidbody.transform.position + m_Rigidbody.transform.forward, ForceModeForRigidbodyForceType);
+                        Transform rbTransform = m_Rigidbody.transform;
 
-                        break;
-                    default:
+                        m_Rigidbody.AddForceAtPosition(
+                            force,
+                            rbTransform.position + rbTransform.forward,
+                            ForceModeForRigidbodyForceType);
+
                         break;
                 }
             }
-        }
-
-        public bool SetGameObject(GameObject gameObj)
-        {
-            bool allGood = gameObj.TryGetComponent(out m_TopDownController);
-            allGood &= gameObj.TryGetComponent(out m_Rigidbody);
-
-            return allGood;
         }
     }
 }

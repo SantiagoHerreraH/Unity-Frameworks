@@ -7,6 +7,10 @@ namespace SilverPillar.Core
 {
     public class SimpleInteractionMachine : SerializedMonoBehaviour
     {
+        [SerializeField]
+        private bool m_DontInteractIfComponentDisabled;
+        [SerializeField, ShowIf(nameof(m_DontInteractIfComponentDisabled))]
+        private bool m_PrintMessageIfCalledInteractWhileComponentDisabled;
         [OdinSerialize, ShowInInspector]
         private List<IInteraction> m_Interactions = new();
         private bool m_Initialized = false;
@@ -30,6 +34,16 @@ namespace SilverPillar.Core
 
         public void Interact(GameObject other)
         {
+            if (m_DontInteractIfComponentDisabled && !enabled)
+            {
+                if (m_PrintMessageIfCalledInteractWhileComponentDisabled)
+                {
+                    Debug.Log($"Couldn't Interact because {nameof(SimpleInteractionMachine)} component in {gameObject.name} is disabled.");
+                }
+
+                return;
+            }
+
             Initialize();
 
             foreach (var interaction in m_Interactions)

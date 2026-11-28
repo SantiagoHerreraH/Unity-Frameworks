@@ -4,19 +4,19 @@ using UnityEngine;
 namespace SilverPillar.Core
 {
     [Serializable]
-    public class InteractWithOther_Interaction : IInteraction
+    public class InteractWithOtherSimpleInteractionMachine_Interaction : IInteraction
     {
         private GameObject m_Self;
 
-        public InteractWithOther_Interaction() { }
-        public InteractWithOther_Interaction(InteractWithOther_Interaction other)
+        public InteractWithOtherSimpleInteractionMachine_Interaction() { }
+        public InteractWithOtherSimpleInteractionMachine_Interaction(InteractWithOtherSimpleInteractionMachine_Interaction other)
         {
             m_Self = other.m_Self;
         }
 
         public IInteraction Clone()
         {
-            return new InteractWithOther_Interaction(this);
+            return new InteractWithOtherSimpleInteractionMachine_Interaction(this);
         }
 
         public GameObject GetSelf()

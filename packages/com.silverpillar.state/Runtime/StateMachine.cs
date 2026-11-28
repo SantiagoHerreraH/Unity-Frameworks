@@ -80,7 +80,7 @@ namespace SilverPillar.State
         {
             if (m_StateOnEnable != null)
             {
-                ChangeState(m_StateOnEnable);
+                ForceChangeState(m_StateOnEnable);
             }
             else if (m_AllowNullState)
             {
